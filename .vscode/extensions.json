@@ -1,0 +1,59 @@
+{
+  "recommendations": [
+    // Essential Extensions
+    "ms-vscode.vscode-typescript-next",
+    "esbenp.prettier-vscode",
+    "dbaeumer.vscode-eslint",
+    "bradlc.vscode-tailwindcss",
+    "formulahendry.auto-rename-tag",
+    "christian-kohler.path-intellisense",
+    
+    // React & Next.js Development
+    "dsznajder.es7-react-js-snippets",
+    "ms-vscode.vscode-json",
+    "burkeholland.simple-react-snippets",
+    
+    // Firebase Development
+    "toba.vsfire",
+    "firebase.firebase-vscode",
+    
+    // Git & Collaboration
+    "eamodio.gitlens",
+    "github.vscode-pull-request-github",
+    "ms-vscode.vscode-github-issue-notebooks",
+    
+    // Code Quality & Productivity
+    "streetsidesoftware.code-spell-checker",
+    "usernamehw.errorlens",
+    "ms-vscode.vscode-todo-highlight",
+    "aaron-bond.better-comments",
+    "gruntfuggly.todo-tree",
+    
+    // UI/UX Development
+    "bradlc.vscode-tailwindcss",
+    "steoates.autoimport-es6-ts",
+    "christian-kohler.npm-intellisense",
+    
+    // Debugging & Testing
+    "ms-vscode.vscode-jest",
+    "orta.vscode-jest",
+    
+    // Theme & Icons (Optional)
+    "pkief.material-icon-theme",
+    "zhuangtongfa.material-theme",
+    
+    // Environment Management
+    "mikestead.dotenv",
+    "ms-vscode.vscode-dotenv-syntax",
+    
+    // Additional Productivity
+    "ms-vscode.vscode-typescript-tslint-plugin",
+    "ms-vscode.references-view",
+    "ms-vsliveshare.vsliveshare"
+  ],
+  "unwantedRecommendations": [
+    "ms-vscode.vscode-typescript",
+    "hookyqr.beautify",
+    "ms-vscode.vscode-json"
+  ]
+}

@@ -1,0 +1,213 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "🚀 Next.js Development Server",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/node_modules/next/dist/bin/next",
+      "args": ["dev", "--turbopack"],
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "NODE_ENV": "development"
+      },
+      "console": "integratedTerminal",
+      "serverReadyAction": {
+        "pattern": "- Local:.*http://localhost:([0-9]+)",
+        "uriFormat": "http://localhost:%s",
+        "action": "openExternally"
+      },
+      "presentation": {
+        "group": "🌐 Web Development",
+        "order": 1
+      }
+    },
+    {
+      "name": "🔥 Next.js + Firebase Emulators",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/node_modules/next/dist/bin/next",
+      "args": ["dev", "--turbopack"],
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "NODE_ENV": "development",
+        "NEXT_PUBLIC_USE_FIREBASE_EMULATOR": "true"
+      },
+      "console": "integratedTerminal",
+      "preLaunchTask": "🔥 Start Firebase Emulators",
+      "serverReadyAction": {
+        "pattern": "- Local:.*http://localhost:([0-9]+)",
+        "uriFormat": "http://localhost:%s",
+        "action": "openExternally"
+      },
+      "presentation": {
+        "group": "🌐 Web Development",
+        "order": 2
+      }
+    },
+    {
+      "name": "🔧 Next.js Development (Debug Mode)",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/node_modules/next/dist/bin/next",
+      "args": ["dev", "--turbopack"],
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "NODE_ENV": "development",
+        "DEBUG": "*"
+      },
+      "console": "integratedTerminal",
+      "serverReadyAction": {
+        "pattern": "- Local:.*http://localhost:([0-9]+)",
+        "uriFormat": "http://localhost:%s",
+        "action": "openExternally"
+      },
+      "presentation": {
+        "group": "🌐 Web Development",
+        "order": 3
+      }
+    },
+    {
+      "name": "🎭 Playwright Test Runner",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/node_modules/.bin/playwright",
+      "args": ["test", "--ui"],
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "NODE_ENV": "test"
+      },
+      "console": "integratedTerminal",
+      "presentation": {
+        "group": "🧪 Testing",
+        "order": 1
+      }
+    },
+    {
+      "name": "🎭 Playwright Test (Headed)",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/node_modules/.bin/playwright",
+      "args": ["test", "--headed"],
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "NODE_ENV": "test"
+      },
+      "console": "integratedTerminal",
+      "presentation": {
+        "group": "🧪 Testing",
+        "order": 2
+      }
+    },
+    {
+      "name": "🎭 Playwright Test (Debug)",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/node_modules/.bin/playwright",
+      "args": ["test", "--debug"],
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "NODE_ENV": "test"
+      },
+      "console": "integratedTerminal",
+      "presentation": {
+        "group": "🧪 Testing",
+        "order": 3
+      }
+    },
+    {
+      "name": "🎭 Playwright Test (MCP Integration)",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/node_modules/.bin/playwright",
+      "args": ["test", "--project=chromium", "--grep=@mcp"],
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "NODE_ENV": "test",
+        "PLAYWRIGHT_MCP_ENABLED": "true"
+      },
+      "console": "integratedTerminal",
+      "presentation": {
+        "group": "🧪 Testing",
+        "order": 4
+      }
+    },
+    {
+      "name": "🏗️ Next.js Build",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/node_modules/next/dist/bin/next",
+      "args": ["build", "--turbopack"],
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "NODE_ENV": "production"
+      },
+      "console": "integratedTerminal",
+      "presentation": {
+        "group": "🚀 Build & Deploy",
+        "order": 1
+      }
+    },
+    {
+      "name": "🚀 Next.js Production Preview",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/node_modules/next/dist/bin/next",
+      "args": ["start"],
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "NODE_ENV": "production",
+        "NEXT_PUBLIC_ENV": "production"
+      },
+      "console": "integratedTerminal",
+      "serverReadyAction": {
+        "pattern": "- Local:.*http://localhost:([0-9]+)",
+        "uriFormat": "http://localhost:%s",
+        "action": "openExternally"
+      },
+      "presentation": {
+        "group": "🚀 Build & Deploy",
+        "order": 2
+      }
+    },
+    {
+      "name": "🔄 Attach to Next.js Process",
+      "type": "node",
+      "request": "attach",
+      "port": 9229,
+      "skipFiles": [
+        "<node_internals>/**",
+        "**/node_modules/**"
+      ],
+      "presentation": {
+        "group": "🔧 Debug",
+        "order": 1
+      }
+    }
+  ],
+  "compounds": [
+    {
+      "name": "🔥 Full Stack Development (Next.js + Firebase)",
+      "configurations": [
+        "🔥 Next.js + Firebase Emulators"
+      ],
+      "presentation": {
+        "group": "🔥 Full Stack",
+        "order": 1
+      },
+      "stopAll": true
+    },
+    {
+      "name": "🎭 Testing Environment (Development + Playwright)",
+      "configurations": [
+        "🚀 Next.js Development Server",
+        "🎭 Playwright Test (Debug)"
+      ],
+      "presentation": {
+        "group": "🎭 Testing Suite",
+        "order": 1
+      },
+      "stopAll": true
+    }
+  ]
+}

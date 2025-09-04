@@ -1,0 +1,124 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions for authentication and authorization
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.type == 'admin' &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isActive == true;
+    }
+    
+    function isViewer() {
+      return isAuthenticated() && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.type in ['admin', 'viewer'] &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isActive == true;
+    }
+    
+    function isUserActive() {
+      return isAuthenticated() && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isActive == true;
+    }
+    
+    function isOwnerOrAdmin(userId) {
+      return isAuthenticated() && (
+        request.auth.uid == userId || isAdmin()
+      );
+    }
+    
+    function hasBusinessAccess(businessId) {
+      return isAuthenticated() &&
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.businessId == businessId &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isActive == true;
+    }
+    
+    function isBusinessAuthorized(businessId) {
+      return isAuthenticated() &&
+             exists(/databases/$(database)/documents/businesses/$(businessId)) &&
+             request.auth.uid in get(/databases/$(database)/documents/businesses/$(businessId)).data.authorizedUsers;
+    }
+    
+    // Users collection - Admin and user management
+    match /users/{userId} {
+      // Users can read their own document, admins can read all
+      allow read: if request.auth.uid == userId || isAdmin();
+      
+      // Users can update their own profile, admins can update any profile
+      allow update: if isOwnerOrAdmin(userId) && 
+                    // Prevent role escalation by non-admins
+                    (isAdmin() || 
+                     (!('role' in request.resource.data.diff(resource.data).affectedKeys()) &&
+                      !('isActive' in request.resource.data.diff(resource.data).affectedKeys())));
+      
+      // Only admins can create new users or delete users
+      allow create, delete: if isAdmin();
+    }
+    
+    // Invitations collection - stores user invitation data
+    match /invitations/{invitationId} {
+      // Only admins can manage invitations
+      allow read, write: if isAdmin();
+    }
+    
+    // Businesses collection - Business entity management
+    match /businesses/{businessId} {
+      // Admins can read all, authorized users can read their business
+      allow read: if isAdmin() || isBusinessAuthorized(businessId);
+      
+      // Only admins can create/update/delete business documents
+      allow create, update, delete: if isAdmin();
+      
+      // Business sub-collections
+      match /clients/{clientId} {
+        // Admins can access all, business users can access their business data
+        allow read, write: if isAdmin() || hasBusinessAccess(businessId) || isBusinessAuthorized(businessId);
+      }
+      
+      match /ingredients/{ingredientId} {
+        // Admins can access all, business users can access their business data
+        allow read, write: if isAdmin() || hasBusinessAccess(businessId) || isBusinessAuthorized(businessId);
+      }
+      
+      match /recipes/{recipeId} {
+        // Admins can access all, business users can access their business data
+        allow read, write: if isAdmin() || hasBusinessAccess(businessId) || isBusinessAuthorized(businessId);
+      }
+      
+      match /vendors/{vendorId} {
+        // Admins can access all, business users can access their business data
+        allow read, write: if isAdmin() || hasBusinessAccess(businessId) || isBusinessAuthorized(businessId);
+      }
+      
+      match /orders/{orderId} {
+        // Admins can access all, business users can access their business data
+        allow read, write: if isAdmin() || hasBusinessAccess(businessId) || isBusinessAuthorized(businessId);
+      }
+      
+      match /reports/{reportId} {
+        // Admins can access all, business users can access their business data
+        allow read, write: if isAdmin() || hasBusinessAccess(businessId) || isBusinessAuthorized(businessId);
+      }
+    }
+    
+    // System collections (admin only)
+    match /system/{document=**} {
+      allow read, write: if isAdmin();
+    }
+    
+    match /audit/{document=**} {
+      allow read, write: if isAdmin();
+    }
+    
+    // Default deny rule
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

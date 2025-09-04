@@ -1,0 +1,197 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "🔥 Web Developer Agent Mode",
+      "type": "shell",
+      "command": "echo",
+      "args": [
+        "🔥 MomentoWeb Specialist Agent Activated\\n",
+        "Stack: Next.js 15 + Firebase v10 + shadcn/ui\\n",
+        "Focus: Full-stack development with Momento Cake branding\\n",
+        "MCP Servers: Context7 (docs) + Sequential (analysis) + Magic (UI)\\n",
+        "Ready for: Authentication, Business Logic, UI Components, Firebase Integration"
+      ],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "shared",
+        "showReuseMessage": false,
+        "clear": true,
+        "group": "🤖 Agent Activation"
+      }
+    },
+    {
+      "label": "🎭 Web Tester Agent Mode",
+      "type": "shell", 
+      "command": "echo",
+      "args": [
+        "🎭 MomentoTest Specialist Agent Activated\\n",
+        "Stack: Playwright MCP + Firebase Testing + Next.js E2E\\n",
+        "Focus: Cross-browser testing with role-based workflows\\n",
+        "MCP Server: Playwright (primary) + Sequential (test orchestration)\\n",
+        "Ready for: E2E Testing, Performance Audits, Accessibility Testing, User Journey Validation"
+      ],
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "shared",
+        "showReuseMessage": false,
+        "clear": true,
+        "group": "🤖 Agent Activation"
+      }
+    },
+    {
+      "label": "🔥 Start Full-Stack Dev Environment",
+      "dependsOrder": "sequence",
+      "dependsOn": [
+        "🔥 Start Firebase Emulators",
+        "🚀 Start Development Server"
+      ],
+      "group": "build",
+      "presentation": {
+        "group": "🔥 Firebase + Web Dev"
+      }
+    },
+    {
+      "label": "🎭 Start Testing Environment",  
+      "dependsOrder": "sequence",
+      "dependsOn": [
+        "🔥 Start Firebase Emulators",
+        "🎭 Install Playwright Browsers"
+      ],
+      "group": "test",
+      "presentation": {
+        "group": "🎭 Testing Environment"
+      }
+    },
+    {
+      "label": "🎭 Install Playwright Browsers",
+      "type": "shell",
+      "command": "npx",
+      "args": ["playwright", "install"],
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false,
+        "group": "🎭 Testing Setup"
+      }
+    },
+    {
+      "label": "🎭 Run E2E Tests (All Browsers)",
+      "type": "npm",
+      "script": "test",
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": true,
+        "group": "🎭 Testing Execution"
+      }
+    },
+    {
+      "label": "🎭 Run E2E Tests (Chrome Only)",
+      "type": "shell",
+      "command": "npx",
+      "args": ["playwright", "test", "--project=chromium"],
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always", 
+        "focus": true,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": true,
+        "group": "🎭 Testing Execution"
+      }
+    },
+    {
+      "label": "🎭 Run E2E Tests (MCP Integration)",
+      "type": "shell",
+      "command": "npx",
+      "args": ["playwright", "test", "--grep", "@mcp"],
+      "group": "test",
+      "env": {
+        "PLAYWRIGHT_MCP_ENABLED": "true"
+      },
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": true,
+        "group": "🎭 MCP Testing"
+      }
+    },
+    {
+      "label": "🔍 Performance Audit",
+      "type": "shell",
+      "command": "npx",
+      "args": ["playwright", "test", "tests/performance/", "--project=chromium"],
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": true,
+        "group": "🔍 Quality Assurance"
+      }
+    },
+    {
+      "label": "♿ Accessibility Audit", 
+      "type": "shell",
+      "command": "npx",
+      "args": ["playwright", "test", "tests/accessibility/", "--project=chromium"],
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": true,
+        "group": "🔍 Quality Assurance"
+      }
+    },
+    {
+      "label": "🔥 Agent: Create Firebase Component",
+      "type": "shell",
+      "command": "code",
+      "args": [
+        "--command", "workbench.action.showCommands",
+        "--args", "Claude: Create Firebase Component with Authentication and Firestore Integration"
+      ],
+      "group": "build",
+      "presentation": {
+        "group": "🔥 Firebase Development"
+      }
+    },
+    {
+      "label": "🎭 Agent: Generate E2E Test Suite",
+      "type": "shell",
+      "command": "code", 
+      "args": [
+        "--command", "workbench.action.showCommands",
+        "--args", "Claude: Generate Playwright E2E Test Suite for Business Workflow"
+      ],
+      "group": "test",
+      "presentation": {
+        "group": "🎭 Test Generation"
+      }
+    }
+  ]
+}

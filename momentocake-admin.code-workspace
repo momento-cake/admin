@@ -1,0 +1,125 @@
+{
+  "folders": [
+    {
+      "name": "🎂 Momento Cake Admin",
+      "path": "."
+    },
+    {
+      "name": "🌐 Website (Reference)",
+      "path": "../website"
+    }
+  ],
+  "settings": {
+    "typescript.preferences.quoteStyle": "single",
+    "javascript.preferences.quoteStyle": "single",
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.fixAll.eslint": "explicit"
+    },
+    "files.associations": {
+      "*.css": "tailwindcss"
+    },
+    "tailwindCSS.includeLanguages": {
+      "typescript": "javascript",
+      "typescriptreact": "javascript"
+    },
+    "tailwindCSS.experimental.classRegex": [
+      ["cva\\(([^)]*)\\)", "[\"'`]([^\"'`]*).*?[\"'`]"],
+      ["cx\\(([^)]*)\\)", "(?:'|\"|`)([^']*)(?:'|\"|`)"]
+    ],
+    "emmet.includeLanguages": {
+      "typescript": "html",
+      "typescriptreact": "html"
+    },
+    "files.exclude": {
+      "**/.git": true,
+      "**/.next": true,
+      "**/node_modules": true,
+      "**/.turbo": true,
+      "**/dist": true,
+      "**/build": true,
+      "**/.DS_Store": true
+    },
+    "search.exclude": {
+      "**/.next": true,
+      "**/.turbo": true,
+      "**/node_modules": true,
+      "**/dist": true,
+      "**/build": true
+    },
+    "typescript.suggest.autoImports": true,
+    "typescript.updateImportsOnFileMove.enabled": "always",
+    "javascript.updateImportsOnFileMove.enabled": "always",
+    "editor.suggestSelection": "first",
+    "editor.tabSize": 2,
+    "editor.insertSpaces": true,
+    "npm.packageManager": "npm",
+    "debug.onTaskErrors": "showErrors",
+    "debug.showBreakpointsInOverviewRuler": true,
+    "debug.showInlineBreakpointCandidates": true,
+    "git.ignoreLimitWarning": true
+  },
+  "extensions": {
+    "recommendations": [
+      "ms-vscode.vscode-typescript-next",
+      "esbenp.prettier-vscode",
+      "dbaeumer.vscode-eslint",
+      "bradlc.vscode-tailwindcss",
+      "dsznajder.es7-react-js-snippets",
+      "firebase.firebase-vscode",
+      "eamodio.gitlens",
+      "streetsidesoftware.code-spell-checker",
+      "usernamehw.errorlens",
+      "pkief.material-icon-theme"
+    ]
+  },
+  "launch": {
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "name": "🚀 Launch Admin Dev Server",
+        "type": "node",
+        "request": "launch",
+        "program": "${workspaceFolder}/node_modules/next/dist/bin/next",
+        "args": ["dev", "--turbopack"],
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "NODE_ENV": "development"
+        },
+        "console": "integratedTerminal",
+        "serverReadyAction": {
+          "pattern": "- Local:.*http://localhost:([0-9]+)",
+          "uriFormat": "http://localhost:%s",
+          "action": "openExternally"
+        }
+      }
+    ]
+  },
+  "tasks": {
+    "version": "2.0.0",
+    "tasks": [
+      {
+        "label": "🚀 Start Dev Server",
+        "type": "npm",
+        "script": "dev",
+        "group": {
+          "kind": "build",
+          "isDefault": true
+        },
+        "presentation": {
+          "group": "development"
+        }
+      },
+      {
+        "label": "🏗️ Build for Production",
+        "type": "npm",
+        "script": "build",
+        "group": "build",
+        "presentation": {
+          "group": "build"
+        }
+      }
+    ]
+  }
+}

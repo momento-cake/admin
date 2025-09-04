@@ -1,0 +1,215 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "🚀 Start Development Server",
+      "type": "npm",
+      "script": "dev",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false,
+        "group": "🌐 Web Development"
+      },
+      "problemMatcher": [
+        "$eslint-stylish"
+      ],
+      "runOptions": {
+        "runOn": "folderOpen"
+      }
+    },
+    {
+      "label": "🔥 Start Firebase Emulators",
+      "type": "shell",
+      "command": "firebase",
+      "args": ["emulators:start", "--only", "auth,firestore,functions"],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false,
+        "group": "🔥 Firebase"
+      },
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "firebase",
+        "pattern": {
+          "regexp": ".*"
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "Starting emulators:",
+          "endsPattern": "All emulators ready!"
+        }
+      }
+    },
+    {
+      "label": "🏗️ Build Production",
+      "type": "npm",
+      "script": "build",
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false,
+        "group": "build"
+      },
+      "problemMatcher": [
+        "$tsc",
+        "$eslint-stylish"
+      ]
+    },
+    {
+      "label": "🧪 Run Tests",
+      "type": "npm",
+      "script": "test",
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false,
+        "group": "test"
+      }
+    },
+    {
+      "label": "🧪 Run Tests (Watch)",
+      "type": "npm",
+      "script": "test:watch",
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false,
+        "group": "test"
+      }
+    },
+    {
+      "label": "🔍 Lint Code",
+      "type": "npm",
+      "script": "lint",
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false,
+        "group": "lint"
+      },
+      "problemMatcher": [
+        "$eslint-stylish"
+      ]
+    },
+    {
+      "label": "🔧 Fix Lint Issues",
+      "type": "npm",
+      "script": "lint:fix",
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false,
+        "group": "lint"
+      }
+    },
+    {
+      "label": "🎨 Format Code",
+      "type": "npm",
+      "script": "format",
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false,
+        "group": "format"
+      }
+    },
+    {
+      "label": "🧹 Clean Build",
+      "type": "shell",
+      "command": "rm -rf .next && rm -rf dist",
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "silent",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false,
+        "group": "clean"
+      }
+    },
+    {
+      "label": "📦 Install Dependencies",
+      "type": "npm",
+      "script": "install",
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false,
+        "group": "install"
+      }
+    },
+    {
+      "label": "🔄 Update Dependencies",
+      "type": "shell",
+      "command": "npm update",
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false,
+        "group": "install"
+      }
+    },
+    {
+      "label": "🚀 Deploy to Firebase",
+      "type": "shell",
+      "command": "npm run build && firebase deploy --only hosting",
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false,
+        "group": "deploy"
+      },
+      "dependsOn": "🏗️ Build Production"
+    }
+  ]
+}
