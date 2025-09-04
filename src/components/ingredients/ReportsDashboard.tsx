@@ -120,27 +120,27 @@ export function ReportsDashboard({ ingredients, recipes }: ReportsDashboardProps
         }
       };
 
-      const filteredIngredients = prepareDataForExport(ingredients, exportOptions);
-      const filteredRecipes = prepareDataForExport(recipes, exportOptions);
+      const filteredIngredients = prepareDataForExport(ingredients as any[], exportOptions);
+      const filteredRecipes = prepareDataForExport(recipes as any[], exportOptions);
 
       switch (format) {
         case 'pdf':
           if (type === 'inventory') {
-            await exportInventoryToPDF(filteredIngredients as Ingredient[], exportOptions);
+            await exportInventoryToPDF(filteredIngredients as unknown as Ingredient[], exportOptions);
           } else if (type === 'recipes') {
-            await exportRecipeCostsToPDF(filteredRecipes as Recipe[], ingredients);
+            await exportRecipeCostsToPDF(filteredRecipes as unknown as Recipe[], ingredients);
           }
           break;
         case 'excel':
           if (type === 'inventory') {
-            await exportInventoryToExcel(filteredIngredients as Ingredient[]);
+            await exportInventoryToExcel(filteredIngredients as unknown as Ingredient[]);
           } else if (type === 'recipes') {
-            await exportRecipesToExcel(filteredRecipes as Recipe[], ingredients);
+            await exportRecipesToExcel(filteredRecipes as unknown as Recipe[], ingredients);
           }
           break;
         case 'csv':
           if (type === 'inventory') {
-            await exportInventoryToCSV(filteredIngredients as Ingredient[]);
+            await exportInventoryToCSV(filteredIngredients as unknown as Ingredient[]);
           }
           break;
       }

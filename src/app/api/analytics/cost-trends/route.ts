@@ -22,11 +22,19 @@ export async function GET(request: NextRequest) {
     );
 
     const priceHistorySnapshot = await getDocs(priceHistoryQuery);
-    const priceHistory = priceHistorySnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-      date: doc.data().date.toDate(),
-    }));
+    const priceHistory = priceHistorySnapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        ingredientId: data.ingredientId,
+        price: data.price,
+        supplierId: data.supplierId,
+        date: data.date.toDate(),
+        changePercentage: data.changePercentage,
+        notes: data.notes,
+        createdBy: data.createdBy,
+      } as PriceHistory;
+    });
 
     // Get all ingredients for cost calculations
     const ingredientsQuery = query(collection(db, 'ingredients'));

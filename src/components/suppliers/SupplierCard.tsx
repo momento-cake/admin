@@ -14,9 +14,10 @@ import { deleteSupplier, formatRating, getRatingColor, formatPhone } from '@/lib
 interface SupplierCardProps {
   supplier: Supplier;
   onDeleted: (id: string) => void;
+  onUpdated?: (updatedSupplier: Supplier) => void;
 }
 
-export function SupplierCard({ supplier, onDeleted }: SupplierCardProps) {
+export function SupplierCard({ supplier, onDeleted, onUpdated }: SupplierCardProps) {
   const router = useRouter();
   const [deleting, setDeleting] = useState(false);
 

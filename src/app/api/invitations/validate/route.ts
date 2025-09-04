@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
     const now = new Date()
     const expiresAt = invitationData.expiresAt instanceof Date 
       ? invitationData.expiresAt 
-      : (invitationData.expiresAt as any).toDate()
+      : (invitationData.expiresAt as unknown as { toDate(): Date }).toDate()
     
     if (now > expiresAt) {
       return NextResponse.json(
