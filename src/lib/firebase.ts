@@ -3,49 +3,56 @@ import { getAuth } from 'firebase/auth'
 import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore'
 import { connectAuthEmulator } from 'firebase/auth'
 
-// Validate Firebase configuration
-const requiredEnvVars = [
-  'NEXT_PUBLIC_FIREBASE_API_KEY',
-  'NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN',
-  'NEXT_PUBLIC_FIREBASE_PROJECT_ID',
-  'NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET',
-  'NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID',
-  'NEXT_PUBLIC_FIREBASE_APP_ID'
-]
+// Determine environment
+const environment = process.env.NEXT_PUBLIC_ENVIRONMENT || 'dev'
+const isProduction = environment === 'prod'
 
-const missingEnvVars = requiredEnvVars.filter(envVar => !process.env[envVar])
-
-if (missingEnvVars.length > 0) {
-  console.error('❌ Missing Firebase environment variables:', missingEnvVars)
-  console.error('Please check your .env.local file and ensure all Firebase variables are set.')
-  
-  // In development, show a helpful message
-  if (process.env.NODE_ENV === 'development') {
-    console.log('\n📝 To fix this:')
-    console.log('1. Copy .env.example to .env.local')
-    console.log('2. Get your Firebase config from: https://console.firebase.google.com/')
-    console.log('3. Replace the placeholder values with your actual Firebase config\n')
+// Environment-specific configuration
+const getFirebaseConfig = () => {
+  if (isProduction) {
+    return {
+      apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY_PROD,
+      authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN_PROD,
+      projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID_PROD,
+      storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET_PROD,
+      messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID_PROD,
+      appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID_PROD,
+    }
+  } else {
+    return {
+      apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+      authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+      projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+      storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+      messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+      appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+      measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
+    }
   }
 }
 
+const firebaseConfig = getFirebaseConfig()
+
+// Validate Firebase configuration
+const requiredKeys = ['apiKey', 'authDomain', 'projectId', 'storageBucket', 'messagingSenderId', 'appId']
+const missingKeys = requiredKeys.filter(key => !firebaseConfig[key as keyof typeof firebaseConfig])
+
+if (missingKeys.length > 0) {
+  console.error(`❌ Missing Firebase configuration for ${environment} environment:`, missingKeys)
+  console.error('Please check your .env.local file and ensure all Firebase variables are set.')
+} else {
+  console.log(`✅ Firebase initialized successfully for ${environment} environment (${firebaseConfig.projectId})`)
+}
+
 // Check if we're using placeholder values
-const hasPlaceholderValues = requiredEnvVars.some(envVar => {
-  const value = process.env[envVar]
-  return value?.includes('your-') || value?.includes('YOUR_')
-})
+const configValues = Object.values(firebaseConfig)
+const hasPlaceholderValues = configValues.some(value => 
+  typeof value === 'string' && (value.includes('your-') || value.includes('YOUR_'))
+)
 
 if (hasPlaceholderValues) {
   console.warn('⚠️ Firebase configuration contains placeholder values')
   console.warn('Please update .env.local with your actual Firebase configuration')
-}
-
-const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY!,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN!,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID!,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET!,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID!,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID!,
 }
 
 // Initialize Firebase

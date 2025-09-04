@@ -38,6 +38,14 @@ jobs:
         run: npm run build
         env:
           NODE_ENV: development
+          NEXT_PUBLIC_ENVIRONMENT: dev
+          NEXT_PUBLIC_FIREBASE_API_KEY: AIzaSyBYeM6XGcyZQqbOJ3paVMactIT12YEaeUc
+          NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: momentocake-dev.firebaseapp.com
+          NEXT_PUBLIC_FIREBASE_PROJECT_ID: momentocake-dev
+          NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: momentocake-dev.firebasestorage.app
+          NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: 14129909413
+          NEXT_PUBLIC_FIREBASE_APP_ID: 1:14129909413:web:7d4e4eaf56ae27c1dc474c
+          NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID: G-ZD8C48YF7L
 
       - name: Setup Firebase CLI
         run: npm install -g firebase-tools
