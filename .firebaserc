@@ -2,6 +2,6 @@
   "projects": {
     "default": "momentocake-admin",
     "prod": "momentocake-admin",
-    "dev": "momentocake-dev"
+    "dev": "momentocake-admin-dev"
   }
 }

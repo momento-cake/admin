@@ -2,6 +2,7 @@ import { initializeApp } from 'firebase/app'
 import { getAuth } from 'firebase/auth'
 import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore'
 import { connectAuthEmulator } from 'firebase/auth'
+import { getStorage, connectStorageEmulator } from 'firebase/storage'
 
 // Determine environment
 const environment = process.env.NEXT_PUBLIC_ENVIRONMENT || 'dev'
@@ -67,6 +68,7 @@ try {
 
 export const auth = getAuth(app)
 export const db = getFirestore(app)
+export const storage = getStorage(app)
 
 // Connect to Firebase emulators in development
 if (process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR === 'true') {
@@ -79,6 +81,11 @@ if (process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_USE_FIREBA
     // Connect to Firestore emulator
     if (!(db as any)._delegate?._databaseId?.projectId?.includes('demo-')) {
       connectFirestoreEmulator(db, 'localhost', 8080)
+    }
+    
+    // Connect to Storage emulator
+    if (!(storage as any)._delegate?._bucket?.includes('demo-')) {
+      connectStorageEmulator(storage, 'localhost', 9199)
     }
     
     console.log('🔧 Connected to Firebase emulators')

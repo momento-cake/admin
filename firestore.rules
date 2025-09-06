@@ -45,10 +45,21 @@ service cloud.firestore {
              request.auth.uid in get(/databases/$(database)/documents/businesses/$(businessId)).data.authorizedUsers;
     }
     
+    // System settings collection - allows unauthenticated read for admin check
+    match /system/settings {
+      // Allow reading system settings to check if admins exist
+      allow read: if true;
+      // Only admins can write system settings
+      allow write: if isAdmin();
+    }
+    
     // Users collection - Admin and user management
     match /users/{userId} {
       // Users can read their own document, admins can read all
-      allow read: if request.auth.uid == userId || isAdmin();
+      // Also allow limited read access to check if any admin users exist (for setup flow)
+      allow read: if request.auth.uid == userId || isAdmin() || 
+                    // Allow reading user role info to check for admin existence
+                    (request.auth == null && 'role' in resource.data && 'type' in resource.data.role);
       
       // Users can update their own profile, admins can update any profile
       allow update: if isOwnerOrAdmin(userId) && 
@@ -58,7 +69,13 @@ service cloud.firestore {
                       !('isActive' in request.resource.data.diff(resource.data).affectedKeys())));
       
       // Only admins can create new users or delete users
-      allow create, delete: if isAdmin();
+      // Also allow creating the first admin user when no admins exist
+      allow create: if isAdmin() || 
+                      (request.auth != null && 
+                       request.resource.data.role.type == 'admin' &&
+                       !exists(/databases/$(database)/documents/system/adminCount));
+      
+      allow delete: if isAdmin();
     }
     
     // Invitations collection - stores user invitation data
