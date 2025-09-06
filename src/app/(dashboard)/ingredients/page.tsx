@@ -1,9 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { IngredientList } from '@/components/ingredients/IngredientList';
 import { IngredientForm } from '@/components/ingredients/IngredientForm';
 import { StockAlerts } from '@/components/ingredients/StockAlerts';
@@ -25,7 +24,8 @@ import { BarChart3, AlertTriangle, Calculator, Package, TrendingUp, DollarSign, 
 
 export default function IngredientsPage() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState('inventory');
+  const searchParams = useSearchParams();
+  const activeTab = searchParams.get('tab') || 'inventory';
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
   const [showStockManager, setShowStockManager] = useState(false);
@@ -114,7 +114,7 @@ export default function IngredientsPage() {
   };
 
   const handleIngredientClickFromAlert = (ingredient: Ingredient) => {
-    setActiveTab('inventory');
+    router.push('/ingredients?tab=inventory');
     // Could scroll to ingredient or highlight it in the list
   };
 
@@ -161,7 +161,7 @@ export default function IngredientsPage() {
 
   const handleIngredientSelect = (ingredient: Ingredient) => {
     setSelectedIngredient(ingredient);
-    setActiveTab('prices'); // Switch to price tracking tab
+    router.push('/ingredients?tab=prices'); // Switch to price tracking tab
   };
 
   return (
@@ -173,47 +173,8 @@ export default function IngredientsPage() {
         </p>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-9">
-          <TabsTrigger value="inventory" className="flex items-center gap-2">
-            <Package className="h-4 w-4" />
-            Inventário
-          </TabsTrigger>
-          <TabsTrigger value="alerts" className="flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4" />
-            Alertas
-          </TabsTrigger>
-          <TabsTrigger value="analytics" className="flex items-center gap-2">
-            <BarChart3 className="h-4 w-4" />
-            Análise
-          </TabsTrigger>
-          <TabsTrigger value="converter" className="flex items-center gap-2">
-            <Calculator className="h-4 w-4" />
-            Conversor
-          </TabsTrigger>
-          <TabsTrigger value="prices" className="flex items-center gap-2">
-            <DollarSign className="h-4 w-4" />
-            Preços
-          </TabsTrigger>
-          <TabsTrigger value="usage" className="flex items-center gap-2">
-            <Activity className="h-4 w-4" />
-            Consumo
-          </TabsTrigger>
-          <TabsTrigger value="recipes" className="flex items-center gap-2">
-            <TrendingUp className="h-4 w-4" />
-            Receitas
-          </TabsTrigger>
-          <TabsTrigger value="reports" className="flex items-center gap-2">
-            <FileBarChart className="h-4 w-4" />
-            Relatórios
-          </TabsTrigger>
-          <TabsTrigger value="advanced" className="flex items-center gap-2">
-            <Settings className="h-4 w-4" />
-            Avançado
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="inventory" className="space-y-4">
+      <div className="space-y-4">
+        {activeTab === 'inventory' && (
           <IngredientList
             onIngredientCreate={handleCreateIngredient}
             onIngredientEdit={handleEditIngredient}
@@ -221,68 +182,70 @@ export default function IngredientsPage() {
             onIngredientDelete={handleDeleteIngredient}
             onIngredientsLoaded={setIngredients}
           />
-        </TabsContent>
+        )}
 
-        <TabsContent value="alerts" className="space-y-4">
+        {activeTab === 'alerts' && (
           <StockAlerts onIngredientClick={handleIngredientClickFromAlert} />
-        </TabsContent>
+        )}
 
-        <TabsContent value="analytics" className="space-y-4">
+        {activeTab === 'analytics' && (
           <StockAnalytics onIngredientClick={handleIngredientClickFromAnalytics} />
-        </TabsContent>
+        )}
 
-        <TabsContent value="converter" className="space-y-4">
+        {activeTab === 'converter' && (
           <UnitConverter />
-        </TabsContent>
+        )}
 
-        <TabsContent value="prices" className="space-y-4">
-          {selectedIngredient ? (
-            <PriceTracker 
-              ingredient={selectedIngredient} 
-              suppliers={suppliers.map(s => ({ ...s, contactPerson: '', phone: '', email: '', address: '', rating: 5, categories: [], isActive: true, createdAt: new Date() }))}
-              onPriceUpdate={onIngredientUpdate}
-            />
-          ) : (
-            <div className="text-center py-12">
-              <DollarSign className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-              <h3 className="text-lg font-medium mb-2">Rastreamento de Preços</h3>
-              <p className="text-muted-foreground">
-                Selecione um ingrediente na aba &quot;Inventário&quot; para visualizar seu histórico de preços.
-              </p>
-            </div>
-          )}
-        </TabsContent>
+        {activeTab === 'prices' && (
+          <>
+            {selectedIngredient ? (
+              <PriceTracker 
+                ingredient={selectedIngredient} 
+                suppliers={suppliers.map(s => ({ ...s, contactPerson: '', phone: '', email: '', address: '', rating: 5, categories: [], isActive: true, createdAt: new Date() }))}
+                onPriceUpdate={onIngredientUpdate}
+              />
+            ) : (
+              <div className="text-center py-12">
+                <DollarSign className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                <h3 className="text-lg font-medium mb-2">Rastreamento de Preços</h3>
+                <p className="text-muted-foreground">
+                  Selecione um ingrediente na seção &quot;Inventário&quot; para visualizar seu histórico de preços.
+                </p>
+              </div>
+            )}
+          </>
+        )}
 
-        <TabsContent value="usage" className="space-y-4">
+        {activeTab === 'usage' && (
           <UsageAnalytics 
             ingredients={ingredients} 
             onIngredientClick={handleIngredientClickFromAnalytics}
           />
-        </TabsContent>
+        )}
 
-        <TabsContent value="recipes" className="space-y-4">
+        {activeTab === 'recipes' && (
           <RecipeIntegration 
             ingredients={ingredients}
             selectedIngredientId={selectedIngredient?.id}
             onRecipeClick={(recipe) => router.push(`/recipes/${recipe.id}`)}
           />
-        </TabsContent>
+        )}
 
-        <TabsContent value="reports" className="space-y-4">
+        {activeTab === 'reports' && (
           <ReportsDashboard 
             ingredients={ingredients}
             recipes={recipes}
           />
-        </TabsContent>
+        )}
 
-        <TabsContent value="advanced" className="space-y-4">
+        {activeTab === 'advanced' && (
           <AdvancedFeatures 
             ingredients={ingredients}
             onIngredientUpdate={onIngredientUpdate}
             onBatchComplete={loadSuppliers}
           />
-        </TabsContent>
-      </Tabs>
+        )}
+      </div>
 
       {/* Create Ingredient Dialog */}
       <Dialog open={showCreateForm} onOpenChange={setShowCreateForm}>

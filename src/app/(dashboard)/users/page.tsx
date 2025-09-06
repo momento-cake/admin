@@ -1,9 +1,9 @@
 'use client'
 
 import { useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { UserPlus } from 'lucide-react'
 import { InviteUserDialog } from '@/components/users/InviteUserDialog'
 import { InvitationsList } from '@/components/users/InvitationsList'
@@ -11,6 +11,8 @@ import { UsersList } from '@/components/users/UsersList'
 
 export default function UsersPage() {
   const [showInviteDialog, setShowInviteDialog] = useState(false)
+  const searchParams = useSearchParams()
+  const activeTab = searchParams.get('tab') || 'users'
 
   return (
     <div className="space-y-6">
@@ -27,13 +29,8 @@ export default function UsersPage() {
         </Button>
       </div>
 
-      <Tabs defaultValue="users" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="users">Usuários Ativos</TabsTrigger>
-          <TabsTrigger value="invitations">Convites</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="users">
+      <div className="space-y-4">
+        {activeTab === 'users' && (
           <Card>
             <CardHeader>
               <CardTitle>Usuários do Sistema</CardTitle>
@@ -45,9 +42,9 @@ export default function UsersPage() {
               <UsersList />
             </CardContent>
           </Card>
-        </TabsContent>
+        )}
         
-        <TabsContent value="invitations">
+        {activeTab === 'invitations' && (
           <Card>
             <CardHeader>
               <CardTitle>Convites Enviados</CardTitle>
@@ -59,8 +56,8 @@ export default function UsersPage() {
               <InvitationsList />
             </CardContent>
           </Card>
-        </TabsContent>
-      </Tabs>
+        )}
+      </div>
 
       <InviteUserDialog 
         open={showInviteDialog}
