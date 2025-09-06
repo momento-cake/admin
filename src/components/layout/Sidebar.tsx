@@ -14,7 +14,8 @@ import {
   Settings,
   LogOut,
   Home,
-  Truck
+  Truck,
+  User
 } from 'lucide-react'
 
 const navigation = [
@@ -65,6 +66,12 @@ const navigation = [
     href: '/settings',
     icon: Settings,
     roles: ['admin']
+  },
+  {
+    name: 'Meu Perfil',
+    href: '/profile',
+    icon: User,
+    roles: ['admin', 'viewer']
   }
 ]
 
