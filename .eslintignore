@@ -1,0 +1,6 @@
+temp-test-files/
+scripts/
+tests/
+playwright-report*
+*.config.ts
+*.config.js
