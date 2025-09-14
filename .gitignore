@@ -53,3 +53,32 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# playwright test outputs
+/test-results/
+/playwright-report/
+playwright-report/
+test-results/
+
+# screenshots and test artifacts
+/screenshots/
+screenshots/
+*.png
+*.jpg
+*.jpeg
+*.webm
+*.mp4
+*.trace.zip
+
+# test scripts (keep only essential tests)
+tests/*-manual-*.spec.ts
+tests/*-debug*.spec.ts
+tests/*-exploration*.spec.ts
+tests/*-validation*.spec.ts
+tests/*-comprehensive*.spec.ts
+tests/*-diagnostic*.spec.ts
+
+# development artifacts
+/scripts/
+/verification/
+*.md.backup
