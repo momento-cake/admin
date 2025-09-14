@@ -7,16 +7,26 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { EmptyState } from '@/components/ui/empty-state';
-import { IngredientCard, IngredientCardCompact } from './IngredientCard';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { 
   Ingredient, 
   IngredientCategory, 
   IngredientFilters,
   StockStatus 
 } from '@/types/ingredient';
-import { fetchIngredients } from '@/lib/ingredients';
+import { 
+  fetchIngredients, 
+  getStockStatus, 
+  getStockStatusText, 
+  formatPrice, 
+  formatStock,
+  formatMeasurement,
+  getUnitDisplayName
+} from '@/lib/ingredients';
 import { fetchSuppliers } from '@/lib/suppliers';
-import { Search, Filter, Grid, List, Plus, Package, Loader2 } from 'lucide-react';
+import { Search, Plus, Package, RefreshCw, Eye, Edit, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface IngredientListProps {
@@ -25,10 +35,10 @@ interface IngredientListProps {
   onIngredientView?: (ingredient: Ingredient) => void;
   onIngredientCreate?: () => void;
   onIngredientsLoaded?: (ingredients: Ingredient[]) => void;
+  onRefresh?: () => void;
   className?: string;
 }
 
-type ViewMode = 'grid' | 'list';
 
 export function IngredientList({
   onIngredientEdit,
@@ -36,13 +46,15 @@ export function IngredientList({
   onIngredientView,
   onIngredientCreate,
   onIngredientsLoaded,
+  onRefresh,
   className
 }: IngredientListProps) {
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  const [error, setError] = useState<string | null>(null);
   const [searchInput, setSearchInput] = useState('');
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [filters, setFilters] = useState<IngredientFilters>({
     searchQuery: '',
     category: undefined,
@@ -56,9 +68,9 @@ export function IngredientList({
   const loadIngredients = async () => {
     try {
       setLoading(true);
-      const response = await fetchIngredients(filters);
-      const loadedIngredients = response.ingredients || [];
+      const loadedIngredients = await fetchIngredients(filters);
       setIngredients(loadedIngredients);
+      setError(null);
       
       // Notify parent component
       if (onIngredientsLoaded) {
@@ -66,6 +78,7 @@ export function IngredientList({
       }
     } catch (error) {
       console.error('Error loading ingredients:', error);
+      setError(error instanceof Error ? error.message : 'Erro interno do servidor');
       setIngredients([]);
     } finally {
       setLoading(false);
@@ -167,12 +180,18 @@ export function IngredientList({
 
   if (loading) {
     return (
-      <div className={cn('space-y-6', className)}>
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          <span className="ml-2 text-muted-foreground">Carregando ingredientes...</span>
-        </div>
+      <div className="flex items-center justify-center p-8">
+        <RefreshCw className="h-6 w-6 animate-spin mr-2" />
+        <span>Carregando ingredientes...</span>
       </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <Alert variant="destructive">
+        <AlertDescription>{error}</AlertDescription>
+      </Alert>
     );
   }
 
@@ -192,40 +211,19 @@ export function IngredientList({
             />
           </div>
           
-          <div className="flex gap-2">
-            <div className="flex border rounded-lg">
-              <Button
-                variant={viewMode === 'grid' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setViewMode('grid')}
-                className="border-0 rounded-r-none"
-              >
-                <Grid className="h-4 w-4" />
-              </Button>
-              <Button
-                variant={viewMode === 'list' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setViewMode('list')}
-                className="border-0 rounded-l-none"
-              >
-                <List className="h-4 w-4" />
-              </Button>
-            </div>
-
-            {onIngredientCreate && (
-              <Button onClick={onIngredientCreate}>
-                <Plus className="h-4 w-4 mr-2" />
-                Adicionar
-              </Button>
-            )}
-          </div>
+          {onIngredientCreate && (
+            <Button onClick={onIngredientCreate}>
+              <Plus className="h-4 w-4 mr-2" />
+              Adicionar
+            </Button>
+          )}
         </div>
 
         {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Select value={filters.category || 'all'} onValueChange={handleCategoryChange}>
-              <SelectTrigger>
+              <SelectTrigger className="w-auto min-w-32">
                 <SelectValue placeholder="Categoria" />
               </SelectTrigger>
               <SelectContent>
@@ -239,7 +237,7 @@ export function IngredientList({
             </Select>
 
             <Select value={filters.supplierId || 'all'} onValueChange={handleSupplierChange}>
-              <SelectTrigger>
+              <SelectTrigger className="w-auto min-w-32">
                 <SelectValue placeholder="Fornecedor" />
               </SelectTrigger>
               <SelectContent>
@@ -253,7 +251,7 @@ export function IngredientList({
             </Select>
 
             <Select value={filters.stockStatus || 'all'} onValueChange={handleStockStatusChange}>
-              <SelectTrigger>
+              <SelectTrigger className="w-auto min-w-32">
                 <SelectValue placeholder="Status do estoque" />
               </SelectTrigger>
               <SelectContent>
@@ -264,13 +262,12 @@ export function IngredientList({
                 <SelectItem value="out">Sem estoque</SelectItem>
               </SelectContent>
             </Select>
+            {hasActiveFilters && (
+              <Button variant="outline" onClick={clearFilters} className="ml-2">
+                Limpar filtros
+              </Button>
+            )}
           </div>
-
-          {hasActiveFilters && (
-            <Button variant="outline" onClick={clearFilters}>
-              Limpar filtros
-            </Button>
-          )}
         </div>
 
         {/* Active Filters Display */}
@@ -317,37 +314,152 @@ export function IngredientList({
         />
       ) : (
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex justify-between items-center">
             <p className="text-sm text-muted-foreground">
-              {ingredients.length} {ingredients.length === 1 ? 'ingrediente' : 'ingredientes'}
+              {ingredients.length} ingrediente{ingredients.length !== 1 ? 's' : ''} encontrado{ingredients.length !== 1 ? 's' : ''}
             </p>
+            {onRefresh && (
+              <Button variant="outline" size="sm" onClick={onRefresh}>
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Atualizar
+              </Button>
+            )}
           </div>
 
-          {viewMode === 'grid' ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {ingredients.map((ingredient) => (
-                <IngredientCard
-                  key={ingredient.id}
-                  ingredient={ingredient}
-                  onEdit={onIngredientEdit}
-                  onDelete={onIngredientDelete}
-                  onView={onIngredientView}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {ingredients.map((ingredient) => (
-                <IngredientCardCompact
-                  key={ingredient.id}
-                  ingredient={ingredient}
-                  onEdit={onIngredientEdit}
-                  onDelete={onIngredientDelete}
-                  onView={onIngredientView}
-                />
-              ))}
-            </div>
-          )}
+          <div className="border rounded-md">
+            <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Ingrediente</TableHead>
+                      <TableHead>Medida</TableHead>
+                      <TableHead>Categoria</TableHead>
+                      <TableHead>Estoque</TableHead>
+                      <TableHead>Preço</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {ingredients.map((ingredient) => {
+                      const stockStatus = getStockStatus(ingredient.currentStock, ingredient.minStock);
+                      return (
+                        <TableRow key={ingredient.id} className="hover:bg-muted/50">
+                          <TableCell>
+                            <div>
+                              <div className="font-medium">
+                                {ingredient.name}
+                                {ingredient.brand && <span className="text-muted-foreground"> - {ingredient.brand}</span>}
+                              </div>
+                              {ingredient.description && (
+                                <div className="text-sm text-muted-foreground truncate max-w-[200px]">
+                                  {ingredient.description}
+                                </div>
+                              )}
+                            </div>
+                          </TableCell>
+                          
+                          <TableCell>
+                            <div className="text-sm">
+                              {formatMeasurement(ingredient.measurementValue, ingredient.unit)}
+                            </div>
+                          </TableCell>
+                          
+                          <TableCell>
+                            <Badge variant="outline" className="text-xs">
+                              {getCategoryName(ingredient.category)}
+                            </Badge>
+                          </TableCell>
+                          
+                          <TableCell>
+                            <div className="space-y-1">
+                              <div className="text-sm font-medium">
+                                {formatStock(ingredient.currentStock)}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                Mín: {formatStock(ingredient.minStock)}
+                              </div>
+                            </div>
+                          </TableCell>
+                          
+                          <TableCell>
+                            <div className="text-sm font-medium">
+                              {formatPrice(ingredient.currentPrice)}
+                            </div>
+                          </TableCell>
+                          
+                          <TableCell>
+                            <Badge 
+                              variant={stockStatus === 'good' ? 'default' : stockStatus === 'out' ? 'destructive' : 'secondary'}
+                              className={cn(
+                                'text-xs',
+                                stockStatus === 'low' && 'bg-yellow-100 text-yellow-800 hover:bg-yellow-100',
+                                stockStatus === 'critical' && 'bg-orange-100 text-orange-800 hover:bg-orange-100'
+                              )}
+                            >
+                              {getStockStatusText(stockStatus)}
+                            </Badge>
+                          </TableCell>
+                          
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              {onIngredientView && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => onIngredientView(ingredient)}
+                                >
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                              )}
+                              {onIngredientEdit && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => onIngredientEdit(ingredient)}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                              )}
+                              {onIngredientDelete && (
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <Button variant="ghost" size="sm">
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        Tem certeza de que deseja excluir o ingrediente "{ingredient.name}"? 
+                                        Esta ação não pode ser desfeita.
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                      <AlertDialogAction
+                                        onClick={() => {
+                                          setDeletingId(ingredient.id);
+                                          onIngredientDelete(ingredient);
+                                          setDeletingId(null);
+                                        }}
+                                        disabled={deletingId === ingredient.id}
+                                        className="bg-destructive hover:bg-destructive/90"
+                                      >
+                                        {deletingId === ingredient.id ? 'Excluindo...' : 'Excluir'}
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+            </Table>
+          </div>
         </div>
       )}
     </div>

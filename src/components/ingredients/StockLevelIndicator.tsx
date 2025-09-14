@@ -41,10 +41,10 @@ export function StockLevelIndicator({
       
       {showNumbers && (
         <span className="text-sm text-muted-foreground">
-          {formatStock(currentStock, unit)}
+          {formatStock(currentStock)}
           {minStock > 0 && (
             <span className="text-xs">
-              {' '}(mín: {formatStock(minStock, unit)})
+              {' '}(mín: {formatStock(minStock)})
             </span>
           )}
         </span>

@@ -4,8 +4,8 @@
     "rootDir": "/Users/gabrielaraujo/projects/momentocake/admin/tests",
     "forbidOnly": false,
     "fullyParallel": true,
-    "globalSetup": null,
-    "globalTeardown": null,
+    "globalSetup": "/Users/gabrielaraujo/projects/momentocake/admin/tests/global-setup.ts",
+    "globalTeardown": "/Users/gabrielaraujo/projects/momentocake/admin/tests/global-teardown.ts",
     "globalTimeout": 0,
     "grep": {},
     "grepInvert": null,
@@ -52,7 +52,7 @@
         "testMatch": [
           "**/*.@(spec|test).?(c|m)[jt]s?(x)"
         ],
-        "timeout": 60000
+        "timeout": 30000
       },
       {
         "outputDir": "/Users/gabrielaraujo/projects/momentocake/admin/test-results",
@@ -68,7 +68,7 @@
         "testMatch": [
           "**/*.@(spec|test).?(c|m)[jt]s?(x)"
         ],
-        "timeout": 60000
+        "timeout": 30000
       },
       {
         "outputDir": "/Users/gabrielaraujo/projects/momentocake/admin/test-results",
@@ -84,7 +84,7 @@
         "testMatch": [
           "**/*.@(spec|test).?(c|m)[jt]s?(x)"
         ],
-        "timeout": 60000
+        "timeout": 30000
       },
       {
         "outputDir": "/Users/gabrielaraujo/projects/momentocake/admin/test-results",
@@ -100,7 +100,7 @@
         "testMatch": [
           "**/*.@(spec|test).?(c|m)[jt]s?(x)"
         ],
-        "timeout": 60000
+        "timeout": 30000
       },
       {
         "outputDir": "/Users/gabrielaraujo/projects/momentocake/admin/test-results",
@@ -116,7 +116,7 @@
         "testMatch": [
           "**/*.@(spec|test).?(c|m)[jt]s?(x)"
         ],
-        "timeout": 60000
+        "timeout": 30000
       },
       {
         "outputDir": "/Users/gabrielaraujo/projects/momentocake/admin/test-results",
@@ -132,7 +132,7 @@
         "testMatch": [
           "**/*.@(spec|test).?(c|m)[jt]s?(x)"
         ],
-        "timeout": 60000
+        "timeout": 30000
       }
     ],
     "shard": null,
@@ -149,217 +149,179 @@
   },
   "suites": [
     {
-      "title": "focused-admin-user-management.spec.ts",
-      "file": "focused-admin-user-management.spec.ts",
+      "title": "recipes-final-validation.spec.ts",
+      "file": "recipes-final-validation.spec.ts",
       "column": 0,
       "line": 0,
-      "specs": [
+      "specs": [],
+      "suites": [
         {
-          "title": "Admin User Management and Invitation Test",
-          "ok": false,
-          "tags": [],
-          "tests": [
+          "title": "Momento Cake Admin - Final Recipe Validation",
+          "file": "recipes-final-validation.spec.ts",
+          "line": 10,
+          "column": 6,
+          "specs": [
             {
-              "timeout": 60000,
-              "annotations": [],
-              "expectedStatus": "passed",
-              "projectId": "chromium",
-              "projectName": "chromium",
-              "results": [
+              "title": "Complete Recipe System End-to-End Validation",
+              "ok": false,
+              "tags": [],
+              "tests": [
                 {
-                  "workerIndex": 0,
-                  "parallelIndex": 0,
-                  "status": "failed",
-                  "duration": 7071,
-                  "error": {
-                    "message": "Error: page.evaluate: SyntaxError: Failed to execute 'querySelectorAll' on 'Document': 'button[type=\"submit\"], button:has-text(\"Convidar\"), button:has-text(\"Send\")' is not a valid selector.\n    at eval (eval at evaluate (:291:30), <anonymous>:5:42)\n    at UtilityScript.evaluate (<anonymous>:293:16)\n    at UtilityScript.<anonymous> (<anonymous>:1:44)",
-                    "stack": "Error: page.evaluate: SyntaxError: Failed to execute 'querySelectorAll' on 'Document': 'button[type=\"submit\"], button:has-text(\"Convidar\"), button:has-text(\"Send\")' is not a valid selector.\n    at eval (eval at evaluate (:291:30), <anonymous>:5:42)\n    at UtilityScript.evaluate (<anonymous>:293:16)\n    at UtilityScript.<anonymous> (<anonymous>:1:44)\n    at eval (eval at evaluate (:291:30), <anonymous>:5:42)\n    at UtilityScript.evaluate (<anonymous>:293:16)\n    at UtilityScript.<anonymous> (<anonymous>:1:44)\n    at /Users/gabrielaraujo/projects/momentocake/admin/tests/focused-admin-user-management.spec.ts:119:41",
-                    "location": {
-                      "file": "eval at evaluate (:291:30), <anonymous>",
-                      "column": 42,
-                      "line": 5
-                    }
-                  },
-                  "errors": [
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
                     {
-                      "location": {
-                        "file": "eval at evaluate (:291:30), <anonymous>",
-                        "column": 42,
-                        "line": 5
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 10968,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m()\u001b[22m failed\n\nLocator:  locator('text=Sistema de Receitas')\nExpected: visible\nReceived: <element(s) not found>\nTimeout:  5000ms\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('text=Sistema de Receitas')\u001b[22m\n",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m()\u001b[22m failed\n\nLocator:  locator('text=Sistema de Receitas')\nExpected: visible\nReceived: <element(s) not found>\nTimeout:  5000ms\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('text=Sistema de Receitas')\u001b[22m\n\n    at /Users/gabrielaraujo/projects/momentocake/admin/tests/recipes-final-validation.spec.ts:35:60",
+                        "location": {
+                          "file": "/Users/gabrielaraujo/projects/momentocake/admin/tests/recipes-final-validation.spec.ts",
+                          "column": 60,
+                          "line": 35
+                        },
+                        "snippet": "  33 |     \n  34 |     // Verify we're on the correct recipe page\n> 35 |     await expect(page.locator('text=Sistema de Receitas')).toBeVisible();\n     |                                                            ^\n  36 |     await expect(page.locator('text=Catálogo de Receitas')).toBeVisible();\n  37 |     console.log('✅ Recipe system accessed successfully');\n  38 |     "
                       },
-                      "message": "Error: page.evaluate: SyntaxError: Failed to execute 'querySelectorAll' on 'Document': 'button[type=\"submit\"], button:has-text(\"Convidar\"), button:has-text(\"Send\")' is not a valid selector.\n    at eval (eval at evaluate (:291:30), <anonymous>:5:42)\n    at UtilityScript.evaluate (<anonymous>:293:16)\n    at UtilityScript.<anonymous> (<anonymous>:1:44)\n    at eval (eval at evaluate (:291:30), <anonymous>:5:42)\n    at UtilityScript.evaluate (<anonymous>:293:16)\n    at UtilityScript.<anonymous> (<anonymous>:1:44)\n    at /Users/gabrielaraujo/projects/momentocake/admin/tests/focused-admin-user-management.spec.ts:119:41"
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/Users/gabrielaraujo/projects/momentocake/admin/tests/recipes-final-validation.spec.ts",
+                            "column": 60,
+                            "line": 35
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m()\u001b[22m failed\n\nLocator:  locator('text=Sistema de Receitas')\nExpected: visible\nReceived: <element(s) not found>\nTimeout:  5000ms\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('text=Sistema de Receitas')\u001b[22m\n\n\n  33 |     \n  34 |     // Verify we're on the correct recipe page\n> 35 |     await expect(page.locator('text=Sistema de Receitas')).toBeVisible();\n     |                                                            ^\n  36 |     await expect(page.locator('text=Catálogo de Receitas')).toBeVisible();\n  37 |     console.log('✅ Recipe system accessed successfully');\n  38 |     \n    at /Users/gabrielaraujo/projects/momentocake/admin/tests/recipes-final-validation.spec.ts:35:60"
+                        }
+                      ],
+                      "stdout": [
+                        {
+                          "text": "🔥 FINAL COMPREHENSIVE RECIPE VALIDATION\n"
+                        },
+                        {
+                          "text": "Step 1: Authentication...\n"
+                        },
+                        {
+                          "text": "✅ Authentication successful\n"
+                        },
+                        {
+                          "text": "Step 2: Accessing recipe system...\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-12T13:14:37.572Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/Users/gabrielaraujo/projects/momentocake/admin/test-results/recipes-final-validation-M-58298-ystem-End-to-End-Validation-chromium/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/Users/gabrielaraujo/projects/momentocake/admin/test-results/recipes-final-validation-M-58298-ystem-End-to-End-Validation-chromium/video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/Users/gabrielaraujo/projects/momentocake/admin/test-results/recipes-final-validation-M-58298-ystem-End-to-End-Validation-chromium/error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/Users/gabrielaraujo/projects/momentocake/admin/tests/recipes-final-validation.spec.ts",
+                        "column": 60,
+                        "line": 35
+                      }
                     }
                   ],
-                  "stdout": [
-                    {
-                      "text": "🎯 Focused test: Admin User Management and Invitations\n"
-                    },
-                    {
-                      "text": "🔐 Logging in as admin...\n"
-                    },
-                    {
-                      "text": "📸 Admin logged in screenshot saved\n"
-                    },
-                    {
-                      "text": "👥 Clicking on Users section...\n"
-                    },
-                    {
-                      "text": "✅ Clicked on Users section\n"
-                    },
-                    {
-                      "text": "📸 Users section screenshot saved\n"
-                    },
-                    {
-                      "text": "📊 Users Page Analysis:\n"
-                    },
-                    {
-                      "text": "   URL: https://momentocake-admin-dev.web.app/users/\n"
-                    },
-                    {
-                      "text": "   Has invite button: true\n"
-                    },
-                    {
-                      "text": "   Has user table: true\n"
-                    },
-                    {
-                      "text": "   Has invite keywords: true\n"
-                    },
-                    {
-                      "text": "   Tables found: 1\n"
-                    },
-                    {
-                      "text": "   Buttons found: 4\n"
-                    },
-                    {
-                      "text": "🔘 Available Buttons:\n"
-                    },
-                    {
-                      "text": "   1. \"Convidar Usuário\"\n"
-                    },
-                    {
-                      "text": "   2. \"Usuários Ativos\"\n"
-                    },
-                    {
-                      "text": "   3. \"Convites\"\n"
-                    },
-                    {
-                      "text": "   4. \"Atualizar\"\n"
-                    },
-                    {
-                      "text": "🎯 Found invite button: button:has-text(\"Convidar\")\n"
-                    },
-                    {
-                      "text": "✅ Clicked invite button\n"
-                    },
-                    {
-                      "text": "📸 Invite form opened screenshot saved\n"
-                    }
-                  ],
-                  "stderr": [],
-                  "retry": 0,
-                  "startTime": "2025-09-06T14:24:53.246Z",
-                  "annotations": [],
-                  "attachments": [
-                    {
-                      "name": "screenshot",
-                      "contentType": "image/png",
-                      "path": "/Users/gabrielaraujo/projects/momentocake/admin/test-results/focused-admin-user-managem-6a1e1-agement-and-Invitation-Test-chromium/test-failed-1.png"
-                    },
-                    {
-                      "name": "video",
-                      "contentType": "video/webm",
-                      "path": "/Users/gabrielaraujo/projects/momentocake/admin/test-results/focused-admin-user-managem-6a1e1-agement-and-Invitation-Test-chromium/video.webm"
-                    },
-                    {
-                      "name": "error-context",
-                      "contentType": "text/markdown",
-                      "path": "/Users/gabrielaraujo/projects/momentocake/admin/test-results/focused-admin-user-managem-6a1e1-agement-and-Invitation-Test-chromium/error-context.md"
-                    }
-                  ],
-                  "errorLocation": {
-                    "file": "eval at evaluate (:291:30), <anonymous>",
-                    "column": 42,
-                    "line": 5
-                  }
+                  "status": "unexpected"
                 }
               ],
-              "status": "unexpected"
-            }
-          ],
-          "id": "dcf71d0549d32ba1366a-f3e9751d226f2e58325d",
-          "file": "focused-admin-user-management.spec.ts",
-          "line": 12,
-          "column": 5
-        },
-        {
-          "title": "Check Existing Users and Invitations",
-          "ok": true,
-          "tags": [],
-          "tests": [
+              "id": "780952c4de4e965806ef-8904f4574a23faef21ce",
+              "file": "recipes-final-validation.spec.ts",
+              "line": 12,
+              "column": 7
+            },
             {
-              "timeout": 60000,
-              "annotations": [],
-              "expectedStatus": "passed",
-              "projectId": "chromium",
-              "projectName": "chromium",
-              "results": [
+              "title": "Recipe System Component Integration Test",
+              "ok": true,
+              "tags": [],
+              "tests": [
                 {
-                  "workerIndex": 1,
-                  "parallelIndex": 1,
-                  "status": "passed",
-                  "duration": 5704,
-                  "errors": [],
-                  "stdout": [
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
                     {
-                      "text": "📋 Checking existing users and invitations...\n"
-                    },
-                    {
-                      "text": "👥 User List Analysis:\n"
-                    },
-                    {
-                      "text": "   Rows found: 2\n"
-                    },
-                    {
-                      "text": "   Emails found: 1\n"
-                    },
-                    {
-                      "text": "   Pending invites: 0\n"
-                    },
-                    {
-                      "text": "   Has user data: true\n"
-                    },
-                    {
-                      "text": "📧 Found emails:\n"
-                    },
-                    {
-                      "text": "   1. admin@momentocake.com.br\n"
-                    },
-                    {
-                      "text": "📸 Existing users check screenshot saved\n"
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 5663,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "🔧 Testing component integration...\n"
+                        },
+                        {
+                          "text": "Testing all interactive elements...\n"
+                        },
+                        {
+                          "text": "  ❌ Search field: Not found\n"
+                        },
+                        {
+                          "text": "  ❌ Category filter: Not found\n"
+                        },
+                        {
+                          "text": "  ❌ Difficulty filter: Not found\n"
+                        },
+                        {
+                          "text": "  ❌ Add recipe button: Not found\n"
+                        },
+                        {
+                          "text": "  ❌ Header title: Not found\n"
+                        },
+                        {
+                          "text": "  ❌ Catalog section: Not found\n"
+                        },
+                        {
+                          "text": "  ❌ Empty state message: Not found\n"
+                        },
+                        {
+                          "text": "✅ Component integration test completed\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2025-09-12T13:14:37.573Z",
+                      "annotations": [],
+                      "attachments": []
                     }
                   ],
-                  "stderr": [],
-                  "retry": 0,
-                  "startTime": "2025-09-06T14:24:53.246Z",
-                  "annotations": [],
-                  "attachments": []
+                  "status": "expected"
                 }
               ],
-              "status": "expected"
+              "id": "780952c4de4e965806ef-be78821ddd7baa37dd44",
+              "file": "recipes-final-validation.spec.ts",
+              "line": 234,
+              "column": 7
             }
-          ],
-          "id": "dcf71d0549d32ba1366a-0f812409abf3c3b20c79",
-          "file": "focused-admin-user-management.spec.ts",
-          "line": 222,
-          "column": 5
+          ]
         }
       ]
     }
   ],
   "errors": [],
   "stats": {
-    "startTime": "2025-09-06T14:24:49.707Z",
-    "duration": 10745.915,
+    "startTime": "2025-09-12T13:14:31.637Z",
+    "duration": 17338.093,
     "expected": 1,
     "skipped": 0,
     "unexpected": 1,

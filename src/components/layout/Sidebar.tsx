@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname, useSearchParams } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -16,13 +16,10 @@ import {
   ChevronRight,
   UserPlus,
   Mail,
-  AlertTriangle,
-  BarChart3,
-  Calculator,
+  Truck,
+  ChefHat,
+  Book,
   DollarSign,
-  Activity,
-  TrendingUp,
-  FileBarChart,
   Settings
 } from 'lucide-react'
 
@@ -41,12 +38,12 @@ const navigation = [
     submenu: [
       {
         name: 'Usuários Ativos',
-        href: '/users?tab=users',
+        href: '/users/active',
         icon: UserPlus
       },
       {
         name: 'Convites',
-        href: '/users?tab=invitations',
+        href: '/users/invitations',
         icon: Mail
       }
     ]
@@ -59,47 +56,35 @@ const navigation = [
     submenu: [
       {
         name: 'Inventário',
-        href: '/ingredients?tab=inventory',
+        href: '/ingredients/inventory',
         icon: Package
       },
       {
-        name: 'Alertas',
-        href: '/ingredients?tab=alerts',
-        icon: AlertTriangle
+        name: 'Fornecedores',
+        href: '/ingredients/suppliers',
+        icon: Truck
+      }
+    ]
+  },
+  {
+    name: 'Receitas',
+    icon: ChefHat,
+    roles: ['admin', 'viewer'],
+    hasSubmenu: true,
+    submenu: [
+      {
+        name: 'Todas as Receitas',
+        href: '/recipes',
+        icon: Book
       },
       {
-        name: 'Análise',
-        href: '/ingredients?tab=analytics',
-        icon: BarChart3
-      },
-      {
-        name: 'Conversor',
-        href: '/ingredients?tab=converter',
-        icon: Calculator
-      },
-      {
-        name: 'Preços',
-        href: '/ingredients?tab=prices',
+        name: 'Análise de Custos',
+        href: '/recipes/costs',
         icon: DollarSign
       },
       {
-        name: 'Consumo',
-        href: '/ingredients?tab=usage',
-        icon: Activity
-      },
-      {
-        name: 'Receitas',
-        href: '/ingredients?tab=recipes',
-        icon: TrendingUp
-      },
-      {
-        name: 'Relatórios',
-        href: '/ingredients?tab=reports',
-        icon: FileBarChart
-      },
-      {
-        name: 'Avançado',
-        href: '/ingredients?tab=advanced',
+        name: 'Configurações',
+        href: '/recipes/settings',
         icon: Settings
       }
     ]
@@ -108,7 +93,6 @@ const navigation = [
 
 export function Sidebar() {
   const pathname = usePathname()
-  const searchParams = useSearchParams()
   const { userModel, logout } = useAuth()
   const [expandedItems, setExpandedItems] = useState<string[]>([])
 
@@ -132,10 +116,7 @@ export function Sidebar() {
   const isActiveSubmenu = (item: any) => {
     if (!item.submenu) return false
     return item.submenu.some((subItem: any) => {
-      const url = new URL(subItem.href, 'http://localhost')
-      const basePath = url.pathname
-      const tabParam = url.searchParams.get('tab')
-      return pathname === basePath && (!tabParam || searchParams.get('tab') === tabParam)
+      return pathname === subItem.href
     })
   }
 
@@ -198,10 +179,7 @@ export function Sidebar() {
                     <div className="ml-6 mt-1 space-y-1">
                       {item.submenu!.map((subItem) => {
                         const SubIcon = subItem.icon
-                        const url = new URL(subItem.href, 'http://localhost')
-                        const basePath = url.pathname
-                        const tabParam = url.searchParams.get('tab')
-                        const isSubActive = pathname === basePath && searchParams.get('tab') === tabParam
+                        const isSubActive = pathname === subItem.href
                         
                         return (
                           <Link

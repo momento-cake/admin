@@ -9,17 +9,19 @@ The Recipes Management system enables Momento Cake to document all recipes, calc
 ### Core Features
 1. **List all recipes** - Complete recipe catalog
 2. **View recipe details** - Full recipe information with costs
-3. **Create new recipe** - Recipe builder with ingredients and steps
+3. **Create new recipe** - Recipe builder with ingredients, sub-recipes and steps
 4. **Edit existing recipe** - Update recipes and recalculate costs
 5. **Delete recipes** - Remove unused recipes (soft delete)
-6. **Cost calculation** - Automatic cost calculation with ingredient prices
+6. **Cost calculation** - Live cost calculation with ingredient and sub-recipe prices
 7. **Labor cost tracking** - Include preparation time costs
+8. **Recipe dependencies** - Support for recipes using other recipes as ingredients
 
 ### Recipe Components
-- **Ingredients list** - Required ingredients with quantities
-- **Preparation steps** - Step-by-step instructions with time estimates
+- **Basic Information** - Name, category, description, generated amounts, servings, total preparation time (auto-calculated), base cost (auto-calculated)
+- **Ingredients and Sub-Recipes** - Required ingredients with quantities AND other recipes with proportions
+- **Preparation Steps** - Step-by-step instructions with individual time estimates that sum to total preparation time
 - **Recipe scaling** - Calculate for different batch sizes
-- **Cost breakdown** - Detailed cost analysis per ingredient
+- **Cost breakdown** - Detailed cost analysis per ingredient and sub-recipe
 - **Final pricing** - Suggested selling price with margins
 
 ## Data Models
@@ -31,30 +33,46 @@ interface Recipe {
   name: string
   description?: string
   category: RecipeCategory
-  servings: number
-  preparationTime: number // minutes
-  cookingTime: number // minutes
-  totalTime: number // calculated field
+  // Generated amounts and servings
+  generatedAmount: number // e.g., 600 for 600g
+  generatedUnit: IngredientUnit // e.g., 'g', 'ml', 'kg', 'l'
+  servings: number // how many portions this recipe makes
+  portionSize: number // calculated: generatedAmount / servings
+  // Time (calculated from steps)
+  preparationTime: number // minutes - sum of all step times
   difficulty: RecipeDifficulty
-  ingredients: RecipeIngredient[]
+  // Components
+  recipeItems: RecipeItem[] // both ingredients and sub-recipes
   instructions: RecipeStep[]
   notes?: string
+  // Costs (calculated fields)
   totalCost: number // calculated field
   costPerServing: number // calculated field
   laborCost: number // calculated field
   suggestedPrice: number // calculated field
+  // Meta
   isActive: boolean
   createdAt: Date
   updatedAt: Date
+  createdBy: string
 }
 
-interface RecipeIngredient {
-  ingredientId: string
-  ingredientName: string // denormalized for display
+// Unified interface for both ingredients and sub-recipes
+interface RecipeItem {
+  id: string
+  type: 'ingredient' | 'recipe'
+  // For ingredients
+  ingredientId?: string
+  ingredientName?: string // denormalized for display
+  // For sub-recipes
+  subRecipeId?: string
+  subRecipeName?: string // denormalized for display
+  // Common fields
   quantity: number
-  unit: string
-  cost: number // calculated from current ingredient price
+  unit: IngredientUnit
+  cost: number // calculated from current price
   notes?: string
+  sortOrder: number
 }
 
 interface RecipeStep {
@@ -106,60 +124,143 @@ interface RecipeSettings {
 - **Sorting**: Sort by name, cost, preparation time, last updated
 
 ### Recipe Detail Screen
-- **Recipe Info**: Name, category, difficulty, servings, times
+- **Recipe Info**: Name, category, difficulty, generated amount & unit, servings, portion size
+- **Time Info**: Total preparation time (calculated from steps)
 - **Cost Summary**: Total cost, cost per serving, suggested price
-- **Ingredients Section**: List with quantities, units, and individual costs
-- **Instructions Section**: Numbered steps with time estimates
+- **Recipe Items Section**: 
+  - Ingredients with quantities, units, and individual costs
+  - Sub-recipes with quantities, units, costs, and **hyperlinks to recipe details**
+  - Cost breakdown showing ingredient costs vs. sub-recipe costs
+- **Instructions Section**: Numbered steps with time estimates (sum = prep time)
 - **Actions**: Edit, duplicate, delete, scale recipe
 
 ### Recipe Form Screen (Create/Edit)
 - **Basic Info**: Name, description, category, difficulty
-- **Servings & Time**: Servings count, prep time, cooking time
-- **Ingredients Builder**: 
-  - Add ingredients from inventory
-  - Set quantities with unit validation
-  - Real-time cost calculation
+- **Generated Output**: Generated amount, generated unit, servings count (portion size auto-calculated)
+- **Recipe Items Builder**: 
+  - **Single unified section** for both ingredients and sub-recipes
+  - Add ingredients from inventory OR add existing recipes as sub-recipes
+  - **Circular dependency prevention**: Block selection of recipes that would create loops
+  - Set quantities with unit validation (must be compatible with item's base unit)
+  - Real-time cost calculation for both ingredients and sub-recipes
 - **Instructions Builder**:
   - Add/reorder preparation steps
   - Set time estimates per step
+  - **Auto-calculate total preparation time** as sum of step times
   - Rich text formatting for instructions
-- **Cost Preview**: Live cost calculation as ingredients are added
+- **Cost Preview**: Live cost calculation as items are added (ingredients + sub-recipes + labor)
 
 ## Business Rules
 
 ### Cost Calculation Logic
 ```typescript
-// Total ingredient cost
-const ingredientCost = recipe.ingredients.reduce((total, ingredient) => {
-  return total + (ingredient.quantity * ingredient.unitPrice)
-}, 0)
+// Calculate cost for each recipe item (ingredients + sub-recipes)
+const calculateItemCost = async (item: RecipeItem) => {
+  if (item.type === 'ingredient') {
+    const ingredient = await getIngredient(item.ingredientId!)
+    return item.quantity * ingredient.pricePerUnit
+  } else {
+    // For sub-recipes, get current recipe cost and calculate proportion
+    const subRecipe = await getRecipe(item.subRecipeId!)
+    const costPerUnit = subRecipe.totalCost / subRecipe.generatedAmount
+    return item.quantity * costPerUnit
+  }
+}
+
+// Total items cost (ingredients + sub-recipes)
+const itemsCosts = await Promise.all(recipe.recipeItems.map(calculateItemCost))
+const totalItemsCost = itemsCosts.reduce((sum, cost) => sum + cost, 0)
 
 // Labor cost calculation
-const totalTimeHours = recipe.totalTime / 60
+const totalTimeHours = recipe.preparationTime / 60
 const laborCost = totalTimeHours * settings.laborHourRate
 
 // Total recipe cost
-const totalCost = ingredientCost + laborCost
+const totalCost = totalItemsCost + laborCost
 
 // Cost per serving
 const costPerServing = totalCost / recipe.servings
+
+// Portion size calculation
+const portionSize = recipe.generatedAmount / recipe.servings
 
 // Suggested price with margin
 const margin = settings.marginsByCategory[recipe.category] || settings.defaultMargin
 const suggestedPrice = costPerServing * (margin / 100)
 ```
 
-### Recipe Scaling
-- **Proportional scaling**: Scale all ingredients proportionally
-- **Non-linear ingredients**: Special handling for yeast, salt, baking powder
-- **Time adjustments**: Preparation time scales, cooking time may not
-- **Equipment limitations**: Consider mixer/oven capacity limits
+### Time Calculation Rules
+```typescript
+// Preparation time is automatically calculated from steps
+const preparationTime = recipe.instructions.reduce((total, step) => {
+  return total + step.timeMinutes
+}, 0)
 
-### Ingredient Integration
-- **Real-time pricing**: Use current ingredient prices for calculations
-- **Availability check**: Validate ingredient availability
-- **Unit compatibility**: Ensure recipe units match ingredient units
-- **Substitution notes**: Allow ingredient substitution notes
+// Update recipe preparation time when steps change
+const updateRecipeTime = (recipe: Recipe) => {
+  recipe.preparationTime = recipe.instructions.reduce((total, step) => 
+    total + step.timeMinutes, 0
+  )
+}
+```
+
+### Circular Dependency Prevention
+```typescript
+// Check for circular dependencies when adding sub-recipes
+const checkCircularDependency = async (recipeId: string, subRecipeId: string): Promise<boolean> => {
+  const visited = new Set<string>()
+  
+  const hasCircularDep = async (currentId: string, targetId: string): Promise<boolean> => {
+    if (currentId === targetId) return true
+    if (visited.has(currentId)) return false
+    
+    visited.add(currentId)
+    const recipe = await getRecipe(currentId)
+    
+    for (const item of recipe.recipeItems) {
+      if (item.type === 'recipe' && await hasCircularDep(item.subRecipeId!, targetId)) {
+        return true
+      }
+    }
+    
+    return false
+  }
+  
+  return await hasCircularDep(subRecipeId, recipeId)
+}
+```
+
+### Recipe Scaling
+```typescript
+const scaleRecipe = (recipe: Recipe, scaleFactor: number): Recipe => {
+  return {
+    ...recipe,
+    // Scale generated amounts and servings
+    generatedAmount: recipe.generatedAmount * scaleFactor,
+    servings: Math.round(recipe.servings * scaleFactor),
+    portionSize: recipe.portionSize, // remains the same per portion
+    
+    // Scale recipe items (ingredients + sub-recipes)
+    recipeItems: recipe.recipeItems.map(item => ({
+      ...item,
+      quantity: item.quantity * scaleFactor
+    })),
+    
+    // Time usually doesn't scale linearly - keep original preparation time
+    // preparationTime: recipe.preparationTime, // no scaling for time
+    
+    // Costs will be recalculated based on new quantities
+  }
+}
+```
+
+### Recipe Integration Rules
+- **Real-time pricing**: Use current ingredient and sub-recipe prices for calculations
+- **Availability check**: Validate ingredient and sub-recipe availability
+- **Unit compatibility**: Ensure recipe units match ingredient/sub-recipe units
+- **Circular dependency prevention**: Block recipes that would create circular references
+- **Sub-recipe linking**: Hyperlinks to navigate between related recipes
+- **Cost propagation**: Live calculation when displaying details (not in lists)
 
 ## Technical Implementation
 
@@ -191,11 +292,15 @@ CREATE TABLE recipes (
   name VARCHAR(255) NOT NULL,
   description TEXT,
   category VARCHAR(50) NOT NULL,
-  servings INTEGER NOT NULL DEFAULT 1,
-  preparation_time INTEGER NOT NULL DEFAULT 0, -- minutes
-  cooking_time INTEGER NOT NULL DEFAULT 0, -- minutes
-  total_time INTEGER GENERATED ALWAYS AS (preparation_time + cooking_time) STORED,
+  -- Generated amounts and servings
+  generated_amount DECIMAL(10,3) NOT NULL DEFAULT 1, -- e.g., 600 for 600g
+  generated_unit VARCHAR(20) NOT NULL DEFAULT 'g', -- g, kg, ml, l, etc.
+  servings INTEGER NOT NULL DEFAULT 1, -- how many portions
+  portion_size DECIMAL(10,3) GENERATED ALWAYS AS (generated_amount / servings) STORED,
+  -- Time (calculated from steps)
+  preparation_time INTEGER NOT NULL DEFAULT 0, -- minutes, sum of step times
   difficulty VARCHAR(20) NOT NULL DEFAULT 'medium',
+  -- Calculated costs
   total_cost DECIMAL(10,2) DEFAULT 0, -- calculated field
   cost_per_serving DECIMAL(10,2) DEFAULT 0, -- calculated field
   labor_cost DECIMAL(10,2) DEFAULT 0, -- calculated field
@@ -203,20 +308,33 @@ CREATE TABLE recipes (
   notes TEXT,
   is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  created_by VARCHAR(255) NOT NULL DEFAULT 'admin'
 );
 
--- Recipe ingredients table
-CREATE TABLE recipe_ingredients (
+-- Recipe items table (unified ingredients and sub-recipes)
+CREATE TABLE recipe_items (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   recipe_id UUID REFERENCES recipes(id) ON DELETE CASCADE,
+  item_type VARCHAR(20) NOT NULL CHECK (item_type IN ('ingredient', 'recipe')),
+  -- For ingredients
   ingredient_id UUID REFERENCES ingredients(id),
-  ingredient_name VARCHAR(255) NOT NULL, -- denormalized
+  ingredient_name VARCHAR(255), -- denormalized
+  -- For sub-recipes
+  sub_recipe_id UUID REFERENCES recipes(id),
+  sub_recipe_name VARCHAR(255), -- denormalized
+  -- Common fields
   quantity DECIMAL(10,3) NOT NULL,
   unit VARCHAR(50) NOT NULL,
-  cost DECIMAL(10,2) NOT NULL, -- calculated from ingredient price
+  cost DECIMAL(10,2) NOT NULL DEFAULT 0, -- calculated from current price
   notes TEXT,
-  sort_order INTEGER NOT NULL DEFAULT 0
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  
+  -- Ensure proper foreign key constraints
+  CONSTRAINT valid_ingredient CHECK (
+    (item_type = 'ingredient' AND ingredient_id IS NOT NULL AND sub_recipe_id IS NULL) OR
+    (item_type = 'recipe' AND sub_recipe_id IS NOT NULL AND ingredient_id IS NULL)
+  )
 );
 
 -- Recipe steps table
@@ -241,8 +359,31 @@ CREATE TABLE recipe_settings (
 -- Indexes
 CREATE INDEX idx_recipes_category ON recipes(category);
 CREATE INDEX idx_recipes_active ON recipes(is_active);
-CREATE INDEX idx_recipe_ingredients_recipe ON recipe_ingredients(recipe_id);
+CREATE INDEX idx_recipe_items_recipe ON recipe_items(recipe_id);
+CREATE INDEX idx_recipe_items_ingredient ON recipe_items(ingredient_id);
+CREATE INDEX idx_recipe_items_sub_recipe ON recipe_items(sub_recipe_id);
+CREATE INDEX idx_recipe_items_type ON recipe_items(item_type);
 CREATE INDEX idx_recipe_steps_recipe ON recipe_steps(recipe_id);
+
+-- Add circular dependency prevention function
+CREATE OR REPLACE FUNCTION prevent_circular_recipe_dependency()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Prevent self-reference
+  IF NEW.recipe_id = NEW.sub_recipe_id THEN
+    RAISE EXCEPTION 'Recipe cannot reference itself';
+  END IF;
+  
+  -- Additional circular dependency check would be implemented in application logic
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_prevent_circular_dependency
+  BEFORE INSERT OR UPDATE ON recipe_items
+  FOR EACH ROW
+  WHEN (NEW.item_type = 'recipe')
+  EXECUTE FUNCTION prevent_circular_recipe_dependency();
 ```
 
 ### State Management (Zustand)

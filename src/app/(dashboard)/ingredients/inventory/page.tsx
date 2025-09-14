@@ -1,28 +1,28 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { IngredientList } from '@/components/ingredients/IngredientList';
 import { IngredientForm } from '@/components/ingredients/IngredientForm';
 import { StockManager } from '@/components/ingredients/StockManager';
-import { Ingredient } from '@/types/ingredient';
+import { IngredientDetailScreen } from '@/components/ingredients/IngredientDetailScreen';
+import { Ingredient, Supplier } from '@/types/ingredient';
 import { createIngredient, updateIngredient, deleteIngredient } from '@/lib/ingredients';
 import { fetchSuppliers } from '@/lib/suppliers';
 import { IngredientFormData } from '@/lib/validators/ingredient';
 // TODO: Implement toast notifications
 
-export default function IngredientsPage() {
+export default function InventoryPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const activeTab = searchParams.get('tab') || 'inventory';
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
   const [showStockManager, setShowStockManager] = useState(false);
+  const [showDetailView, setShowDetailView] = useState(false);
   const [selectedIngredient, setSelectedIngredient] = useState<Ingredient | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [suppliers, setSuppliers] = useState<Array<{ id: string; name: string }>>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const handleCreateIngredient = () => {
@@ -36,7 +36,8 @@ export default function IngredientsPage() {
   };
 
   const handleViewIngredient = (ingredient: Ingredient) => {
-    router.push(`/ingredients/${ingredient.id}`);
+    setSelectedIngredient(ingredient);
+    setShowDetailView(true);
   };
 
   const handleDeleteIngredient = async (ingredient: Ingredient) => {
@@ -92,6 +93,16 @@ export default function IngredientsPage() {
     setSelectedIngredient(null);
   };
 
+  const handleDetailViewBack = () => {
+    setShowDetailView(false);
+    setSelectedIngredient(null);
+  };
+
+  const handleIngredientUpdated = (updatedIngredient: Ingredient) => {
+    setSelectedIngredient(updatedIngredient);
+    setRefreshTrigger(prev => prev + 1);
+  };
+
   const handleManageStock = (ingredient: Ingredient) => {
     setSelectedIngredient(ingredient);
     setShowStockManager(true);
@@ -108,15 +119,11 @@ export default function IngredientsPage() {
     setRefreshTrigger(prev => prev + 1);
   };
 
-
   // Load suppliers for stock management
   const loadSuppliers = async () => {
     try {
       const data = await fetchSuppliers();
-      setSuppliers((data.suppliers || []).map((s: { id: string; name: string }) => ({
-        id: s.id,
-        name: s.name
-      })));
+      setSuppliers(data.suppliers || []);
     } catch (error) {
       console.error('Error loading suppliers:', error);
     }
@@ -127,13 +134,12 @@ export default function IngredientsPage() {
     loadSuppliers();
   }, []);
 
-
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-momento-text">Sistema de Ingredientes</h1>
+        <h1 className="text-3xl font-bold text-momento-text">Inventário de Ingredientes</h1>
         <p className="text-muted-foreground">
-          Gerencie seu catálogo completo de ingredientes, estoque e fornecedores
+          Gerencie seu estoque de ingredientes, quantidades e informações detalhadas
         </p>
       </div>
 
@@ -142,36 +148,25 @@ export default function IngredientsPage() {
           <CardHeader>
             <CardTitle>Inventário de Ingredientes</CardTitle>
             <CardDescription>
-              Gerencie seu catálogo completo de ingredientes e controle de estoque
+              Gerencie seu estoque de ingredientes, quantidades e informações detalhadas
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {activeTab === 'inventory' && (
-              <IngredientList
-                onIngredientCreate={handleCreateIngredient}
-                onIngredientEdit={handleEditIngredient}
-                onIngredientView={handleViewIngredient}
-                onIngredientDelete={handleDeleteIngredient}
-                onRefresh={handleRefreshIngredients}
-                key={refreshTrigger}
-              />
-            )}
-
-            {activeTab === 'vendors' && (
-              <div className="text-center py-12">
-                <h3 className="text-lg font-medium mb-2">Fornecedores</h3>
-                <p className="text-muted-foreground">
-                  Seção de fornecedores em desenvolvimento.
-                </p>
-              </div>
-            )}
+            <IngredientList
+              onIngredientCreate={handleCreateIngredient}
+              onIngredientEdit={handleEditIngredient}
+              onIngredientView={handleViewIngredient}
+              onIngredientDelete={handleDeleteIngredient}
+              onRefresh={handleRefreshIngredients}
+              key={refreshTrigger}
+            />
           </CardContent>
         </Card>
       </div>
 
       {/* Create Ingredient Dialog */}
       <Dialog open={showCreateForm} onOpenChange={setShowCreateForm}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-[85vw] max-w-[85vw] min-w-[85vw] h-[95vh] overflow-y-auto !max-w-none m-0 p-6" style={{ width: '85vw', maxWidth: '85vw' }}>
           <DialogHeader>
             <DialogTitle>Adicionar Novo Ingrediente</DialogTitle>
           </DialogHeader>
@@ -185,7 +180,7 @@ export default function IngredientsPage() {
 
       {/* Edit Ingredient Dialog */}
       <Dialog open={showEditForm} onOpenChange={setShowEditForm}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-auto min-w-[600px] max-w-[900px] max-h-[90vh] overflow-y-auto p-6">
           <DialogHeader>
             <DialogTitle>Editar Ingrediente</DialogTitle>
           </DialogHeader>
@@ -202,7 +197,7 @@ export default function IngredientsPage() {
 
       {/* Stock Manager Dialog */}
       <Dialog open={showStockManager} onOpenChange={setShowStockManager}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-[85vw] max-w-[85vw] min-w-[85vw] h-[95vh] overflow-y-auto !max-w-none m-0 p-6" style={{ width: '85vw', maxWidth: '85vw' }}>
           <DialogHeader>
             <DialogTitle>
               {selectedIngredient ? `Gerenciar Estoque - ${selectedIngredient.name}` : 'Gerenciar Estoque'}
@@ -213,6 +208,24 @@ export default function IngredientsPage() {
               ingredient={selectedIngredient}
               onStockUpdated={handleStockUpdated}
               suppliers={suppliers}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Ingredient Detail View Dialog */}
+      <Dialog open={showDetailView} onOpenChange={setShowDetailView}>
+        <DialogContent className="w-auto min-w-[800px] max-w-[1200px] max-h-[95vh] overflow-y-auto p-6">
+          <DialogHeader>
+            <DialogTitle>Detalhes do Ingrediente</DialogTitle>
+          </DialogHeader>
+          {selectedIngredient && (
+            <IngredientDetailScreen
+              ingredient={selectedIngredient}
+              suppliers={suppliers}
+              onEdit={handleEditIngredient}
+              onBack={handleDetailViewBack}
+              onIngredientUpdate={handleIngredientUpdated}
             />
           )}
         </DialogContent>

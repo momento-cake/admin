@@ -1,7 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
 /**
- * Playwright Configuration for First Access Feature Testing
+ * Playwright Configuration for Ingredients Management System Testing
  * Cross-browser automation with comprehensive coverage
  */
 export default defineConfig({
@@ -83,9 +83,9 @@ export default defineConfig({
     timeout: 120 * 1000,
   },
   
-  /* Global setup and teardown - disabled for initial testing */
-  // globalSetup: require.resolve('./tests/global-setup.ts'),
-  // globalTeardown: require.resolve('./tests/global-teardown.ts'),
+  /* Global setup and teardown */
+  globalSetup: require.resolve('./tests/global-setup.ts'),
+  globalTeardown: require.resolve('./tests/global-teardown.ts'),
   
   /* Test timeout */
   timeout: 30 * 1000,

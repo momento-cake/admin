@@ -3,6 +3,8 @@ export interface Ingredient {
   name: string;
   description?: string;
   unit: IngredientUnit;
+  measurementValue: number; // e.g., 1 for "1 KG Sugar"
+  brand?: string; // e.g., "União" for sugar brand
   currentPrice: number;
   supplierId?: string;
   lastUpdated: Date;
@@ -20,12 +22,7 @@ export enum IngredientUnit {
   GRAM = 'gram',
   LITER = 'liter',
   MILLILITER = 'milliliter',
-  UNIT = 'unit',
-  POUND = 'pound',
-  OUNCE = 'ounce',
-  CUP = 'cup',
-  TABLESPOON = 'tablespoon',
-  TEASPOON = 'teaspoon'
+  UNIT = 'unit'
 }
 
 export enum IngredientCategory {
@@ -50,11 +47,25 @@ export interface Supplier {
   contactPerson?: string;
   phone?: string;
   email?: string;
+  // Brazilian address structure
+  cep?: string; // CEP (postal code)
+  estado?: string; // State
+  cidade?: string; // City
+  bairro?: string; // Neighborhood
+  endereco?: string; // Street address
+  numero?: string; // Street number
+  complemento?: string; // Address complement
+  // Legacy address field for backward compatibility
   address?: string;
+  // Brazilian business fields
+  cpfCnpj?: string; // CPF or CNPJ
+  inscricaoEstadual?: string; // State registration (optional)
+  // Existing fields
   rating: number;
   categories: string[];
   isActive: boolean;
   createdAt: Date;
+  updatedAt: Date;
 }
 
 // Create/Update types for forms
@@ -62,6 +73,8 @@ export interface CreateIngredientData {
   name: string;
   description?: string;
   unit: IngredientUnit;
+  measurementValue: number; // e.g., 1 for "1 KG Sugar"
+  brand?: string; // e.g., "União" for sugar brand
   currentPrice: number;
   supplierId?: string;
   minStock: number;
@@ -79,13 +92,46 @@ export interface CreateSupplierData {
   contactPerson?: string;
   phone?: string;
   email?: string;
+  // Brazilian address structure
+  cep?: string;
+  estado?: string;
+  cidade?: string;
+  bairro?: string;
+  endereco?: string;
+  numero?: string;
+  complemento?: string;
+  // Legacy address field for backward compatibility
   address?: string;
+  // Brazilian business fields
+  cpfCnpj?: string;
+  inscricaoEstadual?: string;
+  // Existing fields
   rating: number;
   categories: string[];
 }
 
 export interface UpdateSupplierData extends Partial<CreateSupplierData> {
   id: string;
+}
+
+export interface CreatePriceHistoryData {
+  ingredientId: string;
+  price: number;
+  supplierId: string;
+  quantity: number;
+  notes?: string;
+}
+
+// Price history types
+export interface PriceHistoryEntry {
+  id: string;
+  ingredientId: string;
+  price: number;
+  supplierId: string;
+  quantity: number; // Amount purchased at this price
+  notes?: string;
+  createdAt: Date;
+  createdBy: string;
 }
 
 // Stock level indicator types
@@ -99,13 +145,6 @@ export interface IngredientFilters {
   searchQuery?: string;
 }
 
-// Unit conversion types
-export interface UnitConversion {
-  from: IngredientUnit;
-  to: IngredientUnit;
-  value: number;
-  result: number;
-}
 
 // API response types
 export interface IngredientsResponse {
@@ -122,126 +161,13 @@ export interface SuppliersResponse {
   limit: number;
 }
 
-// Phase 3: Cost History & Price Tracking
-export interface PriceHistory {
-  id: string;
-  ingredientId: string;
-  price: number;
-  supplierId?: string;
-  date: Date;
-  changePercentage?: number;
-  notes?: string;
-  createdBy: string;
+export interface PriceHistoryResponse {
+  priceHistory: PriceHistoryEntry[];
+  total: number;
+  page: number;
+  limit: number;
 }
 
-export interface PriceAlert {
-  id: string;
-  ingredientId: string;
-  threshold: number; // percentage threshold for alerts
-  alertType: 'increase' | 'decrease' | 'both';
-  isActive: boolean;
-  lastTriggered?: Date;
-  createdAt: Date;
-}
-
-// Phase 3: Usage Analytics & Consumption Patterns
-export interface IngredientUsage {
-  id: string;
-  ingredientId: string;
-  quantity: number;
-  unit: IngredientUnit;
-  date: Date;
-  usageType: 'production' | 'waste' | 'adjustment' | 'sampling';
-  recipeId?: string;
-  notes?: string;
-  createdBy: string;
-}
-
-export interface ConsumptionPattern {
-  ingredientId: string;
-  period: 'daily' | 'weekly' | 'monthly';
-  averageUsage: number;
-  peakUsage: number;
-  lowUsage: number;
-  trend: 'increasing' | 'decreasing' | 'stable';
-  seasonalPattern?: boolean;
-}
-
-// Phase 3: Recipe Integration System
-export interface Recipe {
-  id: string;
-  name: string;
-  description?: string;
-  category: string;
-  servings: number;
-  prepTime: number; // minutes
-  bakeTime: number; // minutes
-  difficulty: 'easy' | 'medium' | 'hard';
-  ingredients: RecipeIngredient[];
-  instructions: string[];
-  totalCost?: number;
-  costPerServing?: number;
-  isActive: boolean;
-  createdAt: Date;
-  createdBy: string;
-  lastCalculated?: Date;
-}
-
-export interface RecipeIngredient {
-  ingredientId: string;
-  quantity: number;
-  unit: IngredientUnit;
-  cost?: number;
-  notes?: string;
-}
-
-// Phase 3: Advanced Analytics Types
-export interface CostTrend {
-  period: Date;
-  totalCost: number;
-  averageCost: number;
-  ingredientCount: number;
-  topExpensiveIngredients: Array<{
-    ingredientId: string;
-    name: string;
-    cost: number;
-    percentage: number;
-  }>;
-}
-
-export interface UsageHeatmap {
-  ingredientId: string;
-  ingredientName: string;
-  dailyUsage: Array<{
-    date: Date;
-    usage: number;
-    intensity: number; // 0-1 scale for visualization
-  }>;
-}
-
-// Phase 3: Report Types
-export interface InventoryReport {
-  id: string;
-  type: 'inventory_valuation' | 'cost_analysis' | 'usage_report' | 'supplier_performance';
-  title: string;
-  dateRange: {
-    from: Date;
-    to: Date;
-  };
-  data: Record<string, unknown>;
-  generatedAt: Date;
-  generatedBy: string;
-}
-
-export interface ExportOptions {
-  format: 'pdf' | 'excel' | 'csv';
-  includeCharts: boolean;
-  dateRange?: {
-    from: Date;
-    to: Date;
-  };
-  filters?: IngredientFilters;
-}
 
 // Phase 3: Advanced Integration Types
 export interface BarcodeData {

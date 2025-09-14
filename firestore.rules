@@ -84,6 +84,48 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
     
+    // Top-level ingredients collection - for system-wide ingredients
+    match /ingredients/{ingredientId} {
+      // Admins can manage all ingredients, viewers can read
+      allow read: if isViewer();
+      allow write: if isAdmin();
+    }
+    
+    // Top-level suppliers collection - for system-wide suppliers
+    match /suppliers/{supplierId} {
+      // Admins can manage all suppliers, viewers can read
+      allow read: if isViewer();
+      allow write: if isAdmin();
+    }
+    
+    // Stock history collection - for ingredient stock tracking
+    match /stockHistory/{stockHistoryId} {
+      // Admins can manage all stock history, viewers can read
+      allow read: if isViewer();
+      allow write: if isAdmin();
+    }
+    
+    // Stock history collection (with underscore) - for ingredient stock tracking
+    match /stock_history/{stockHistoryId} {
+      // Admins can manage all stock history, viewers can read
+      allow read: if isViewer();
+      allow write: if isAdmin();
+    }
+    
+    // Price history collection - for ingredient price tracking
+    match /priceHistory/{priceHistoryId} {
+      // Admins can manage all price history, viewers can read
+      allow read: if isViewer();
+      allow write: if isAdmin();
+    }
+    
+    // Top-level recipes collection - for system-wide recipes
+    match /recipes/{recipeId} {
+      // Admins can manage all recipes, viewers can read
+      allow read: if isViewer();
+      allow write: if isAdmin();
+    }
+    
     // Businesses collection - Business entity management
     match /businesses/{businessId} {
       // Admins can read all, authorized users can read their business

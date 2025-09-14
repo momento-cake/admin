@@ -99,7 +99,8 @@ export function IngredientCard({
             </div>
             <div className="flex-1 min-w-0">
               <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors truncate">
-                {ingredient.name}
+                {ingredient.measurementValue} {getUnitDisplayName(ingredient.unit)} {ingredient.name}
+                {ingredient.brand && <span className="text-muted-foreground"> - {ingredient.brand}</span>}
               </h3>
               {ingredient.description && (
                 <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
@@ -208,7 +209,10 @@ export function IngredientCardCompact({
               <Package className="h-3 w-3 text-primary" />
             </div>
             <div className="min-w-0 flex-1">
-              <h4 className="font-medium text-sm truncate">{ingredient.name}</h4>
+              <h4 className="font-medium text-sm truncate">
+                {ingredient.measurementValue} {getUnitDisplayName(ingredient.unit)} {ingredient.name}
+                {ingredient.brand && <span className="text-muted-foreground"> - {ingredient.brand}</span>}
+              </h4>
               <p className="text-xs text-muted-foreground">
                 {formatPrice(ingredient.currentPrice)} / {getUnitDisplayName(ingredient.unit)}
               </p>

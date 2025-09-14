@@ -1,21 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { adminDb } from '@/lib/firebase-admin'
-import { UserInvitation } from '@/types'
-import { FieldValue } from 'firebase-admin/firestore'
+import { db } from '@/lib/firebase'
+import { collection, query, where, orderBy, getDocs, addDoc, serverTimestamp, doc, updateDoc } from 'firebase/firestore'
 import { generateInvitationToken, sendInvitationEmail } from '@/lib/invitations'
+import { UserInvitation, UserRole } from '@/types'
 
-export async function GET(request: NextRequest) {
+// GET /api/invitations - Get all invitations
+export async function GET() {
   try {
-    // Get the invitations collection using Firebase Admin SDK
-    const invitationsRef = adminDb.collection('invitations')
-    const querySnapshot = await invitationsRef.orderBy('invitedAt', 'desc').get()
+    const invitationsRef = collection(db, 'invitations')
+    const q = query(
+      invitationsRef,
+      orderBy('invitedAt', 'desc')
+    )
     
+    const querySnapshot = await getDocs(q)
     const invitations: UserInvitation[] = []
     
     querySnapshot.forEach((doc) => {
       const data = doc.data()
-      
-      const invitation: UserInvitation = {
+      invitations.push({
         id: doc.id,
         email: data.email,
         name: data.name,
@@ -27,41 +30,68 @@ export async function GET(request: NextRequest) {
         expiresAt: data.expiresAt?.toDate() || new Date(),
         acceptedAt: data.acceptedAt?.toDate(),
         cancelledAt: data.cancelledAt?.toDate(),
-        metadata: data.metadata || {}
-      }
-      
-      invitations.push(invitation)
+        metadata: data.metadata
+      })
     })
 
-    return NextResponse.json({
-      success: true,
-      invitations
+    return NextResponse.json({ 
+      invitations,
+      count: invitations.length 
     })
-    
   } catch (error) {
-    console.error('Error fetching invitations:', error)
+    // Always log the full error details for debugging
+    console.error('=== INVITATIONS API ERROR ===')
+    console.error('Error fetching invitations:', {
+      message: error?.message,
+      code: error?.code,
+      stack: error?.stack,
+      timestamp: new Date().toISOString(),
+      endpoint: 'GET /api/invitations'
+    })
+    console.error('Full error object:', error)
+    console.error('============================')
     
+    // Return empty array if it's a permissions error or collection doesn't exist yet
+    // but still log the error above for monitoring
+    if (error?.code === 'permission-denied' || error?.code === 'not-found') {
+      console.warn(`Returning empty invitations array due to: ${error.code}`)
+      return NextResponse.json({ 
+        invitations: [],
+        count: 0
+      })
+    }
+    
+    // For other errors, return 500 but ensure they're properly logged
+    console.error('Returning 500 error to client for unhandled error type')
     return NextResponse.json(
-      { 
-        success: false, 
-        error: 'Failed to fetch invitations',
-        message: error instanceof Error ? error.message : 'Internal server error'
-      },
+      { error: 'Internal server error' },
       { status: 500 }
     )
   }
 }
 
+// POST /api/invitations - Create new invitation
 export async function POST(request: NextRequest) {
-  try {
-    // Parse request body
-    const body = await request.json()
-    const { email, name, role, department, notes, invitedBy } = body
+  let body = null
+  let email = null
+  let name = null
+  let role = null
+  let invitedBy = null
+  let metadata = null
 
-    // Validate required fields
+  try {
+    body = await request.json()
+    const extractedData = body
+    email = extractedData.email
+    name = extractedData.name
+    role = extractedData.role
+    invitedBy = extractedData.invitedBy
+    metadata = extractedData.metadata
+
+    // Basic validation
     if (!email || !name || !role || !invitedBy) {
       return NextResponse.json(
-        { success: false, error: 'Missing required fields: email, name, role, invitedBy' },
+        { error: 'Missing required fields: email, name, role, invitedBy' },
         { status: 400 }
       )
     }
@@ -70,108 +100,108 @@ export async function POST(request: NextRequest) {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(email)) {
       return NextResponse.json(
-        { success: false, error: 'Invalid email format' },
+        { error: 'Invalid email format' },
         { status: 400 }
       )
     }
 
     // Validate role
-    if (!['admin', 'viewer'].includes(role)) {
+    const validRoles: UserRole[] = ['admin', 'viewer']
+    if (!validRoles.includes(role)) {
       return NextResponse.json(
-        { success: false, error: 'Invalid role. Must be admin or viewer' },
+        { error: 'Invalid role. Must be admin or viewer' },
         { status: 400 }
       )
     }
 
-    // Check if user with this email already has an invitation
-    const existingInvitation = await adminDb.collection('invitations')
-      .where('email', '==', email)
-      .where('status', 'in', ['pending', 'accepted'])
-      .get()
-
-    if (!existingInvitation.empty) {
+    // Check if invitation already exists for this email
+    const existingInvitationsRef = collection(db, 'invitations')
+    const existingQuery = query(
+      existingInvitationsRef,
+      where('email', '==', email),
+      where('status', 'in', ['pending'])
+    )
+    
+    const existingSnapshot = await getDocs(existingQuery)
+    if (!existingSnapshot.empty) {
       return NextResponse.json(
-        { success: false, error: 'An active invitation already exists for this email' },
+        { error: 'An active invitation already exists for this email' },
         { status: 409 }
       )
     }
 
-    // Generate invitation token
+    // Generate invitation token and expiration
     const token = generateInvitationToken()
-    
-    // Set expiration date (7 days from now)
     const expiresAt = new Date()
-    expiresAt.setDate(expiresAt.getDate() + 7)
+    expiresAt.setDate(expiresAt.getDate() + 7) // Expires in 7 days
 
-    // Create invitation data
+    // Create invitation document
     const invitationData = {
-      email,
+      email: email.toLowerCase(),
       name,
       role,
-      status: 'pending',
+      status: 'pending' as const,
       token,
       invitedBy,
-      invitedAt: FieldValue.serverTimestamp(),
+      invitedAt: serverTimestamp(),
       expiresAt,
-      metadata: {
-        department: department || '',
-        notes: notes || ''
-      }
+      metadata: metadata || {}
     }
 
-    // Save invitation to Firestore
-    const docRef = await adminDb.collection('invitations').add(invitationData)
+    const invitationsRef = collection(db, 'invitations')
+    const docRef = await addDoc(invitationsRef, invitationData)
 
     // Send invitation email
     try {
       await sendInvitationEmail({
-        email,
+        email: email.toLowerCase(),
         name,
         token,
         invitedBy,
         role
       })
-      console.log(`✅ Invitation email sent to ${email}`)
     } catch (emailError) {
-      console.warn(`⚠️ Failed to send email to ${email}:`, emailError)
-      // Continue anyway - the invitation is saved in the database
+      console.error('Error sending invitation email:', emailError)
+      // Continue - invitation was created but email failed
     }
 
-    // Get the created invitation with server timestamps resolved
-    const createdDoc = await docRef.get()
-    const createdData = createdDoc.data()
-
-    const invitation: UserInvitation = {
-      id: createdDoc.id,
-      email: createdData?.email || '',
-      name: createdData?.name || '',
-      role: createdData?.role || 'viewer',
-      status: createdData?.status || 'pending',
-      token: createdData?.token || '',
-      invitedBy: createdData?.invitedBy || '',
-      invitedAt: createdData?.invitedAt?.toDate() || new Date(),
-      expiresAt: createdData?.expiresAt?.toDate() || new Date(),
-      metadata: createdData?.metadata || {}
+    // Return the created invitation
+    const newInvitation: UserInvitation = {
+      id: docRef.id,
+      email: email.toLowerCase(),
+      name,
+      role,
+      status: 'pending',
+      token,
+      invitedBy,
+      invitedAt: new Date(),
+      expiresAt,
+      metadata: metadata || {}
     }
 
     return NextResponse.json(
-      {
-        success: true,
-        invitation,
-        message: 'Invitation created and sent successfully'
+      { 
+        invitation: newInvitation,
+        message: 'Invitation created successfully'
       },
       { status: 201 }
     )
-    
   } catch (error) {
-    console.error('Error creating invitation:', error)
+    // Always log the full error details for debugging
+    console.error('=== INVITATIONS CREATE ERROR ===')
+    console.error('Error creating invitation:', {
+      message: error?.message,
+      code: error?.code,
+      stack: error?.stack,
+      timestamp: new Date().toISOString(),
+      endpoint: 'POST /api/invitations',
+      requestData: { body, email, name, role, invitedBy }
+    })
+    console.error('Full error object:', error)
+    console.error('=================================')
     
     return NextResponse.json(
-      { 
-        success: false, 
-        error: 'Failed to create invitation',
-        message: error instanceof Error ? error.message : 'Internal server error'
-      },
+      { error: 'Internal server error' },
       { status: 500 }
     )
   }

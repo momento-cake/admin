@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Supplier } from '@/types/ingredient';
-import { deleteSupplier, formatRating, getRatingColor, formatPhone } from '@/lib/suppliers';
+import { deleteSupplier, formatRating, getRatingColor, formatPhone, getCategoryLabel } from '@/lib/suppliers';
 
 interface SupplierCardProps {
   supplier: Supplier;
@@ -146,7 +146,7 @@ export function SupplierCard({ supplier, onDeleted, onUpdated }: SupplierCardPro
             <div className="flex flex-wrap gap-1">
               {supplier.categories.slice(0, 3).map((category) => (
                 <Badge key={category} variant="outline" className="text-xs">
-                  {category}
+                  {getCategoryLabel(category)}
                 </Badge>
               ))}
               {supplier.categories.length > 3 && (

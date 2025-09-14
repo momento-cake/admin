@@ -120,35 +120,6 @@ export interface Ingredient {
   notes?: string
 }
 
-// Recipe Types
-export interface RecipeIngredient {
-  ingredientId: string
-  quantity: number
-  unit: PackageUnit
-  cost: number
-}
-
-export interface PreparationStep {
-  id: string
-  order: number
-  description: string
-  duration: number
-}
-
-export interface Recipe {
-  id: string
-  name: string
-  ingredients: RecipeIngredient[]
-  preparationSteps: PreparationStep[]
-  totalPreparationTime: number
-  totalCost: number
-  yieldQuantity: number
-  yieldUnit: PackageUnit
-  isActive: boolean
-  createdAt: Date
-  updatedAt?: Date
-  notes?: string
-}
 
 // Vendor Types
 export interface Vendor {

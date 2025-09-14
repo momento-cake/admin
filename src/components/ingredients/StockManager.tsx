@@ -15,7 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Ingredient } from '@/types/ingredient';
-import { updateIngredient, getStockStatus, getStockStatusColor, getStockStatusText, formatStock } from '@/lib/ingredients';
+import { updateIngredient, getStockStatus, getStockStatusColor, getStockStatusText, formatStock, formatMeasurement } from '@/lib/ingredients';
 
 const stockUpdateSchema = z.object({
   type: z.enum(['receive', 'consume', 'adjust']),
@@ -187,7 +187,7 @@ export function StockManager({ ingredient, onStockUpdated, suppliers = [] }: Sto
                 <div className="text-center">
                   <p className="text-sm text-muted-foreground mb-1">Estoque Atual</p>
                   <p className="text-2xl font-bold">
-                    {formatStock(ingredient.currentStock, ingredient.unit)}
+                    {formatStock(ingredient.currentStock)}
                   </p>
                 </div>
                 <div className="text-center">
@@ -199,7 +199,7 @@ export function StockManager({ ingredient, onStockUpdated, suppliers = [] }: Sto
                 <div className="text-center">
                   <p className="text-sm text-muted-foreground mb-1">Estoque Mínimo</p>
                   <p className="text-lg font-medium">
-                    {formatStock(ingredient.minStock, ingredient.unit)}
+                    {formatStock(ingredient.minStock)}
                   </p>
                 </div>
               </div>
@@ -289,9 +289,9 @@ export function StockManager({ ingredient, onStockUpdated, suppliers = [] }: Sto
                       </div>
                     </div>
                     <p className="text-lg">
-                      {formatStock(ingredient.currentStock, ingredient.unit)} → {' '}
+                      {formatStock(ingredient.currentStock)} → {' '}
                       <span className="font-bold">
-                        {formatStock(newStock, ingredient.unit)}
+                        {formatStock(newStock)}
                       </span>
                     </p>
                     <div className="flex items-center gap-2 mt-2">
@@ -383,12 +383,12 @@ export function StockManager({ ingredient, onStockUpdated, suppliers = [] }: Sto
                                   {getTypeLabel(transaction.type)}
                                 </h4>
                                 <Badge variant="outline" className="text-xs">
-                                  {formatStock(transaction.quantity, ingredient.unit)}
+                                  {formatStock(Math.abs(transaction.quantity))}
                                 </Badge>
                               </div>
                               <p className="text-xs text-muted-foreground">
-                                {formatStock(transaction.previousStock, ingredient.unit)} → {' '}
-                                {formatStock(transaction.newStock, ingredient.unit)}
+                                {formatStock(transaction.previousStock)} → {' '}
+                                {formatStock(transaction.newStock)}
                               </p>
                               {transaction.reason && (
                                 <p className="text-xs text-muted-foreground mt-1">
