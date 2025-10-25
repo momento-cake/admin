@@ -1,32 +1,93 @@
 import { IngredientUnit } from './ingredient';
 
-// Recipe core interfaces
+/**
+ * Complete recipe definition with all components and cost calculations.
+ *
+ * @remarks
+ * Recipes are composite documents that include ingredients, steps, and calculated
+ * fields like cost and servings. They can be used as sub-recipes within other recipes.
+ *
+ * @example
+ * ```typescript
+ * const paodeQueijo: Recipe = {
+ *   id: 'rec_001',
+ *   name: 'Pão de Queijo',
+ *   category: 'breads',
+ *   generatedAmount: 600,
+ *   generatedUnit: 'gram',
+ *   servings: 12,
+ *   recipeItems: [...],
+ *   instructions: [...]
+ * };
+ * ```
+ */
 export interface Recipe {
+  /** Unique Firestore document ID */
   id: string;
+
+  /** Recipe name (required) */
   name: string;
+
+  /** Optional description of the recipe */
   description?: string;
+
+  /** Category for organizing recipes */
   category: RecipeCategory;
+
   // Generated amounts and servings
-  generatedAmount: number; // e.g., 600 for 600g
-  generatedUnit: IngredientUnit; // e.g., 'g', 'ml', 'kg', 'l'
-  servings: number; // how many portions this recipe makes
-  portionSize: number; // calculated: generatedAmount / servings
+  /** Total amount produced by this recipe (e.g., 600 for 600g) */
+  generatedAmount: number;
+
+  /** Unit of the generated amount (g, ml, kg, l, unit) */
+  generatedUnit: IngredientUnit;
+
+  /** Number of servings/portions this recipe produces */
+  servings: number;
+
+  /** Size of a single portion (calculated: generatedAmount / servings) */
+  portionSize: number;
+
   // Time (calculated from steps)
-  preparationTime: number; // minutes - sum of all step times
+  /** Total preparation time in minutes (sum of all step times) */
+  preparationTime: number;
+
+  /** Difficulty level of the recipe */
   difficulty: RecipeDifficulty;
+
   // Components
-  recipeItems: RecipeItem[]; // both ingredients and sub-recipes
+  /** Ingredients and sub-recipes that make up this recipe */
+  recipeItems: RecipeItem[];
+
+  /** Step-by-step instructions for preparing the recipe */
   instructions: RecipeStep[];
+
+  /** Optional notes or tips for this recipe */
   notes?: string;
+
   // Costs (calculated fields)
-  totalCost: number; // calculated field
-  costPerServing: number; // calculated field
-  laborCost: number; // calculated field
-  suggestedPrice: number; // calculated field
+  /** Total cost of all ingredients (calculated) */
+  totalCost: number;
+
+  /** Cost per serving (calculated) */
+  costPerServing: number;
+
+  /** Labor cost based on preparation time (calculated) */
+  laborCost: number;
+
+  /** Suggested selling price (calculated) */
+  suggestedPrice: number;
+
   // Meta
+  /** Whether recipe is active and available for use */
   isActive: boolean;
+
+  /** When the recipe was created */
   createdAt: Date;
+
+  /** When the recipe was last updated */
   updatedAt: Date;
+
+  /** UID of user who created this recipe */
   createdBy: string;
 }
 
@@ -68,21 +129,38 @@ export interface RecipeStep {
   notes?: string;
 }
 
-// Recipe enums
+/**
+ * Categories for organizing recipes.
+ */
 export enum RecipeCategory {
+  /** Cakes and large pastries */
   CAKES = 'cakes',
-  CUPCAKES = 'cupcakes', 
+  /** Individual cupcakes */
+  CUPCAKES = 'cupcakes',
+  /** Cookies and small bites */
   COOKIES = 'cookies',
+  /** Breads and rolls (including Pão de Queijo) */
   BREADS = 'breads',
+  /** Pastries and croissants */
   PASTRIES = 'pastries',
+  /** Icings and frostings */
   ICINGS = 'icings',
+  /** Fillings and creams */
   FILLINGS = 'fillings',
+  /** Other recipes */
   OTHER = 'other'
 }
 
+/**
+ * Difficulty levels for recipes.
+ * Helps users understand complexity and time requirements.
+ */
 export enum RecipeDifficulty {
+  /** Easy, straightforward recipe, minimal technique required */
   EASY = 'easy',
+  /** Medium difficulty, some technique and timing required */
   MEDIUM = 'medium',
+  /** Hard, advanced techniques or timing required */
   HARD = 'hard'
 }
 

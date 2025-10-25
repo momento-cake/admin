@@ -1,63 +1,198 @@
-// User Role Types
-export type UserRole = 
-  | 'admin' 
-  | 'viewer'
+/**
+ * User roles for role-based access control.
+ * - `admin`: Full system access including user management
+ * - `viewer`: Read-only access to recipes and ingredients
+ */
+export type UserRole = 'admin' | 'viewer';
 
+/**
+ * Represents an authenticated user in the system.
+ *
+ * @remarks
+ * Users are created through invitations and registration. Each user has
+ * a unique Firebase UID and email. Roles determine what features they can access.
+ *
+ * @example
+ * ```typescript
+ * const admin: UserModel = {
+ *   uid: 'user_123',
+ *   email: 'admin@example.com',
+ *   displayName: 'John Admin',
+ *   role: { type: 'admin' },
+ *   isActive: true,
+ *   emailVerified: true
+ * };
+ * ```
+ */
 export interface UserModel {
-  uid: string
-  email: string
-  displayName?: string
-  photoURL?: string
-  emailVerified: boolean
+  /** Unique Firebase user ID */
+  uid: string;
+
+  /** User's email address (unique) */
+  email: string;
+
+  /** Display name (optional) */
+  displayName?: string;
+
+  /** Profile photo URL (optional) */
+  photoURL?: string;
+
+  /** Whether email has been verified */
+  emailVerified: boolean;
+
+  /** User's role and permissions */
   role: {
-    type: UserRole
-  }
-  createdAt?: Date
-  lastSignInAt?: Date
-  isActive: boolean
+    /** Role type (admin or viewer) */
+    type: UserRole;
+  };
+
+  /** When the user account was created */
+  createdAt?: Date;
+
+  /** When the user last signed in */
+  lastSignInAt?: Date;
+
+  /** Whether the user account is active */
+  isActive: boolean;
+
+  /** Additional user metadata */
   metadata: {
-    isInitialAdmin?: boolean
-    firstName?: string
-    lastName?: string
-    phone?: string
-    department?: string
-    bio?: string
-    registeredFrom?: string
-    invitationId?: string
-  }
+    /** Whether this was the initial admin user */
+    isInitialAdmin?: boolean;
+
+    /** User's first name */
+    firstName?: string;
+
+    /** User's last name */
+    lastName?: string;
+
+    /** User's phone number */
+    phone?: string;
+
+    /** User's department */
+    department?: string;
+
+    /** User's bio or description */
+    bio?: string;
+
+    /** Source of user registration */
+    registeredFrom?: string;
+
+    /** ID of the invitation that created this user */
+    invitationId?: string;
+  };
 }
 
-// Invitation Types
-export type InvitationStatus = 'pending' | 'accepted' | 'expired' | 'cancelled'
+/**
+ * Status of a user invitation.
+ * - `pending`: Invitation sent, awaiting user acceptance
+ * - `accepted`: User accepted and registered
+ * - `expired`: Invitation expired without acceptance
+ * - `cancelled`: Invitation was cancelled by an admin
+ */
+export type InvitationStatus = 'pending' | 'accepted' | 'expired' | 'cancelled';
 
+/**
+ * Represents an invitation to join the system.
+ *
+ * @remarks
+ * Invitations are created by admins and sent to new users via email.
+ * Each invitation has an expiration time and can only be used once.
+ * The token is used to validate the invitation during registration.
+ *
+ * @example
+ * ```typescript
+ * const invitation: UserInvitation = {
+ *   id: 'inv_001',
+ *   email: 'newuser@example.com',
+ *   name: 'New User',
+ *   role: 'viewer',
+ *   status: 'pending',
+ *   token: 'long_secure_token_here',
+ *   invitedBy: 'admin_uid',
+ *   invitedAt: new Date('2024-01-01'),
+ *   expiresAt: new Date('2024-01-08'),
+ * };
+ * ```
+ */
 export interface UserInvitation {
-  id: string
-  email: string
-  name: string
-  role: UserRole
-  status: InvitationStatus
-  token: string
-  invitedBy: string // uid of the admin who sent the invitation
-  invitedAt: Date
-  expiresAt: Date
-  acceptedAt?: Date
-  cancelledAt?: Date
+  /** Unique invitation ID */
+  id: string;
+
+  /** Email address the invitation was sent to */
+  email: string;
+
+  /** Name of the invited user */
+  name: string;
+
+  /** Role to assign to the user upon acceptance */
+  role: UserRole;
+
+  /** Current status of the invitation */
+  status: InvitationStatus;
+
+  /** Secure token for validating the invitation */
+  token: string;
+
+  /** UID of the admin who created this invitation */
+  invitedBy: string;
+
+  /** When the invitation was created */
+  invitedAt: Date;
+
+  /** When the invitation expires */
+  expiresAt: Date;
+
+  /** When the invitation was accepted (if applicable) */
+  acceptedAt?: Date;
+
+  /** When the invitation was cancelled (if applicable) */
+  cancelledAt?: Date;
+
+  /** Additional invitation metadata */
   metadata?: {
-    department?: string
-    notes?: string
-  }
+    /** Department for the new user (optional) */
+    department?: string;
+
+    /** Notes from the admin who sent the invitation */
+    notes?: string;
+  };
 }
 
+/**
+ * Form data for user registration via invitation.
+ *
+ * @remarks
+ * This data is submitted when a user accepts an invitation
+ * and completes their registration.
+ */
 export interface UserRegistrationData {
-  invitationToken: string
-  firstName: string
-  lastName: string
-  email: string // Should match invitation email
-  password: string
-  phone?: string
-  department?: string
-  profilePicture?: string
-  acceptsTerms: boolean
+  /** Token from the invitation */
+  invitationToken: string;
+
+  /** User's first name */
+  firstName: string;
+
+  /** User's last name */
+  lastName: string;
+
+  /** User's email (must match invitation email) */
+  email: string;
+
+  /** User's password (must meet security requirements) */
+  password: string;
+
+  /** User's phone number (optional) */
+  phone?: string;
+
+  /** User's department (optional) */
+  department?: string;
+
+  /** User's profile picture (optional, base64 or URL) */
+  profilePicture?: string;
+
+  /** Whether user accepts terms of service */
+  acceptsTerms: boolean;
 }
 
 
