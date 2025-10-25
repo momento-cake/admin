@@ -1,0 +1,6 @@
+# Temporary AI helper files - DO NOT COMMIT
+# This folder contains temporary artifacts used during AI-assisted development
+# including planning documents, code snippets, research results, etc.
+
+*
+!.gitignore
