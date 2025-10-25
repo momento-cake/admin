@@ -16,6 +16,7 @@ import { IngredientUnit, IngredientCategory, Ingredient, Supplier } from '@/type
 import { fetchSuppliers } from '@/lib/suppliers';
 import { getUnitDisplayName } from '@/lib/ingredients';
 import { Loader2, Plus } from 'lucide-react';
+import { SupplierCreateModal } from '@/components/suppliers/SupplierCreateModal';
 
 interface IngredientFormProps {
   ingredient?: Ingredient;
@@ -48,6 +49,7 @@ export function IngredientForm({
   const [selectedAllergens, setSelectedAllergens] = useState<string[]>(
     ingredient?.allergens || []
   );
+  const [showSupplierModal, setShowSupplierModal] = useState(false);
 
   // Helper functions for price formatting
   const decimalToCents = (decimal: number): number => {
@@ -184,6 +186,13 @@ export function IngredientForm({
       [IngredientCategory.OTHER]: 'Outros'
     };
     return names[category];
+  };
+
+  const handleSupplierCreated = (newSupplier: Supplier) => {
+    // Add new supplier to the list
+    setSuppliers(prev => [...prev, newSupplier]);
+    // Automatically select the new supplier
+    form.setValue('supplierId', newSupplier.id);
   };
 
   const handleSubmit = async (data: IngredientFormData) => {
@@ -351,7 +360,19 @@ export function IngredientForm({
                 name="supplierId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Fornecedor *</FormLabel>
+                    <div className="flex items-center justify-between">
+                      <FormLabel>Fornecedor *</FormLabel>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowSupplierModal(true)}
+                        className="h-7 px-2"
+                      >
+                        <Plus className="h-3 w-3 mr-1" />
+                        Novo
+                      </Button>
+                    </div>
                     <Select onValueChange={field.onChange} value={field.value || ''}>
                       <FormControl>
                         <SelectTrigger>
@@ -530,6 +551,13 @@ export function IngredientForm({
           </Button>
         </div>
       </form>
+
+      {/* Supplier Creation Modal */}
+      <SupplierCreateModal
+        open={showSupplierModal}
+        onOpenChange={setShowSupplierModal}
+        onSupplierCreated={handleSupplierCreated}
+      />
     </Form>
   );
 }

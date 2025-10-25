@@ -27,6 +27,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { fetchIngredient } from '@/lib/ingredients';
+import { fetchRecipeSettings, getMarginForCategory } from '@/lib/recipeSettings';
 
 const COLLECTION_NAME = 'recipes';
 
@@ -519,36 +520,48 @@ export async function calculateRecipeCosts(id: string): Promise<CostBreakdown> {
   try {
     console.log('📊 Calculating recipe costs:', id);
 
-    const recipe = await fetchRecipe(id);
+    const [recipe, settings] = await Promise.all([
+      fetchRecipe(id),
+      fetchRecipeSettings()
+    ]);
+    
+    console.log(`📊 Recipe: ${recipe.name} | Settings: Labor R$${settings.laborHourRate}/hr, Default Margin ${settings.defaultMargin}%`);
     
     // Calculate costs for each recipe item (ingredients + sub-recipes)
     const itemCosts: any[] = [];
     let ingredientCost = 0;
     let subRecipeCost = 0;
 
+    console.log(`📊 Calculating costs for ${recipe.recipeItems.length} recipe items`);
+
+    const visitedRecipes = new Set<string>();
+    visitedRecipes.add(id); // Add current recipe to prevent circular references
+
     for (const item of recipe.recipeItems) {
-      const itemCost = await calculateRecipeItemCost(item);
+      const itemCost = await calculateRecipeItemCost(item, visitedRecipes);
       itemCosts.push(itemCost);
       
       if (item.type === 'ingredient') {
         ingredientCost += itemCost.totalCost;
+        console.log(`🥄 Ingredient: ${itemCost.itemName} - ${itemCost.quantity}${itemCost.unit} = ${formatPrice(itemCost.totalCost)}`);
       } else {
         subRecipeCost += itemCost.totalCost;
+        console.log(`🍰 Sub-recipe: ${itemCost.itemName} - ${itemCost.quantity}${itemCost.unit} = ${formatPrice(itemCost.totalCost)}`);
       }
     }
 
     const totalItemCost = ingredientCost + subRecipeCost;
 
-    // Calculate labor cost (placeholder - would use actual settings)
-    const laborHourRate = 25; // R$/hour - TODO: get from settings
-    const laborCost = (recipe.preparationTime / 60) * laborHourRate;
+    // Calculate labor cost using settings
+    const laborCost = (recipe.preparationTime / 60) * settings.laborHourRate;
+    console.log(`⏱️ Labor: ${recipe.preparationTime}min × R$${settings.laborHourRate}/hr = ${formatPrice(laborCost)}`);
 
     // Total recipe cost
     const totalCost = totalItemCost + laborCost;
     const costPerServing = recipe.servings > 0 ? totalCost / recipe.servings : 0;
 
-    // Calculate suggested price (placeholder margin)
-    const margin = 150; // 150% margin - TODO: get from settings
+    // Calculate suggested price using category-specific margin
+    const margin = getMarginForCategory(settings, recipe.category);
     const suggestedPrice = costPerServing * (margin / 100);
 
     const profitAmount = suggestedPrice - costPerServing;
@@ -571,7 +584,7 @@ export async function calculateRecipeCosts(id: string): Promise<CostBreakdown> {
       calculatedAt: new Date()
     };
 
-    console.log(`✅ Recipe costs calculated: ${formatPrice(totalCost)} (ingredients: ${formatPrice(ingredientCost)}, sub-recipes: ${formatPrice(subRecipeCost)}, labor: ${formatPrice(laborCost)})`);
+    console.log(`✅ Recipe costs calculated: ${formatPrice(totalCost)} total (ingredients: ${formatPrice(ingredientCost)}, sub-recipes: ${formatPrice(subRecipeCost)}, labor: ${formatPrice(laborCost)}) = ${formatPrice(costPerServing)}/serving → ${formatPrice(suggestedPrice)} suggested (${margin}% margin)`);
 
     return costBreakdown;
   } catch (error) {
@@ -581,7 +594,7 @@ export async function calculateRecipeCosts(id: string): Promise<CostBreakdown> {
 }
 
 // Helper function to calculate cost for a single recipe item
-async function calculateRecipeItemCost(item: RecipeItem): Promise<any> {
+async function calculateRecipeItemCost(item: RecipeItem, visitedRecipes = new Set<string>()): Promise<any> {
   try {
     if (item.type === 'ingredient') {
       // Fetch current ingredient price from ingredients collection
@@ -631,13 +644,42 @@ async function calculateRecipeItemCost(item: RecipeItem): Promise<any> {
         };
       }
     } else {
-      // For sub-recipes, get current recipe cost and calculate proportion
+      // For sub-recipes, calculate costs recursively with proportional scaling
       try {
-        const subRecipe = await fetchRecipe(item.subRecipeId!);
+        if (!item.subRecipeId) {
+          throw new Error(`Sub-recipe ID is missing for ${item.subRecipeName}`);
+        }
+
+        // Prevent infinite loops by tracking visited recipes
+        if (visitedRecipes.has(item.subRecipeId)) {
+          console.warn(`Warning: Circular dependency detected for sub-recipe ${item.subRecipeId}, using zero cost`);
+          return {
+            itemId: item.id,
+            type: 'recipe' as const,
+            itemName: item.subRecipeName || 'Circular Dependency',
+            quantity: item.quantity,
+            unit: item.unit,
+            unitCost: 0,
+            totalCost: 0
+          };
+        }
+
+        visitedRecipes.add(item.subRecipeId);
         
-        // Calculate cost per unit of the sub-recipe
-        const costPerUnit = subRecipe.generatedAmount > 0 ? subRecipe.totalCost / subRecipe.generatedAmount : 0;
+        const subRecipe = await fetchRecipe(item.subRecipeId);
+        
+        // Calculate sub-recipe costs recursively
+        const subRecipeCostBreakdown = await calculateRecipeSubCosts(subRecipe, visitedRecipes);
+        
+        // Calculate proportional cost based on quantity used vs. generated amount
+        // Example: If sub-recipe generates 600g and we use 300g, we use 50% of the sub-recipe cost
+        const proportionUsed = subRecipe.generatedAmount > 0 ? item.quantity / subRecipe.generatedAmount : 0;
+        const costPerUnit = subRecipe.generatedAmount > 0 ? subRecipeCostBreakdown.totalCost / subRecipe.generatedAmount : 0;
         const totalCost = item.quantity * costPerUnit;
+        
+        visitedRecipes.delete(item.subRecipeId); // Clean up visited set
+        
+        console.log(`🍰 Sub-recipe calculation: ${subRecipe.name} generates ${subRecipe.generatedAmount}${subRecipe.generatedUnit}, using ${item.quantity}${item.unit} (${(proportionUsed * 100).toFixed(1)}% of recipe), cost ${formatPrice(subRecipeCostBreakdown.totalCost)} → ${formatPrice(totalCost)}`);
         
         return {
           itemId: item.id,
@@ -646,7 +688,9 @@ async function calculateRecipeItemCost(item: RecipeItem): Promise<any> {
           quantity: item.quantity,
           unit: item.unit,
           unitCost: costPerUnit,
-          totalCost
+          totalCost,
+          proportionUsed: proportionUsed,
+          subRecipeBreakdown: subRecipeCostBreakdown
         };
       } catch (error) {
         console.warn(`Warning: Could not calculate cost for sub-recipe ${item.subRecipeId}:`, error);
@@ -666,6 +710,47 @@ async function calculateRecipeItemCost(item: RecipeItem): Promise<any> {
   } catch (error) {
     console.error('❌ Error calculating item cost:', error);
     throw error;
+  }
+}
+
+// Helper function to calculate sub-recipe costs without infinite loops
+async function calculateRecipeSubCosts(recipe: Recipe, visitedRecipes = new Set<string>()): Promise<{ totalCost: number; ingredientCost: number; subRecipeCost: number; laborCost: number }> {
+  try {
+    const settings = await fetchRecipeSettings();
+    
+    let ingredientCost = 0;
+    let subRecipeCost = 0;
+
+    // Calculate costs for each recipe item
+    for (const item of recipe.recipeItems) {
+      const itemCost = await calculateRecipeItemCost(item, visitedRecipes);
+      
+      if (item.type === 'ingredient') {
+        ingredientCost += itemCost.totalCost;
+      } else {
+        subRecipeCost += itemCost.totalCost;
+      }
+    }
+
+    // Calculate labor cost
+    const laborCost = (recipe.preparationTime / 60) * settings.laborHourRate;
+
+    const totalCost = ingredientCost + subRecipeCost + laborCost;
+
+    return {
+      totalCost,
+      ingredientCost,
+      subRecipeCost,
+      laborCost
+    };
+  } catch (error) {
+    console.error('❌ Error calculating sub-recipe costs:', error);
+    return {
+      totalCost: 0,
+      ingredientCost: 0,
+      subRecipeCost: 0,
+      laborCost: 0
+    };
   }
 }
 

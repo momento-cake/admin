@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -42,8 +43,11 @@ export default function RecipesListPage() {
 
   // Dialog states
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [recipeToDelete, setRecipeToDelete] = useState<Recipe | null>(null);
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Load recipes
   const loadRecipes = async () => {
@@ -106,18 +110,33 @@ export default function RecipesListPage() {
     router.push(`/recipes/${recipe.id}/edit`);
   };
 
-  const handleDeleteRecipe = async (recipe: Recipe) => {
-    if (window.confirm(`Tem certeza que deseja remover a receita "${recipe.name}"?`)) {
-      try {
-        await deleteRecipe(recipe.id);
-        console.log(`Receita removida: ${recipe.name}`);
-        setRefreshTrigger(prev => prev + 1);
-        // TODO: Show success toast
-      } catch (error) {
-        console.error('Erro ao remover receita:', error);
-        alert('Erro ao remover receita: ' + (error instanceof Error ? error.message : 'Erro inesperado'));
-      }
+  const handleDeleteRecipe = (recipe: Recipe) => {
+    setRecipeToDelete(recipe);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDeleteRecipe = async () => {
+    if (!recipeToDelete) return;
+
+    try {
+      setIsDeleting(true);
+      await deleteRecipe(recipeToDelete.id);
+      console.log(`Receita removida: ${recipeToDelete.name}`);
+      setRefreshTrigger(prev => prev + 1);
+      setShowDeleteConfirm(false);
+      setRecipeToDelete(null);
+      // TODO: Show success toast
+    } catch (error) {
+      console.error('Erro ao remover receita:', error);
+      alert('Erro ao remover receita: ' + (error instanceof Error ? error.message : 'Erro inesperado'));
+    } finally {
+      setIsDeleting(false);
     }
+  };
+
+  const cancelDeleteRecipe = () => {
+    setShowDeleteConfirm(false);
+    setRecipeToDelete(null);
   };
 
   const handleDuplicateRecipe = async (recipe: Recipe) => {
@@ -381,6 +400,30 @@ export default function RecipesListPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza de que deseja excluir a receita "{recipeToDelete?.name}"? 
+              Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={cancelDeleteRecipe}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDeleteRecipe}
+              disabled={isDeleting}
+              className="bg-destructive hover:bg-destructive/90"
+              data-testid="confirm-delete"
+            >
+              {isDeleting ? 'Excluindo...' : 'Excluir'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

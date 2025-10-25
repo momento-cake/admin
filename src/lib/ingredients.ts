@@ -5,6 +5,7 @@ import {
   IngredientFilters,
   StockStatus,
   IngredientUnit,
+  IngredientCategory,
   UnitConversion,
   PriceHistoryEntry,
   CreatePriceHistoryData,
@@ -666,4 +667,25 @@ export async function getLatestPrice(ingredientId: string): Promise<PriceHistory
     console.error('❌ Error getting latest price:', error);
     return null;
   }
+}
+
+// Category translation helper
+export function getCategoryDisplayName(category: IngredientCategory): string {
+  const categoryNames: Record<IngredientCategory, string> = {
+    [IngredientCategory.FLOUR]: 'Farinha',
+    [IngredientCategory.SUGAR]: 'Açúcar',
+    [IngredientCategory.DAIRY]: 'Laticínios',
+    [IngredientCategory.EGGS]: 'Ovos',
+    [IngredientCategory.FATS]: 'Gorduras',
+    [IngredientCategory.LEAVENING]: 'Fermento',
+    [IngredientCategory.FLAVORING]: 'Aromatizantes',
+    [IngredientCategory.NUTS]: 'Nozes',
+    [IngredientCategory.FRUITS]: 'Frutas',
+    [IngredientCategory.CHOCOLATE]: 'Chocolate',
+    [IngredientCategory.SPICES]: 'Temperos',
+    [IngredientCategory.PRESERVATIVES]: 'Conservantes',
+    [IngredientCategory.OTHER]: 'Outros'
+  };
+  
+  return categoryNames[category] || category;
 }

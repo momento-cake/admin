@@ -126,6 +126,13 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
     
+    // Recipe settings collection - for system-wide recipe configuration
+    match /recipe_settings/{settingsId} {
+      // Admins can manage recipe settings, viewers can read
+      allow read: if isViewer();
+      allow write: if isAdmin();
+    }
+    
     // Businesses collection - Business entity management
     match /businesses/{businessId} {
       // Admins can read all, authorized users can read their business

@@ -9,6 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { Autocomplete } from '@/components/ui/autocomplete';
 import { Plus, Trash2, Clock } from 'lucide-react';
+import { IngredientSelectionModal } from './IngredientSelectionModal';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { IngredientForm } from '@/components/ingredients/IngredientForm';
 import { 
   Recipe, 
   CreateRecipeData,
@@ -23,7 +26,8 @@ import {
   getDifficultyDisplayName,
   fetchRecipes
 } from '@/lib/recipes';
-import { fetchIngredients } from '@/lib/ingredients';
+import { fetchIngredients, createIngredient } from '@/lib/ingredients';
+import { IngredientFormData } from '@/lib/validators/ingredient';
 
 interface RecipeFormProps {
   recipe?: Recipe;
@@ -81,6 +85,10 @@ export function RecipeForm({ recipe, onSubmit, onCancel, isSubmitting }: RecipeF
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [loadingIngredients, setLoadingIngredients] = useState(false);
   const [loadingRecipes, setLoadingRecipes] = useState(false);
+  const [showIngredientModal, setShowIngredientModal] = useState(false);
+  const [showCreateIngredientModal, setShowCreateIngredientModal] = useState(false);
+  const [showCreateRecipeModal, setShowCreateRecipeModal] = useState(false);
+  const [isCreatingIngredient, setIsCreatingIngredient] = useState(false);
 
   // Calculate portion size whenever generatedAmount or servings change
   useEffect(() => {
@@ -187,14 +195,75 @@ export function RecipeForm({ recipe, onSubmit, onCancel, isSubmitting }: RecipeF
 
   // Recipe Items (Ingredients + Sub-recipes) Management
   const addRecipeItem = () => {
+    setShowIngredientModal(true);
+  };
+
+  const handleSelectIngredient = (ingredient: Ingredient) => {
     const newItem: CreateRecipeItemData = {
       type: 'ingredient',
-      ingredientId: '',
+      ingredientId: ingredient.id,
       quantity: 1,
-      unit: IngredientUnit.GRAM,
+      unit: ingredient.unit,
       notes: ''
     };
     handleInputChange('recipeItems', [...formData.recipeItems, newItem]);
+  };
+
+  const handleSelectRecipe = (recipe: Recipe) => {
+    const newItem: CreateRecipeItemData = {
+      type: 'recipe',
+      subRecipeId: recipe.id,
+      quantity: 1,
+      unit: recipe.generatedUnit,
+      notes: ''
+    };
+    handleInputChange('recipeItems', [...formData.recipeItems, newItem]);
+  };
+
+  const handleCreateNewIngredient = () => {
+    setShowIngredientModal(false);
+    setShowCreateIngredientModal(true);
+  };
+
+  const handleCreateNewRecipe = () => {
+    setShowIngredientModal(false);
+    setShowCreateRecipeModal(true);
+  };
+
+  const handleIngredientCreated = async (data: IngredientFormData) => {
+    try {
+      setIsCreatingIngredient(true);
+      const newIngredient = await createIngredient(data);
+      
+      // Auto-select the newly created ingredient
+      const newItem: CreateRecipeItemData = {
+        type: 'ingredient',
+        ingredientId: newIngredient.id,
+        quantity: 1,
+        unit: newIngredient.unit,
+        notes: ''
+      };
+      handleInputChange('recipeItems', [...formData.recipeItems, newItem]);
+      
+      // Refresh ingredients list
+      await loadIngredients();
+      
+      setShowCreateIngredientModal(false);
+      console.log('✅ Ingredient created and added to recipe:', newIngredient.name);
+    } catch (error) {
+      console.error('❌ Error creating ingredient:', error);
+      alert('Erro ao criar ingrediente: ' + (error instanceof Error ? error.message : 'Erro inesperado'));
+    } finally {
+      setIsCreatingIngredient(false);
+    }
+  };
+
+  const handleRecipeCreated = (data: CreateRecipeData) => {
+    // For now, just show a message that recipe creation from within recipe is not fully supported
+    // since it would require the full recipe creation flow
+    console.log('Recipe creation from within recipe form:', data);
+    alert('Criação de receita a partir de outra receita não é totalmente suportada ainda. Use a página de receitas para criar novas receitas.');
+    setShowCreateRecipeModal(false);
   };
 
   const updateRecipeItem = (index: number, field: keyof CreateRecipeItemData, value: any) => {
@@ -215,8 +284,8 @@ export function RecipeForm({ recipe, onSubmit, onCancel, isSubmitting }: RecipeF
       const selectedIngredient = ingredients.find(ing => ing.id === value);
       if (selectedIngredient) {
         currentItem.unit = selectedIngredient.unit;
-        // Keep existing quantity or set to 1 if empty
-        if (!currentItem.quantity || currentItem.quantity === 0) {
+        // Only set quantity to 1 if it's currently 0 or undefined, don't override existing values
+        if (currentItem.quantity === 0 || currentItem.quantity === undefined) {
           currentItem.quantity = 1;
         }
       }
@@ -224,8 +293,8 @@ export function RecipeForm({ recipe, onSubmit, onCancel, isSubmitting }: RecipeF
       const selectedRecipe = recipes.find(recipe => recipe.id === value);
       if (selectedRecipe) {
         currentItem.unit = selectedRecipe.generatedUnit;
-        // Keep existing quantity or set to 1 if empty
-        if (!currentItem.quantity || currentItem.quantity === 0) {
+        // Only set quantity to 1 if it's currently 0 or undefined, don't override existing values
+        if (currentItem.quantity === 0 || currentItem.quantity === undefined) {
           currentItem.quantity = 1;
         }
       }
@@ -390,11 +459,15 @@ export function RecipeForm({ recipe, onSubmit, onCancel, isSubmitting }: RecipeF
             <Label htmlFor="generatedAmount">Quantidade Gerada *</Label>
             <Input
               id="generatedAmount"
-              type="number"
-              min="0.001"
-              step="0.001"
+              inputMode="numeric"
+              pattern="[0-9]*(\.[0-9]+)?"
               value={formData.generatedAmount}
-              onChange={(e) => handleInputChange('generatedAmount', parseFloat(e.target.value) || 1)}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                  handleInputChange('generatedAmount', value === '' ? 1 : parseFloat(value) || 1);
+                }
+              }}
               className={errors.generatedAmount ? 'border-destructive' : ''}
             />
             {errors.generatedAmount && (
@@ -425,10 +498,15 @@ export function RecipeForm({ recipe, onSubmit, onCancel, isSubmitting }: RecipeF
             <Label htmlFor="servings">Porções *</Label>
             <Input
               id="servings"
-              type="number"
-              min="1"
+              inputMode="numeric"
+              pattern="[0-9]*"
               value={formData.servings}
-              onChange={(e) => handleInputChange('servings', parseInt(e.target.value) || 1)}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (value === '' || /^\d+$/.test(value)) {
+                  handleInputChange('servings', value === '' ? 1 : parseInt(value) || 1);
+                }
+              }}
               className={errors.servings ? 'border-destructive' : ''}
             />
             {errors.servings && (
@@ -519,9 +597,15 @@ export function RecipeForm({ recipe, onSubmit, onCancel, isSubmitting }: RecipeF
                 )}
 
                 <Input
-                  type="number"
+                  inputMode="numeric"
+                  pattern="[0-9]*(\.[0-9]+)?"
                   value={item.quantity}
-                  onChange={(e) => updateRecipeItem(index, 'quantity', parseFloat(e.target.value) || 0)}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                      updateRecipeItem(index, 'quantity', value === '' ? 0 : parseFloat(value) || 0);
+                    }
+                  }}
                   placeholder="Quantidade"
                   className="w-24"
                 />
@@ -611,10 +695,15 @@ export function RecipeForm({ recipe, onSubmit, onCancel, isSubmitting }: RecipeF
                     <Label htmlFor={`time-${index}`}>Tempo (minutos):</Label>
                     <Input
                       id={`time-${index}`}
-                      type="number"
-                      min="0"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
                       value={step.timeMinutes}
-                      onChange={(e) => updateInstruction(index, 'timeMinutes', parseInt(e.target.value) || 0)}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (value === '' || /^\d+$/.test(value)) {
+                          updateInstruction(index, 'timeMinutes', value === '' ? 0 : parseInt(value) || 0);
+                        }
+                      }}
                       className="w-20"
                     />
                   </div>
@@ -662,6 +751,48 @@ export function RecipeForm({ recipe, onSubmit, onCancel, isSubmitting }: RecipeF
           {isSubmitting ? 'Salvando...' : (recipe ? 'Atualizar' : 'Criar')}
         </Button>
       </div>
+
+      {/* Ingredient Selection Modal */}
+      <IngredientSelectionModal
+        open={showIngredientModal}
+        onOpenChange={setShowIngredientModal}
+        ingredients={ingredients}
+        recipes={recipes}
+        onSelectIngredient={handleSelectIngredient}
+        onSelectRecipe={handleSelectRecipe}
+        loadingIngredients={loadingIngredients}
+        loadingRecipes={loadingRecipes}
+        onCreateNewIngredient={handleCreateNewIngredient}
+        onCreateNewRecipe={handleCreateNewRecipe}
+      />
+
+      {/* Create New Ingredient Modal */}
+      <Dialog open={showCreateIngredientModal} onOpenChange={setShowCreateIngredientModal}>
+        <DialogContent className="w-[85vw] max-w-[85vw] min-w-[85vw] h-[95vh] overflow-y-auto !max-w-none m-0 p-6" style={{ width: '85vw', maxWidth: '85vw' }}>
+          <DialogHeader>
+            <DialogTitle>Criar Novo Ingrediente</DialogTitle>
+          </DialogHeader>
+          <IngredientForm
+            onSubmit={handleIngredientCreated}
+            onCancel={() => setShowCreateIngredientModal(false)}
+            isSubmitting={isCreatingIngredient}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Create New Recipe Modal */}
+      <Dialog open={showCreateRecipeModal} onOpenChange={setShowCreateRecipeModal}>
+        <DialogContent className="w-[85vw] max-w-[85vw] min-w-[85vw] h-[95vh] overflow-y-auto !max-w-none m-0 p-6" style={{ width: '85vw', maxWidth: '85vw' }}>
+          <DialogHeader>
+            <DialogTitle>Criar Nova Receita</DialogTitle>
+          </DialogHeader>
+          <RecipeForm
+            onSubmit={handleRecipeCreated}
+            onCancel={() => setShowCreateRecipeModal(false)}
+            isSubmitting={false}
+          />
+        </DialogContent>
+      </Dialog>
     </form>
   );
 }

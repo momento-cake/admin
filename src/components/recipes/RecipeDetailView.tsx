@@ -9,6 +9,7 @@ import {
   getCategoryDisplayName, 
   getDifficultyDisplayName
 } from '@/lib/recipes';
+import { useRecipeCosts } from '@/hooks/useRecipeCosts';
 import { 
   Clock,
   Users,
@@ -18,7 +19,9 @@ import {
   Edit,
   X,
   Scale,
-  BookOpen
+  BookOpen,
+  RefreshCw,
+  AlertCircle
 } from 'lucide-react';
 
 interface RecipeDetailViewProps {
@@ -61,6 +64,24 @@ const formatPrice = (value: number): string => {
 
 export function RecipeDetailView({ recipe, onClose, onEdit }: RecipeDetailViewProps) {
   const portionSize = recipe.generatedAmount / recipe.servings;
+  const { costBreakdown, isCalculating, error, recalculate } = useRecipeCosts(recipe);
+
+  // Use calculated costs if available, otherwise fall back to stored values
+  const displayCosts = costBreakdown ? {
+    totalCost: costBreakdown.totalCost,
+    costPerServing: costBreakdown.costPerServing,
+    laborCost: costBreakdown.laborCost,
+    suggestedPrice: costBreakdown.suggestedPrice,
+    ingredientCost: costBreakdown.ingredientCost,
+    subRecipeCost: costBreakdown.subRecipeCost
+  } : {
+    totalCost: recipe.totalCost,
+    costPerServing: recipe.costPerServing,
+    laborCost: recipe.laborCost,
+    suggestedPrice: recipe.suggestedPrice,
+    ingredientCost: 0,
+    subRecipeCost: 0
+  };
 
   return (
     <div className="space-y-6">
@@ -137,7 +158,16 @@ export function RecipeDetailView({ recipe, onClose, onEdit }: RecipeDetailViewPr
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Custo por Porção</p>
-                <p className="font-semibold">{formatPrice(recipe.costPerServing)}</p>
+                <p className="font-semibold">
+                  {isCalculating ? (
+                    <span className="flex items-center gap-1">
+                      <RefreshCw className="h-3 w-3 animate-spin" />
+                      Calculando...
+                    </span>
+                  ) : (
+                    formatPrice(displayCosts.costPerServing)
+                  )}
+                </p>
               </div>
             </div>
           </CardContent>
@@ -185,28 +215,69 @@ export function RecipeDetailView({ recipe, onClose, onEdit }: RecipeDetailViewPr
 
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <DollarSign className="h-5 w-5" />
-              Análise de Custos
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <DollarSign className="h-5 w-5" />
+                Análise de Custos
+                {isCalculating && <RefreshCw className="h-4 w-4 animate-spin" />}
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={recalculate}
+                disabled={isCalculating}
+                className="h-8 w-8 p-0"
+              >
+                <RefreshCw className={`h-4 w-4 ${isCalculating ? 'animate-spin' : ''}`} />
+              </Button>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
+            {error && (
+              <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 p-2 rounded">
+                <AlertCircle className="h-4 w-4" />
+                {error}
+              </div>
+            )}
+            
+            {costBreakdown && (
+              <>
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground">Custo de Ingredientes:</span>
+                  <span className="font-medium">{formatPrice(displayCosts.ingredientCost)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground">Custo de Sub-receitas:</span>
+                  <span className="font-medium">{formatPrice(displayCosts.subRecipeCost)}</span>
+                </div>
+              </>
+            )}
+            
             <div className="flex justify-between">
+              <span className="text-sm text-muted-foreground">Custo de Mão de Obra:</span>
+              <span className="font-medium">{formatPrice(displayCosts.laborCost)}</span>
+            </div>
+            <div className="flex justify-between border-t pt-2">
               <span className="text-sm text-muted-foreground">Custo Total:</span>
-              <span className="font-medium">{formatPrice(recipe.totalCost)}</span>
+              <span className="font-medium">{formatPrice(displayCosts.totalCost)}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-sm text-muted-foreground">Custo por Porção:</span>
-              <span className="font-medium">{formatPrice(recipe.costPerServing)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-sm text-muted-foreground">Custo de Mão de Obra:</span>
-              <span className="font-medium">{formatPrice(recipe.laborCost)}</span>
+              <span className="font-medium">{formatPrice(displayCosts.costPerServing)}</span>
             </div>
             <div className="flex justify-between border-t pt-2">
               <span className="text-sm text-muted-foreground">Preço Sugerido:</span>
-              <span className="font-semibold text-green-600">{formatPrice(recipe.suggestedPrice)}</span>
+              <span className="font-semibold text-green-600">{formatPrice(displayCosts.suggestedPrice)}</span>
             </div>
+            
+            {costBreakdown && (
+              <div className="text-xs text-muted-foreground pt-2 border-t">
+                Margem: {costBreakdown.margin.toFixed(1)}% • 
+                Lucro: {formatPrice(costBreakdown.profitAmount)} ({costBreakdown.profitPercentage.toFixed(1)}%)
+                <br />
+                Atualizado: {costBreakdown.calculatedAt.toLocaleTimeString('pt-BR')}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -224,34 +295,55 @@ export function RecipeDetailView({ recipe, onClose, onEdit }: RecipeDetailViewPr
           <CardContent>
             {recipe.recipeItems.length > 0 ? (
               <div className="space-y-3">
-                {recipe.recipeItems.map((item, index) => (
-                  <div key={item.id || index} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-gray-100 rounded-lg">
-                        {item.type === 'ingredient' ? (
-                          <Package className="h-4 w-4 text-gray-600" />
-                        ) : (
-                          <ChefHat className="h-4 w-4 text-gray-600" />
+                {recipe.recipeItems.map((item, index) => {
+                  // Get calculated cost for this item if available
+                  const calculatedItemCost = costBreakdown?.itemCosts.find(
+                    (cost: any) => cost.itemId === item.id
+                  );
+                  const displayCost = calculatedItemCost?.totalCost ?? item.cost;
+                  
+                  return (
+                    <div key={item.id || index} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-gray-100 rounded-lg">
+                          {item.type === 'ingredient' ? (
+                            <Package className="h-4 w-4 text-gray-600" />
+                          ) : (
+                            <ChefHat className="h-4 w-4 text-gray-600" />
+                          )}
+                        </div>
+                        <div>
+                          <p className="font-medium">
+                            {item.ingredientName || item.subRecipeName || 'Item não identificado'}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {item.quantity} {getUnitDisplayName(item.unit)}
+                            {item.notes && ` • ${item.notes}`}
+                          </p>
+                          {calculatedItemCost && (
+                            <p className="text-xs text-muted-foreground">
+                              {formatPrice(calculatedItemCost.unitCost)}/{getUnitDisplayName(item.unit)}
+                              {calculatedItemCost.proportionUsed && (
+                                <span> • {(calculatedItemCost.proportionUsed * 100).toFixed(1)}% da receita</span>
+                              )}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-medium">{formatPrice(displayCost)}</p>
+                        <Badge variant="outline" className="text-xs">
+                          {item.type === 'ingredient' ? 'Ingrediente' : 'Sub-receita'}
+                        </Badge>
+                        {calculatedItemCost && calculatedItemCost.totalCost !== item.cost && (
+                          <p className="text-xs text-muted-foreground">
+                            Era: {formatPrice(item.cost)}
+                          </p>
                         )}
                       </div>
-                      <div>
-                        <p className="font-medium">
-                          {item.ingredientName || item.subRecipeName || 'Item não identificado'}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {item.quantity} {getUnitDisplayName(item.unit)}
-                          {item.notes && ` • ${item.notes}`}
-                        </p>
-                      </div>
                     </div>
-                    <div className="text-right">
-                      <p className="font-medium">{formatPrice(item.cost)}</p>
-                      <Badge variant="outline" className="text-xs">
-                        {item.type === 'ingredient' ? 'Ingrediente' : 'Sub-receita'}
-                      </Badge>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <div className="text-center py-8 text-muted-foreground">

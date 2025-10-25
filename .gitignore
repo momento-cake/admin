@@ -79,6 +79,16 @@ tests/*-comprehensive*.spec.ts
 tests/*-diagnostic*.spec.ts
 
 # development artifacts
-/scripts/
 /verification/
+/validation-results/
 *.md.backup
+
+# test result files
+test-report.json
+test-results.json
+deployment-test-results.json
+comprehensive-test-report.json
+detailed-analysis.json
+initial-admin.json
+INGREDIENT_PRICE_UPDATE_RESULTS.md
+RECIPE_FORM_ANALYSIS.md

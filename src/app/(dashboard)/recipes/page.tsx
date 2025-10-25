@@ -39,10 +39,6 @@ export default function RecipesPage() {
   };
 
   const handleDeleteRecipe = async (recipe: Recipe) => {
-    if (!confirm(`Tem certeza que deseja excluir a receita "${recipe.name}"?`)) {
-      return;
-    }
-
     try {
       await deleteRecipe(recipe.id);
       console.log(`Receita removida: ${recipe.name}`);

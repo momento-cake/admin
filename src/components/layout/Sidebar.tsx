@@ -49,13 +49,18 @@ const navigation = [
     ]
   },
   {
-    name: 'Ingredientes',
+    name: 'Produtos',
     icon: Package,
     roles: ['admin', 'viewer'],
     hasSubmenu: true,
     submenu: [
       {
-        name: 'Inventário',
+        name: 'Receitas',
+        href: '/recipes',
+        icon: ChefHat
+      },
+      {
+        name: 'Ingredientes',
         href: '/ingredients/inventory',
         icon: Package
       },
@@ -63,31 +68,19 @@ const navigation = [
         name: 'Fornecedores',
         href: '/ingredients/suppliers',
         icon: Truck
-      }
-    ]
-  },
-  {
-    name: 'Receitas',
-    icon: ChefHat,
-    roles: ['admin', 'viewer'],
-    hasSubmenu: true,
-    submenu: [
-      {
-        name: 'Todas as Receitas',
-        href: '/recipes',
-        icon: Book
       },
       {
         name: 'Análise de Custos',
         href: '/recipes/costs',
         icon: DollarSign
-      },
-      {
-        name: 'Configurações',
-        href: '/recipes/settings',
-        icon: Settings
       }
     ]
+  },
+  {
+    name: 'Configurações',
+    href: '/recipes/settings',
+    icon: Settings,
+    roles: ['admin']
   }
 ]
 
@@ -116,7 +109,13 @@ export function Sidebar() {
   const isActiveSubmenu = (item: any) => {
     if (!item.submenu) return false
     return item.submenu.some((subItem: any) => {
-      return pathname === subItem.href
+      if (subItem.href) {
+        return pathname === subItem.href
+      }
+      if (subItem.submenu) {
+        return subItem.submenu.some((nestedItem: any) => pathname === nestedItem.href)
+      }
+      return false
     })
   }
 
@@ -180,21 +179,73 @@ export function Sidebar() {
                       {item.submenu!.map((subItem) => {
                         const SubIcon = subItem.icon
                         const isSubActive = pathname === subItem.href
+                        const hasNestedSubmenu = subItem.hasSubmenu && subItem.submenu
+                        const isNestedExpanded = isExpanded(subItem.name)
+                        const isNestedActive = hasNestedSubmenu && subItem.submenu.some((nestedItem: any) => pathname === nestedItem.href)
                         
                         return (
-                          <Link
-                            key={subItem.name}
-                            href={subItem.href}
-                            className={cn(
-                              'group flex items-center px-2 py-1.5 text-xs font-medium rounded-md transition-colors',
-                              isSubActive
-                                ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                                : 'text-sidebar-foreground/80 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground'
+                          <div key={subItem.name}>
+                            {hasNestedSubmenu ? (
+                              <button
+                                onClick={() => toggleExpanded(subItem.name)}
+                                className={cn(
+                                  'group flex items-center justify-between w-full px-2 py-1.5 text-xs font-medium rounded-md transition-colors',
+                                  isNestedActive || isNestedExpanded
+                                    ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                                    : 'text-sidebar-foreground/80 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground'
+                                )}
+                              >
+                                <div className="flex items-center">
+                                  <SubIcon className="mr-2 h-4 w-4 flex-shrink-0" />
+                                  {subItem.name}
+                                </div>
+                                {isNestedExpanded ? (
+                                  <ChevronDown className="h-3 w-3" />
+                                ) : (
+                                  <ChevronRight className="h-3 w-3" />
+                                )}
+                              </button>
+                            ) : (
+                              <Link
+                                href={subItem.href}
+                                className={cn(
+                                  'group flex items-center px-2 py-1.5 text-xs font-medium rounded-md transition-colors',
+                                  isSubActive
+                                    ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                                    : 'text-sidebar-foreground/80 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground'
+                                )}
+                              >
+                                <SubIcon className="mr-2 h-4 w-4 flex-shrink-0" />
+                                {subItem.name}
+                              </Link>
                             )}
-                          >
-                            <SubIcon className="mr-2 h-4 w-4 flex-shrink-0" />
-                            {subItem.name}
-                          </Link>
+                            
+                            {/* Nested submenu */}
+                            {hasNestedSubmenu && isNestedExpanded && (
+                              <div className="ml-6 mt-1 space-y-1">
+                                {subItem.submenu!.map((nestedItem: any) => {
+                                  const NestedIcon = nestedItem.icon
+                                  const isNestedItemActive = pathname === nestedItem.href
+                                  
+                                  return (
+                                    <Link
+                                      key={nestedItem.name}
+                                      href={nestedItem.href}
+                                      className={cn(
+                                        'group flex items-center px-2 py-1 text-xs font-medium rounded-md transition-colors',
+                                        isNestedItemActive
+                                          ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                                          : 'text-sidebar-foreground/60 hover:bg-sidebar-accent/30 hover:text-sidebar-accent-foreground'
+                                      )}
+                                    >
+                                      <NestedIcon className="mr-2 h-3 w-3 flex-shrink-0" />
+                                      {nestedItem.name}
+                                    </Link>
+                                  )
+                                })}
+                              </div>
+                            )}
+                          </div>
                         )
                       })}
                     </div>
