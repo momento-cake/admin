@@ -107,6 +107,7 @@ export function RelatedPersonsSection({
             variant="outline"
             size="sm"
             onClick={() => {
+              console.log('RelatedPersonsSection: Add button clicked')
               setIsAdding(true)
               resetForm()
             }}
@@ -168,7 +169,7 @@ export function RelatedPersonsSection({
       {/* Form for Adding/Editing */}
       {isAdding && (
         <Card className="p-4 bg-gray-50">
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-4" onSubmit={handleSubmit}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -261,13 +262,14 @@ export function RelatedPersonsSection({
                 Cancelar
               </Button>
               <Button
-                type="submit"
+                type="button"
                 className="bg-blue-600 hover:bg-blue-700 text-white"
+                onClick={handleSubmit}
               >
                 {editingIndex !== null ? 'Atualizar Pessoa' : 'Adicionar Pessoa'}
               </Button>
             </div>
-          </form>
+          </div>
         </Card>
       )}
 

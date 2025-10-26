@@ -5,7 +5,14 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { X, Loader2 } from 'lucide-react'
+import { X, Loader2, Trash2 } from 'lucide-react'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Client, ClientType, RelatedPerson, SpecialDate } from '@/types/client'
 import { RelatedPersonsSection } from './RelatedPersonsSection'
 import { SpecialDatesSection } from './SpecialDatesSection'
@@ -219,39 +226,47 @@ export function ClientFormModal({ client, onClose, onSuccess }: ClientFormModalP
             )}
             <div className="space-y-3">
               {formData.contactMethods.map((cm, index) => (
-                <div key={cm.id} className="p-3 border border-input rounded-md bg-muted/30 space-y-2">
-                  <div className="grid grid-cols-3 gap-2">
-                    <div>
-                      <select
+                <div key={cm.id} className="p-3 border border-input rounded-md bg-muted/30">
+                  <div className="flex items-end gap-2">
+                    <div className="flex-1">
+                      <Label className="text-xs mb-1 block">Tipo</Label>
+                      <Select
                         value={cm.type}
-                        onChange={(e) => {
+                        onValueChange={(value) => {
                           const newMethods = [...formData.contactMethods]
-                          newMethods[index].type = e.target.value as any
+                          newMethods[index].type = value as any
                           setFormData(prev => ({ ...prev, contactMethods: newMethods }))
                         }}
-                        className="w-full px-2 py-1 text-sm border border-input rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-ring"
                       >
-                        <option value="phone">Telefone</option>
-                        <option value="email">Email</option>
-                        <option value="whatsapp">WhatsApp</option>
-                        <option value="instagram">Instagram</option>
-                        <option value="facebook">Facebook</option>
-                        <option value="linkedin">LinkedIn</option>
-                        <option value="other">Outro</option>
-                      </select>
+                        <SelectTrigger className="h-9">
+                          <SelectValue placeholder="Selecione" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="phone">Telefone</SelectItem>
+                          <SelectItem value="email">Email</SelectItem>
+                          <SelectItem value="whatsapp">WhatsApp</SelectItem>
+                          <SelectItem value="instagram">Instagram</SelectItem>
+                          <SelectItem value="facebook">Facebook</SelectItem>
+                          <SelectItem value="linkedin">LinkedIn</SelectItem>
+                          <SelectItem value="other">Outro</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
-                    <Input
-                      type="text"
-                      value={cm.value}
-                      onChange={(e) => {
-                        const newMethods = [...formData.contactMethods]
-                        newMethods[index].value = e.target.value
-                        setFormData(prev => ({ ...prev, contactMethods: newMethods }))
-                      }}
-                      placeholder="Valor"
-                      className="h-9"
-                    />
-                    <label className="flex items-center gap-1 cursor-pointer text-sm">
+                    <div className="flex-1">
+                      <Label className="text-xs mb-1 block">Valor</Label>
+                      <Input
+                        type="text"
+                        value={cm.value}
+                        onChange={(e) => {
+                          const newMethods = [...formData.contactMethods]
+                          newMethods[index].value = e.target.value
+                          setFormData(prev => ({ ...prev, contactMethods: newMethods }))
+                        }}
+                        placeholder="Valor"
+                        className="h-9"
+                      />
+                    </div>
+                    <label className="flex items-center gap-1 cursor-pointer text-sm mb-1 whitespace-nowrap">
                       <input
                         type="checkbox"
                         checked={cm.isPrimary}
@@ -261,23 +276,23 @@ export function ClientFormModal({ client, onClose, onSuccess }: ClientFormModalP
                           setFormData(prev => ({ ...prev, contactMethods: newMethods }))
                         }}
                       />
-                      Principal
+                      <span className="text-xs">Principal</span>
                     </label>
+                    {formData.contactMethods.length > 1 && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setFormData(prev => ({
+                          ...prev,
+                          contactMethods: prev.contactMethods.filter((_, i) => i !== index)
+                        }))}
+                        className="h-9 px-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
-                  {formData.contactMethods.length > 1 && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setFormData(prev => ({
-                        ...prev,
-                        contactMethods: prev.contactMethods.filter((_, i) => i !== index)
-                      }))}
-                      className="w-full text-xs"
-                    >
-                      Remover
-                    </Button>
-                  )}
                 </div>
               ))}
             </div>
@@ -285,16 +300,19 @@ export function ClientFormModal({ client, onClose, onSuccess }: ClientFormModalP
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => setFormData(prev => ({
-                ...prev,
-                contactMethods: [...prev.contactMethods, {
-                  id: Date.now().toString(),
-                  type: 'phone' as const,
-                  value: '',
-                  isPrimary: false,
-                  notes: ''
-                }]
-              }))}
+              onClick={() => {
+                console.log('Adding new contact method')
+                setFormData(prev => ({
+                  ...prev,
+                  contactMethods: [...prev.contactMethods, {
+                    id: Date.now().toString(),
+                    type: 'phone' as const,
+                    value: '',
+                    isPrimary: false,
+                    notes: ''
+                  }]
+                }))
+              }}
             >
               + Adicionar Método
             </Button>
