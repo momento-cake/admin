@@ -110,14 +110,18 @@ export async function fetchIngredient(id: string): Promise<Ingredient> {
   try {
     const docRef = doc(db, COLLECTION_NAME, id);
     const docSnap = await getDoc(docRef);
-    
+
     if (!docSnap.exists()) {
       throw new Error('Ingrediente não encontrado');
     }
-    
+
     return docToIngredient(docSnap);
   } catch (error) {
     console.error('❌ Error fetching ingredient:', error);
+    // Re-throw the original error if it's a specific error message
+    if (error instanceof Error && error.message === 'Ingrediente não encontrado') {
+      throw error;
+    }
     throw new Error('Erro ao buscar ingrediente');
   }
 }
@@ -237,7 +241,7 @@ export async function updateIngredient(data: UpdateIngredientData): Promise<Ingr
     console.log('🔄 Updating ingredient:', id);
 
     // Validate required fields
-    if (updateData.name && !updateData.name.trim()) {
+    if (updateData.name !== undefined && !updateData.name.trim()) {
       throw new Error('Nome do ingrediente é obrigatório');
     }
 
@@ -403,10 +407,34 @@ export function getUnitDisplayName(unit: IngredientUnit): string {
 export function convertUnits(from: IngredientUnit, to: IngredientUnit, value: number): number {
   // If same unit, return value
   if (from === to) return value;
-  
+
+  // Define compatible weight and volume units
+  const weightUnits = [IngredientUnit.KILOGRAM, IngredientUnit.GRAM];
+  const volumeUnits = [IngredientUnit.LITER, IngredientUnit.MILLILITER];
+
+  // Check if units are compatible
+  const fromIsWeight = weightUnits.includes(from);
+  const toIsWeight = weightUnits.includes(to);
+  const fromIsVolume = volumeUnits.includes(from);
+  const toIsVolume = volumeUnits.includes(to);
+
+  // Return original value if units are incompatible (different categories or UNIT type)
+  const fromIsUnit = from === IngredientUnit.UNIT;
+  const toIsUnit = to === IngredientUnit.UNIT;
+
+  // If either is UNIT type, they're incompatible unless both are UNIT (already handled above)
+  if (fromIsUnit || toIsUnit) {
+    return value;
+  }
+
+  // If trying to convert between weight and volume, they're incompatible
+  if ((fromIsWeight && toIsVolume) || (fromIsVolume && toIsWeight)) {
+    return value;
+  }
+
   // Convert to base unit (grams for weight, milliliters for volume)
   let baseValue = value;
-  
+
   // Weight conversions to grams
   switch (from) {
     case IngredientUnit.KILOGRAM:
@@ -416,7 +444,7 @@ export function convertUnits(from: IngredientUnit, to: IngredientUnit, value: nu
       baseValue = value;
       break;
   }
-  
+
   // Volume conversions to milliliters
   switch (from) {
     case IngredientUnit.LITER:
@@ -426,7 +454,7 @@ export function convertUnits(from: IngredientUnit, to: IngredientUnit, value: nu
       baseValue = value;
       break;
   }
-  
+
   // Convert from base unit to target unit
   switch (to) {
     case IngredientUnit.KILOGRAM:
@@ -476,11 +504,13 @@ export async function updateIngredientStock(ingredientId: string, data: StockUpd
   try {
     console.log('🔄 Updating ingredient stock:', ingredientId);
 
-    // Validate that quantity is a positive integer
-    const quantity = Math.round(Math.abs(data.quantity));
-    if (quantity <= 0) {
+    // Validate that quantity is a positive number (reject negative values)
+    if (data.quantity <= 0) {
       throw new Error('Quantidade deve ser um número inteiro positivo');
     }
+
+    // Convert to positive integer after validation
+    const quantity = Math.round(Math.abs(data.quantity));
 
     // Get current ingredient
     const ingredient = await fetchIngredient(ingredientId);

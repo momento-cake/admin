@@ -376,25 +376,6 @@ describe('Recipes Service', () => {
 
   describe('updateRecipe', () => {
     it('should update recipe with valid data', async () => {
-      const mockCurrentDoc = {
-        id: 'recipe-1',
-        exists: () => true,
-        data: () => ({
-          name: 'Original Recipe',
-          category: 'cakes',
-          difficulty: 'easy',
-          generatedAmount: 1000,
-          servings: 10,
-          preparationTime: 60,
-          recipeItems: [],
-          instructions: [],
-          isActive: true,
-          createdAt: { toDate: () => new Date() },
-          updatedAt: { toDate: () => new Date() },
-          createdBy: 'admin',
-        }),
-      };
-
       const mockUpdatedDoc = {
         id: 'recipe-1',
         exists: () => true,
@@ -416,9 +397,7 @@ describe('Recipes Service', () => {
 
       const mockEmptySnapshot = { empty: true, docs: [] };
 
-      vi.mocked(FirebaseFirestore.getDoc)
-        .mockResolvedValueOnce(mockCurrentDoc as any)
-        .mockResolvedValueOnce(mockUpdatedDoc as any);
+      vi.mocked(FirebaseFirestore.getDoc).mockResolvedValue(mockUpdatedDoc as any);
       vi.mocked(FirebaseFirestore.getDocs).mockResolvedValue(
         mockEmptySnapshot as any
       );

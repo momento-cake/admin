@@ -132,6 +132,7 @@ describe('Ingredient Validators', () => {
         minStock: 10,
         currentStock: 50,
         category: 'flour',
+        allergens: [],
       };
 
       const result = ingredientValidation.safeParse(data);

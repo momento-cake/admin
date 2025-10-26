@@ -119,14 +119,18 @@ export async function fetchSupplier(id: string): Promise<Supplier> {
   try {
     const docRef = doc(db, COLLECTION_NAME, id);
     const docSnap = await getDoc(docRef);
-    
+
     if (!docSnap.exists()) {
       throw new Error('Fornecedor não encontrado');
     }
-    
+
     return docToSupplier(docSnap);
   } catch (error) {
     console.error('❌ Error fetching supplier:', error);
+    // Re-throw the original error if it's a specific error message
+    if (error instanceof Error && error.message === 'Fornecedor não encontrado') {
+      throw error;
+    }
     throw new Error('Erro ao buscar fornecedor');
   }
 }

@@ -142,7 +142,7 @@ describe('Ingredients Service', () => {
               name: 'Flour',
               category: 'Flour',
               unit: 'kg',
-              currentStock: 5,
+              currentStock: 7,
               minStock: 10,
               isActive: true,
               createdAt: { toDate: () => new Date() },

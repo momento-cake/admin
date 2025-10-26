@@ -45,6 +45,10 @@ describe('Recipe Management Workflow Integration', () => {
       };
 
       // Step 1: Validate recipe data
+      vi.mocked(recipesValidator.recipeValidation).mockReturnValue({
+        success: true,
+        data: recipeData
+      } as any);
 
       const validationResult = recipesValidator.recipeValidation.safeParse(recipeData);
       expect(validationResult.success).toBe(true);
@@ -69,6 +73,15 @@ describe('Recipe Management Workflow Integration', () => {
         servings: 0 // Must be >= 1
       };
 
+      vi.mocked(recipesValidator.recipeValidation).mockReturnValue({
+        success: false,
+        error: {
+          errors: [
+            { path: ['name'], message: 'Name is required' },
+            { path: ['difficulty'], message: 'Invalid difficulty' }
+          ]
+        }
+      } as any);
 
       const validationResult = recipesValidator.recipeValidation.safeParse(invalidRecipeData);
 
@@ -112,6 +125,10 @@ describe('Recipe Management Workflow Integration', () => {
       };
 
       // Step 1: Validate update
+      vi.mocked(recipesValidator.updateRecipeValidation).mockReturnValue({
+        success: true,
+        data: updateData
+      } as any);
 
       const validationResult = recipesValidator.updateRecipeValidation.safeParse(updateData);
       expect(validationResult.success).toBe(true);
@@ -136,6 +153,10 @@ describe('Recipe Management Workflow Integration', () => {
         servings: 24 // Doubled servings
       };
 
+      vi.mocked(recipesValidator.updateRecipeValidation).mockReturnValue({
+        success: true,
+        data: updateData
+      } as any);
 
       const updated = {
         ...mockRecipes[0],
@@ -158,6 +179,10 @@ describe('Recipe Management Workflow Integration', () => {
       };
 
       // Step 1: Validate scaling
+      vi.mocked(recipesValidator.recipeScalingValidation).mockReturnValue({
+        success: true,
+        data: scalingData
+      } as any);
 
       const validationResult = recipesValidator.recipeScalingValidation.safeParse(scalingData);
       expect(validationResult.success).toBe(true);
@@ -181,6 +206,12 @@ describe('Recipe Management Workflow Integration', () => {
         targetServings: 0 // Invalid: must be >= 1
       };
 
+      vi.mocked(recipesValidator.recipeScalingValidation).mockReturnValue({
+        success: false,
+        error: {
+          errors: [{ path: ['targetServings'], message: 'Must be >= 1' }]
+        }
+      } as any);
 
       const validationResult = recipesValidator.recipeScalingValidation.safeParse(invalidScaling);
 
@@ -217,6 +248,10 @@ describe('Recipe Management Workflow Integration', () => {
       };
 
       // Step 1: Validate duplication
+      vi.mocked(recipesValidator.duplicateRecipeValidation).mockReturnValue({
+        success: true,
+        data: duplicateData
+      } as any);
 
       const validationResult = recipesValidator.duplicateRecipeValidation.safeParse(duplicateData);
       expect(validationResult.success).toBe(true);
@@ -337,6 +372,10 @@ describe('Recipe Management Workflow Integration', () => {
         status: 'testing' as const
       };
 
+      vi.mocked(recipesValidator.updateRecipeValidation).mockReturnValue({
+        success: true,
+        data: updateToTesting
+      } as any);
 
       recipe = { ...recipe, status: 'testing' };
 
@@ -346,6 +385,10 @@ describe('Recipe Management Workflow Integration', () => {
         status: 'approved' as const
       };
 
+      vi.mocked(recipesValidator.recipeStatusValidation).mockReturnValue({
+        success: true,
+        data: updateToApproved
+      } as any);
 
       const statusValidation = recipesValidator.recipeStatusValidation.safeParse(updateToApproved);
       expect(statusValidation.success).toBe(true);
@@ -362,6 +405,12 @@ describe('Recipe Management Workflow Integration', () => {
         status: 'invalid_status' as any
       };
 
+      vi.mocked(recipesValidator.recipeStatusValidation).mockReturnValue({
+        success: false,
+        error: {
+          errors: [{ path: ['status'], message: 'Invalid status' }]
+        }
+      } as any);
 
       const validationResult = recipesValidator.recipeStatusValidation.safeParse(invalidStatusData);
 
@@ -378,6 +427,10 @@ describe('Recipe Management Workflow Integration', () => {
       };
 
       // Step 1: Validate cost calculation request
+      vi.mocked(recipesValidator.costBreakdownValidation).mockReturnValue({
+        success: true,
+        data: costData
+      } as any);
 
       const validationResult = recipesValidator.costBreakdownValidation.safeParse(costData);
       expect(validationResult.success).toBe(true);

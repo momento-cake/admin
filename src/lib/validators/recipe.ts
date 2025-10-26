@@ -143,7 +143,7 @@ export const priceUpdateValidation = z.object({
   defaultMargin: z.number()
     .min(0, 'Margem padrão deve ser positiva')
     .optional(),
-  marginsByCategory: z.record(z.nativeEnum(RecipeCategory), z.number())
+  marginsByCategory: z.record(z.string(), z.number())
     .optional(),
 });
 
@@ -213,7 +213,8 @@ export function validateRecipeName(name: string): { isValid: boolean; error?: st
     return { isValid: true };
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return { isValid: false, error: error.errors[0]?.message };
+      const firstError = error.errors?.[0];
+      return { isValid: false, error: firstError?.message || 'Nome inválido' };
     }
     return { isValid: false, error: 'Nome inválido' };
   }
@@ -225,7 +226,8 @@ export function validateRecipeItem(item: unknown): { isValid: boolean; error?: s
     return { isValid: true };
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return { isValid: false, error: error.errors[0]?.message };
+      const firstError = error.errors?.[0];
+      return { isValid: false, error: firstError?.message || 'Item de receita inválido' };
     }
     return { isValid: false, error: 'Item de receita inválido' };
   }
@@ -237,7 +239,8 @@ export function validateRecipeStep(step: unknown): { isValid: boolean; error?: s
     return { isValid: true };
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return { isValid: false, error: error.errors[0]?.message };
+      const firstError = error.errors?.[0];
+      return { isValid: false, error: firstError?.message || 'Passo de receita inválido' };
     }
     return { isValid: false, error: 'Passo de receita inválido' };
   }

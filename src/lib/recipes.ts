@@ -210,14 +210,18 @@ export async function fetchRecipe(id: string): Promise<Recipe> {
   try {
     const docRef = doc(db, COLLECTION_NAME, id);
     const docSnap = await getDoc(docRef);
-    
+
     if (!docSnap.exists()) {
       throw new Error('Receita não encontrada');
     }
-    
+
     return docToRecipe(docSnap);
   } catch (error) {
     console.error('❌ Error fetching recipe:', error);
+    // Re-throw the original error if it's a specific error message
+    if (error instanceof Error && error.message === 'Receita não encontrada') {
+      throw error;
+    }
     throw new Error('Erro ao buscar receita');
   }
 }
@@ -354,15 +358,15 @@ export async function updateRecipe(data: UpdateRecipeData): Promise<Recipe> {
     console.log('🔄 Updating recipe:', id);
 
     // Validate required fields
-    if (updateData.name && !updateData.name.trim()) {
+    if (updateData.name !== undefined && !updateData.name.trim()) {
       throw new Error('Nome da receita é obrigatório');
     }
 
-    if (updateData.generatedAmount && updateData.generatedAmount <= 0) {
+    if (updateData.generatedAmount !== undefined && updateData.generatedAmount <= 0) {
       throw new Error('Quantidade gerada deve ser maior que zero');
     }
 
-    if (updateData.servings && updateData.servings <= 0) {
+    if (updateData.servings !== undefined && updateData.servings <= 0) {
       throw new Error('Número de porções deve ser maior que zero');
     }
 

@@ -17,7 +17,7 @@ vi.mock('@/lib/firebase', () => ({
 
 describe('Suppliers Service', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
   });
 
   describe('fetchSuppliers', () => {
@@ -236,7 +236,9 @@ describe('Suppliers Service', () => {
           createdAt: { toDate: () => new Date() },
         }),
       };
+      const mockEmptySnapshot = { empty: true, docs: [] };
 
+      vi.mocked(FirebaseFirestore.getDocs).mockResolvedValue(mockEmptySnapshot as any);
       vi.mocked(FirebaseFirestore.addDoc).mockResolvedValue(
         mockDocRef as any
       );
@@ -302,18 +304,6 @@ describe('Suppliers Service', () => {
 
   describe('updateSupplier', () => {
     it('should update supplier with valid data', async () => {
-      const mockCurrentDoc = {
-        id: 'supplier-1',
-        exists: () => true,
-        data: () => ({
-          name: 'Original Supplier',
-          rating: 4.0,
-          categories: [],
-          isActive: true,
-          createdAt: { toDate: () => new Date() },
-        }),
-      };
-
       const mockUpdatedDoc = {
         id: 'supplier-1',
         exists: () => true,
@@ -325,10 +315,10 @@ describe('Suppliers Service', () => {
           createdAt: { toDate: () => new Date() },
         }),
       };
+      const mockEmptySnapshot = { empty: true, docs: [] };
 
-      vi.mocked(FirebaseFirestore.getDoc)
-        .mockResolvedValueOnce(mockCurrentDoc as any)
-        .mockResolvedValueOnce(mockUpdatedDoc as any);
+      vi.mocked(FirebaseFirestore.getDocs).mockResolvedValue(mockEmptySnapshot as any);
+      vi.mocked(FirebaseFirestore.getDoc).mockResolvedValue(mockUpdatedDoc as any);
 
       const result = await updateSupplier({
         id: 'supplier-1',
@@ -380,7 +370,9 @@ describe('Suppliers Service', () => {
           createdAt: { toDate: () => new Date() },
         }),
       };
+      const mockEmptySnapshot = { empty: true, docs: [] };
 
+      vi.mocked(FirebaseFirestore.getDocs).mockResolvedValue(mockEmptySnapshot as any);
       vi.mocked(FirebaseFirestore.addDoc).mockResolvedValue(
         mockDocRef as any
       );
@@ -418,7 +410,9 @@ describe('Suppliers Service', () => {
           createdAt: { toDate: () => new Date() },
         }),
       };
+      const mockEmptySnapshot = { empty: true, docs: [] };
 
+      vi.mocked(FirebaseFirestore.getDocs).mockResolvedValue(mockEmptySnapshot as any);
       vi.mocked(FirebaseFirestore.addDoc).mockResolvedValue(
         mockDocRef as any
       );

@@ -20,7 +20,8 @@ import {
   ChefHat,
   Book,
   DollarSign,
-  Settings
+  Settings,
+  UserCheck
 } from 'lucide-react'
 
 const navigation = [
@@ -75,6 +76,12 @@ const navigation = [
         icon: DollarSign
       }
     ]
+  },
+  {
+    name: 'Clientes',
+    href: '/clients',
+    icon: UserCheck,
+    roles: ['admin', 'viewer']
   },
   {
     name: 'Configurações',

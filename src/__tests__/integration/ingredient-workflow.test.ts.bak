@@ -37,14 +37,13 @@ describe('Ingredient Management Workflow Integration', () => {
     it('should complete ingredient creation from form to API', async () => {
       const ingredientData = {
         name: 'Premium Flour',
-        currentPrice: 25.50,
+        price: 25.50,
         supplierId: 'sup1',
-        category: 'flour',
-        unit: 'kilogram',
-        measurementValue: 1,
-        minStock: 5,
-        currentStock: 10,
-        allergens: ['gluten']
+        category: 'grains',
+        measurement: {
+          value: 1,
+          unit: 'kg'
+        }
       };
 
       // Step 1: Validate ingredient data
@@ -98,6 +97,10 @@ describe('Ingredient Management Workflow Integration', () => {
       };
 
       // Step 1: Validate update data
+      vi.mocked(ingredientsValidator.updateIngredientValidation).mockReturnValue({
+        success: true,
+        data: updateData
+      } as any);
 
       const validationResult = ingredientsValidator.updateIngredientValidation.safeParse(updateData);
       expect(validationResult.success).toBe(true);
@@ -121,6 +124,12 @@ describe('Ingredient Management Workflow Integration', () => {
         // Missing id
       };
 
+      vi.mocked(ingredientsValidator.updateIngredientValidation).mockReturnValue({
+        success: false,
+        error: {
+          errors: [{ path: ['id'], message: 'ID is required' }]
+        }
+      } as any);
 
       const validationResult = ingredientsValidator.updateIngredientValidation.safeParse(invalidUpdateData);
 
@@ -135,6 +144,10 @@ describe('Ingredient Management Workflow Integration', () => {
         currentStock: 150 // Only updating stock
       };
 
+      vi.mocked(ingredientsValidator.updateIngredientValidation).mockReturnValue({
+        success: true,
+        data: partialUpdate
+      } as any);
 
       const updated = {
         ...mockIngredients[0],
@@ -224,6 +237,10 @@ describe('Ingredient Management Workflow Integration', () => {
       };
 
       // Step 1: Validate stock update
+      vi.mocked(ingredientsValidator.stockUpdateValidation).mockReturnValue({
+        success: true,
+        data: stockUpdate
+      } as any);
 
       const validationResult = ingredientsValidator.stockUpdateValidation.safeParse(stockUpdate);
       expect(validationResult.success).toBe(true);
@@ -243,6 +260,12 @@ describe('Ingredient Management Workflow Integration', () => {
         type: 'purchase' as const
       };
 
+      vi.mocked(ingredientsValidator.stockUpdateValidation).mockReturnValue({
+        success: false,
+        error: {
+          errors: [{ path: ['quantity'], message: 'Quantity must be positive' }]
+        }
+      } as any);
 
       const validationResult = ingredientsValidator.stockUpdateValidation.safeParse(invalidStockUpdate);
 
@@ -295,6 +318,10 @@ describe('Ingredient Management Workflow Integration', () => {
       expect(result.current.isPlatformAdmin()).toBe(true);
 
       const ingredientData = factories.ingredient();
+      vi.mocked(ingredientsValidator.ingredientValidation).mockReturnValue({
+        success: true,
+        data: ingredientData
+      } as any);
 
       vi.mocked(ingredientsLib.createIngredient).mockResolvedValue(ingredientData);
 

@@ -24,7 +24,7 @@ describe('Recipe Validators', () => {
         generatedAmount: 1000,
         generatedUnit: 'gram',
         servings: 10,
-        difficulty: 'intermediate',
+        difficulty: 'medium',
         recipeItems: [
           {
             type: 'ingredient',
@@ -427,7 +427,7 @@ describe('Recipe Validators', () => {
         testResults: {
           tastingNotes: 'Good flavor, needs more salt',
           costAccuracy: true,
-          difficultyRating: 'intermediate',
+          difficultyRating: 'medium',
           recommendedChanges: 'Add 5g salt',
         },
       };
