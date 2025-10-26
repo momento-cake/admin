@@ -128,7 +128,7 @@ export function SpecialDatesSection({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between relative z-0">
         <h3 className="text-lg font-semibold text-gray-900">Datas Especiais</h3>
         {!isAdding && (
           <Button
@@ -140,7 +140,7 @@ export function SpecialDatesSection({
               setIsAdding(true)
               resetForm()
             }}
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 relative z-10"
           >
             <Plus className="w-4 h-4" />
             Adicionar Data
