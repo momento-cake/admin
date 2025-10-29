@@ -17,9 +17,9 @@ The Momento Cake Admin system is a web-based admin dashboard for managing the ba
 - **Styling**: TailwindCSS + Shadcn UI components
 - **Database**: Firebase Firestore
 - **Authentication**: Firebase Auth
-- **Development port**: Always use port 3001
-- **Port management**: If port 3001 is in use, kill the process then start on port 3001
-- **Command**: `npm run dev` should always run on port 3001
+- **Development port**: Always use port 4000
+- **Port management**: If port 4000 is in use, kill the process then start on port 4000
+- **Command**: `npm run dev` should always run on port 4000
 
 ## Application Structure
 
@@ -108,10 +108,10 @@ await page.waitForLoadState('load'); // ✅ Use this
 - **Success indicator**: Successful login redirects to `/dashboard`
 
 **Test Environment Setup:**
-- **Application URL**: http://localhost:3001
-- **Login URL**: http://localhost:3001/login
+- **Application URL**: http://localhost:4000
+- **Login URL**: http://localhost:4000/login
 - **Clean environment**: Kill existing dev servers before testing
-- **Port management**: Always use port 3001, kill processes if port is occupied
+- **Port management**: Always use port 4000, kill processes if port is occupied
 
 #### Test Organization
 - Place tests in `tests/` directory
@@ -350,10 +350,10 @@ Before starting feature development:
 
 ## Troubleshooting
 
-### Port 3001 Already in Use
+### Port 4000 Already in Use
 ```bash
-# Find and kill process using port 3001
-lsof -i :3001
+# Find and kill process using port 4000
+lsof -i :4000
 kill -9 <PID>
 
 # Then start dev server

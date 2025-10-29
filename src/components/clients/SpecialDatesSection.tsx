@@ -7,6 +7,9 @@ import { Plus, Trash2, Edit2, Calendar } from 'lucide-react'
 import { SpecialDate, SpecialDateType, RelatedPerson } from '@/types/client'
 
 interface SpecialDatesSectionProps {
+  isAdding?: boolean
+  onShowAddForm?: () => void
+  onHideAddForm?: () => void
   specialDates: SpecialDate[]
   relatedPersons?: RelatedPerson[]
   onAdd: (date: SpecialDate) => void
@@ -21,13 +24,22 @@ const SPECIAL_DATE_TYPES: { label: string; value: SpecialDateType; icon: string 
 ]
 
 export function SpecialDatesSection({
+  isAdding: parentIsAdding = false,
+  onShowAddForm: parentOnShowAddForm,
+  onHideAddForm: parentOnHideAddForm,
   specialDates,
   relatedPersons = [],
   onAdd,
   onUpdate,
   onRemove
 }: SpecialDatesSectionProps) {
-  const [isAdding, setIsAdding] = useState(false)
+  const [localIsAdding, setLocalIsAdding] = useState(false)
+  // Use parent-managed state if provided, otherwise fall back to local state
+  const isAdding = parentOnShowAddForm !== undefined ? parentIsAdding : localIsAdding
+  const setIsAdding = parentOnShowAddForm !== undefined ? (value: boolean) => {
+    if (value) parentOnShowAddForm()
+    else parentOnHideAddForm?.()
+  } : setLocalIsAdding
   const [editingIndex, setEditingIndex] = useState<number | null>(null)
   const [formData, setFormData] = useState<SpecialDate>({
     id: '',
@@ -135,10 +147,11 @@ export function SpecialDatesSection({
             type="button"
             variant="outline"
             size="sm"
-            onClick={() => {
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
               console.log('SpecialDatesSection: Add button clicked')
               setIsAdding(true)
-              resetForm()
             }}
             className="flex items-center gap-2 relative z-10"
           >
@@ -157,29 +170,29 @@ export function SpecialDatesSection({
             const actualIndex = specialDates.findIndex(d => d.id === date.id)
 
             return (
-              <Card key={date.id} className="p-3 flex items-center justify-between hover:bg-gray-50 transition">
-                <div className="flex items-start gap-3 flex-1">
-                  <div className="text-2xl pt-1">
+              <Card key={date.id} className="p-3 flex items-start justify-between gap-4 hover:bg-gray-50 transition">
+                <div className="flex gap-3 flex-1 min-w-0">
+                  <div className="text-xl flex-shrink-0">
                     {getDateTypeIcon(date.type)}
                   </div>
-                  <div className="flex-1">
-                    <p className="font-medium text-gray-900">{date.description}</p>
-                    <p className="text-sm text-gray-600">
-                      {formatDate(date.date)}
-                      {daysUntil === 0 && <span className="ml-2 font-semibold text-red-600">Hoje! 🎉</span>}
-                      {daysUntil === 1 && <span className="ml-2 text-orange-600">Amanhã!</span>}
-                      {daysUntil > 1 && daysUntil <= 30 && <span className="ml-2 text-blue-600">Em {daysUntil} dias</span>}
-                    </p>
-                    <div className="text-sm text-gray-500 mt-1">
-                      <span>{getDateTypeLabel(date.type)}</span>
-                      {relatedPerson && <span> • Relacionado a: {relatedPerson}</span>}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-baseline gap-2 flex-wrap">
+                      <p className="font-medium text-gray-900">{date.description}</p>
+                      <p className="text-sm text-gray-600">
+                        {formatDate(date.date)}
+                      </p>
+                      {daysUntil === 0 && <span className="text-red-600 font-semibold text-xs">Hoje! 🎉</span>}
+                      {daysUntil === 1 && <span className="text-orange-600 text-xs">Amanhã!</span>}
+                      {daysUntil > 1 && daysUntil <= 30 && <span className="text-blue-600 text-xs">Em {daysUntil} dias</span>}
                     </div>
-                    {date.notes && (
-                      <p className="text-sm text-gray-600 mt-1 italic">{date.notes}</p>
-                    )}
+                    <div className="text-sm text-gray-500 flex items-center gap-2 flex-wrap mt-0.5">
+                      <span>{getDateTypeLabel(date.type)}</span>
+                      {relatedPerson && <span>→ {relatedPerson}</span>}
+                      {date.notes && <span className="italic truncate">({date.notes})</span>}
+                    </div>
                   </div>
                 </div>
-                <div className="flex gap-2 ml-4">
+                <div className="flex gap-2 flex-shrink-0 mt-0">
                   <Button
                     type="button"
                     variant="ghost"
@@ -208,7 +221,7 @@ export function SpecialDatesSection({
       {/* Form for Adding/Editing */}
       {isAdding && (
         <Card className="p-4 bg-gray-50">
-          <div className="space-y-4" onSubmit={handleSubmit}>
+          <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -290,14 +303,22 @@ export function SpecialDatesSection({
               <Button
                 type="button"
                 variant="outline"
-                onClick={resetForm}
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  resetForm()
+                }}
               >
                 Cancelar
               </Button>
               <Button
                 type="button"
                 className="bg-blue-600 hover:bg-blue-700 text-white"
-                onClick={handleSubmit}
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  handleSubmit(e as any)
+                }}
               >
                 {editingIndex !== null ? 'Atualizar Data' : 'Adicionar Data'}
               </Button>

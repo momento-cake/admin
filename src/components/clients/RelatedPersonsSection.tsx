@@ -7,6 +7,9 @@ import { Plus, Trash2, Edit2 } from 'lucide-react'
 import { RelatedPerson, RelationshipType } from '@/types/client'
 
 interface RelatedPersonsSectionProps {
+  isAdding?: boolean
+  onShowAddForm?: () => void
+  onHideAddForm?: () => void
   relatedPersons: RelatedPerson[]
   onAdd: (person: RelatedPerson) => void
   onUpdate: (index: number, person: RelatedPerson) => void
@@ -23,12 +26,21 @@ const RELATIONSHIP_TYPES: { label: string; value: RelationshipType }[] = [
 ]
 
 export function RelatedPersonsSection({
+  isAdding: parentIsAdding = false,
+  onShowAddForm: parentOnShowAddForm,
+  onHideAddForm: parentOnHideAddForm,
   relatedPersons,
   onAdd,
   onUpdate,
   onRemove
 }: RelatedPersonsSectionProps) {
-  const [isAdding, setIsAdding] = useState(false)
+  const [localIsAdding, setLocalIsAdding] = useState(false)
+  // Use parent-managed state if provided, otherwise fall back to local state
+  const isAdding = parentOnShowAddForm !== undefined ? parentIsAdding : localIsAdding
+  const setIsAdding = parentOnShowAddForm !== undefined ? (value: boolean) => {
+    if (value) parentOnShowAddForm()
+    else parentOnHideAddForm?.()
+  } : setLocalIsAdding
   const [editingIndex, setEditingIndex] = useState<number | null>(null)
   const [formData, setFormData] = useState<RelatedPerson>({
     id: '',
@@ -106,10 +118,11 @@ export function RelatedPersonsSection({
             type="button"
             variant="outline"
             size="sm"
-            onClick={() => {
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
               console.log('RelatedPersonsSection: Add button clicked')
               setIsAdding(true)
-              resetForm()
             }}
             className="flex items-center gap-2 relative z-10"
           >
@@ -123,25 +136,30 @@ export function RelatedPersonsSection({
       {relatedPersons.length > 0 && !isAdding && (
         <div className="space-y-2">
           {relatedPersons.map((person, index) => (
-            <Card key={person.id} className="p-3 flex items-center justify-between">
-              <div className="flex-1">
-                <p className="font-medium text-gray-900">{person.name}</p>
-                <p className="text-sm text-gray-500">
-                  {getRelationshipLabel(person.relationship)}
-                  {person.birthDate && ` • Nascimento: ${formatDate(person.birthDate)}`}
-                </p>
+            <Card key={person.id} className="p-3 flex items-start justify-between gap-4">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-baseline gap-2 flex-wrap">
+                  <p className="font-medium text-gray-900">{person.name}</p>
+                  <p className="text-sm text-gray-500">
+                    {getRelationshipLabel(person.relationship)}
+                  </p>
+                  {person.birthDate && (
+                    <p className="text-sm text-gray-500">
+                      Nasc: {formatDate(person.birthDate)}
+                    </p>
+                  )}
+                </div>
                 {(person.email || person.phone) && (
-                  <div className="text-sm text-gray-600 mt-1">
+                  <div className="text-sm text-gray-600 mt-1 flex items-center gap-2 flex-wrap">
                     {person.email && <span>{person.email}</span>}
-                    {person.email && person.phone && <span> • </span>}
                     {person.phone && <span>{person.phone}</span>}
                   </div>
                 )}
                 {person.notes && (
-                  <p className="text-sm text-gray-600 mt-1 italic">{person.notes}</p>
+                  <p className="text-sm text-gray-600 mt-1 italic truncate">{person.notes}</p>
                 )}
               </div>
-              <div className="flex gap-2 ml-4">
+              <div className="flex gap-2 flex-shrink-0 mt-0">
                 <Button
                   type="button"
                   variant="ghost"
@@ -169,7 +187,7 @@ export function RelatedPersonsSection({
       {/* Form for Adding/Editing */}
       {isAdding && (
         <Card className="p-4 bg-gray-50">
-          <div className="space-y-4" onSubmit={handleSubmit}>
+          <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -257,14 +275,22 @@ export function RelatedPersonsSection({
               <Button
                 type="button"
                 variant="outline"
-                onClick={resetForm}
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  resetForm()
+                }}
               >
                 Cancelar
               </Button>
               <Button
                 type="button"
                 className="bg-blue-600 hover:bg-blue-700 text-white"
-                onClick={handleSubmit}
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  handleSubmit(e as any)
+                }}
               >
                 {editingIndex !== null ? 'Atualizar Pessoa' : 'Adicionar Pessoa'}
               </Button>

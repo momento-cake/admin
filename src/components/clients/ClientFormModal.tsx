@@ -27,15 +27,15 @@ export function ClientFormModal({ client, onClose, onSuccess }: ClientFormModalP
   const [clientType, setClientType] = useState<ClientType>(client?.type || 'person')
   const [loading, setLoading] = useState(false)
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
+  const [showAddPersonForm, setShowAddPersonForm] = useState(false)
+  const [showAddDateForm, setShowAddDateForm] = useState(false)
   const [formData, setFormData] = useState({
     type: client?.type || ('person' as ClientType),
     name: client?.name || '',
-    email: client?.email || '',
     cpfCnpj: client?.cpfCnpj || '',
-    phone: client?.phone || '',
-    contactMethods: client?.contactMethods || [
-      { id: '1', type: 'phone' as const, value: '', isPrimary: true, notes: '' }
-    ],
+    contactMethods: client?.contactMethods && client.contactMethods.length > 0
+      ? client.contactMethods
+      : [{ id: '1', type: 'phone' as const, value: '', isPrimary: true, notes: '' }],
     address: client?.address || {
       cep: '', estado: '', cidade: '', bairro: '', endereco: '', numero: '', complemento: ''
     },
@@ -49,9 +49,32 @@ export function ClientFormModal({ client, onClose, onSuccess }: ClientFormModalP
     })
   })
 
+  const formatCPF = (value: string): string => {
+    const numbers = value.replace(/\D/g, '')
+    if (numbers.length <= 3) return numbers
+    if (numbers.length <= 6) return `${numbers.slice(0, 3)}.${numbers.slice(3)}`
+    if (numbers.length <= 9) return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(6)}`
+    return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(6, 9)}-${numbers.slice(9, 11)}`
+  }
+
+  const formatCNPJ = (value: string): string => {
+    const numbers = value.replace(/\D/g, '')
+    if (numbers.length <= 2) return numbers
+    if (numbers.length <= 5) return `${numbers.slice(0, 2)}.${numbers.slice(2)}`
+    if (numbers.length <= 8) return `${numbers.slice(0, 2)}.${numbers.slice(2, 5)}.${numbers.slice(5)}`
+    if (numbers.length <= 12) return `${numbers.slice(0, 2)}.${numbers.slice(2, 5)}.${numbers.slice(5, 8)}/${numbers.slice(8)}`
+    return `${numbers.slice(0, 2)}.${numbers.slice(2, 5)}.${numbers.slice(5, 8)}/${numbers.slice(8, 12)}-${numbers.slice(12, 14)}`
+  }
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target
-    setFormData(prev => ({ ...prev, [name]: value }))
+
+    let formattedValue = value
+    if (name === 'cpfCnpj') {
+      formattedValue = clientType === 'person' ? formatCPF(value) : formatCNPJ(value)
+    }
+
+    setFormData(prev => ({ ...prev, [name]: formattedValue }))
     if (validationErrors[name]) {
       setValidationErrors(prev => ({ ...prev, [name]: '' }))
     }
@@ -74,9 +97,7 @@ export function ClientFormModal({ client, onClose, onSuccess }: ClientFormModalP
       const submitData = {
         type: clientType,
         name: formData.name,
-        email: formData.email || undefined,
         cpfCnpj: formData.cpfCnpj || undefined,
-        phone: formData.phone || undefined,
         address: Object.values(formData.address).some(v => v) ? formData.address : undefined,
         contactMethods: formData.contactMethods,
         tags: formData.tags.length > 0 ? formData.tags : undefined,
@@ -181,38 +202,15 @@ export function ClientFormModal({ client, onClose, onSuccess }: ClientFormModalP
               {validationErrors.name && <p className="text-sm text-destructive mt-1">{validationErrors.name}</p>}
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="cpfCnpj">
-                  {clientType === 'person' ? 'CPF' : 'CNPJ'}
-                </Label>
-                <Input
-                  id="cpfCnpj"
-                  type="text"
-                  name="cpfCnpj"
-                  value={formData.cpfCnpj}
-                  onChange={handleInputChange}
-                />
-              </div>
-            </div>
-
             <div className="space-y-2">
-              <Label htmlFor="phone">Telefone</Label>
+              <Label htmlFor="cpfCnpj">
+                {clientType === 'person' ? 'CPF' : 'CNPJ'}
+              </Label>
               <Input
-                id="phone"
-                type="tel"
-                name="phone"
-                value={formData.phone}
+                id="cpfCnpj"
+                type="text"
+                name="cpfCnpj"
+                value={formData.cpfCnpj}
                 onChange={handleInputChange}
               />
             </div>
@@ -321,12 +319,21 @@ export function ClientFormModal({ client, onClose, onSuccess }: ClientFormModalP
           {/* Related Persons */}
           <div>
             <RelatedPersonsSection
+              isAdding={showAddPersonForm}
+              onShowAddForm={() => setShowAddPersonForm(true)}
+              onHideAddForm={() => setShowAddPersonForm(false)}
               relatedPersons={formData.relatedPersons}
-              onAdd={(person) => setFormData(prev => ({ ...prev, relatedPersons: [...prev.relatedPersons, person] }))}
-              onUpdate={(index, person) => setFormData(prev => ({
-                ...prev,
-                relatedPersons: prev.relatedPersons.map((p, i) => i === index ? person : p)
-              }))}
+              onAdd={(person) => {
+                setFormData(prev => ({ ...prev, relatedPersons: [...prev.relatedPersons, person] }))
+                setShowAddPersonForm(false)
+              }}
+              onUpdate={(index, person) => {
+                setFormData(prev => ({
+                  ...prev,
+                  relatedPersons: prev.relatedPersons.map((p, i) => i === index ? person : p)
+                }))
+                setShowAddPersonForm(false)
+              }}
               onRemove={(index) => setFormData(prev => ({
                 ...prev,
                 relatedPersons: prev.relatedPersons.filter((_, i) => i !== index)
@@ -337,13 +344,22 @@ export function ClientFormModal({ client, onClose, onSuccess }: ClientFormModalP
           {/* Special Dates */}
           <div>
             <SpecialDatesSection
+              isAdding={showAddDateForm}
+              onShowAddForm={() => setShowAddDateForm(true)}
+              onHideAddForm={() => setShowAddDateForm(false)}
               specialDates={formData.specialDates}
               relatedPersons={formData.relatedPersons}
-              onAdd={(date) => setFormData(prev => ({ ...prev, specialDates: [...prev.specialDates, date] }))}
-              onUpdate={(index, date) => setFormData(prev => ({
-                ...prev,
-                specialDates: prev.specialDates.map((d, i) => i === index ? date : d)
-              }))}
+              onAdd={(date) => {
+                setFormData(prev => ({ ...prev, specialDates: [...prev.specialDates, date] }))
+                setShowAddDateForm(false)
+              }}
+              onUpdate={(index, date) => {
+                setFormData(prev => ({
+                  ...prev,
+                  specialDates: prev.specialDates.map((d, i) => i === index ? date : d)
+                }))
+                setShowAddDateForm(false)
+              }}
               onRemove={(index) => setFormData(prev => ({
                 ...prev,
                 specialDates: prev.specialDates.filter((_, i) => i !== index)

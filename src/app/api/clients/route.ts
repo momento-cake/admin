@@ -76,12 +76,13 @@ export async function POST(request: NextRequest) {
     const validationResult = createClientSchema.safeParse(body)
     if (!validationResult.success) {
       console.error('❌ Validation failed:', validationResult.error)
+      const errors = validationResult.error.errors || []
       return NextResponse.json(
         {
           success: false,
           error: 'Dados inválidos',
-          details: validationResult.error.errors.map(err => ({
-            field: err.path.join('.'),
+          details: errors.map(err => ({
+            field: Array.isArray(err.path) ? err.path.join('.') : String(err.path),
             message: err.message
           }))
         },

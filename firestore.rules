@@ -125,6 +125,12 @@ service cloud.firestore {
       allow read: if isViewer();
       allow write: if isAdmin();
     }
+
+    // Top-level clients collection - for clients management
+    match /clients/{clientId} {
+      // Allow all reads and writes (testing only - will be restricted later)
+      allow read, write: if true;
+    }
     
     // Recipe settings collection - for system-wide recipe configuration
     match /recipe_settings/{settingsId} {
