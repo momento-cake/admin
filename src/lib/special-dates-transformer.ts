@@ -131,8 +131,8 @@ export function getDateRangeBounds(
  * @returns True if there are dates older than the current range (or if we haven't explored very far back yet)
  */
 export function hasOlderDates(clients: Client[], pastDays: number): boolean {
-  // Allow exploration up to 5 years (1825 days) in the past
-  const maxExplorableHistoryDays = 1825
+  // Allow exploration up to 1 year (365 days) in the past
+  const maxExplorableHistoryDays = 365
   if (pastDays < maxExplorableHistoryDays) {
     return true
   }
@@ -170,8 +170,8 @@ export function hasOlderDates(clients: Client[], pastDays: number): boolean {
  * @returns True if there are dates further in the future than the current range (or if we haven't explored very far ahead yet)
  */
 export function hasFutureDates(clients: Client[], futureDays: number): boolean {
-  // Allow exploration up to 5 years (1825 days) in the future
-  const maxExplorableFutureDays = 1825
+  // Allow exploration up to 1 year (365 days) in the future
+  const maxExplorableFutureDays = 365
   if (futureDays < maxExplorableFutureDays) {
     return true
   }
