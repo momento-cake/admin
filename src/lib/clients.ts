@@ -538,3 +538,52 @@ export async function fetchClientsWithUpcomingDates(
     throw new Error('Erro ao buscar clientes com datas especiais')
   }
 }
+
+/**
+ * Interface for special date dashboard entries
+ */
+export interface SpecialDateWithClient {
+  // Date information
+  dateId: string
+  date: string // YYYY-MM-DD format
+  type: 'birthday' | 'anniversary' | 'custom' | 'company-anniversary'
+  description: string
+  relatedPersonId?: string
+  relatedPersonName?: string
+  notes?: string
+
+  // Client information
+  clientId: string
+  clientName: string
+  clientType: 'person' | 'business'
+
+  // Calculated fields
+  daysFromToday: number
+  displayDate: string // "15 de março de 2025"
+  relativeDate: string // "Em 5 dias", "Hoje!", "Há 3 dias"
+  yearOfDate: number
+}
+
+/**
+ * Fetch all clients for the special dates dashboard
+ * Returns clients with minimal data for performance
+ */
+export async function fetchSpecialDatesForDashboard(): Promise<Client[]> {
+  try {
+    console.log('🔍 Fetching clients for special dates dashboard')
+
+    const clientsQuery = query(
+      collection(db, COLLECTION_NAME),
+      where('isActive', '==', true)
+    )
+
+    const snapshot = await getDocs(clientsQuery)
+    const clients = snapshot.docs.map(docToClient)
+
+    console.log(`✅ Retrieved ${clients.length} clients for special dates dashboard`)
+    return clients
+  } catch (error) {
+    console.error('❌ Error fetching clients for special dates dashboard:', error)
+    throw new Error('Erro ao buscar clientes para o dashboard de datas especiais')
+  }
+}

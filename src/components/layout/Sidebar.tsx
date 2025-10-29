@@ -21,7 +21,8 @@ import {
   Book,
   DollarSign,
   Settings,
-  UserCheck
+  UserCheck,
+  Calendar
 } from 'lucide-react'
 
 const navigation = [
@@ -79,9 +80,21 @@ const navigation = [
   },
   {
     name: 'Clientes',
-    href: '/clients',
     icon: UserCheck,
-    roles: ['admin', 'viewer']
+    roles: ['admin', 'viewer'],
+    hasSubmenu: true,
+    submenu: [
+      {
+        name: 'Todos os Clientes',
+        href: '/clients',
+        icon: UserCheck
+      },
+      {
+        name: 'Datas Especiais',
+        href: '/clients/special-dates',
+        icon: Calendar
+      }
+    ]
   },
   {
     name: 'Configurações',
