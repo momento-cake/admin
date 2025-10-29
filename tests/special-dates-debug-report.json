@@ -1,0 +1,40 @@
+{
+  "timestamp": "2025-10-29T10:16:08.821Z",
+  "url": "http://localhost:4000/clients/special-dates/",
+  "pageTitle": "Momento Cake Admin",
+  "elementsFound": {
+    "tables": 0,
+    "tableBodies": 0,
+    "tableRows": 0,
+    "lists": 0,
+    "cards": 0,
+    "loadingIndicators": 0,
+    "errorMessages": 0,
+    "emptyStateMessages": 1
+  },
+  "consoleMessages": {
+    "total": 14,
+    "errors": [],
+    "warnings": [],
+    "relevantLogs": [
+      "🔍 Fetching clients for special dates dashboard",
+      "🔍 Fetching clients for special dates dashboard",
+      "✅ Retrieved 2 clients for special dates dashboard",
+      "✅ Retrieved 2 clients for special dates dashboard"
+    ],
+    "allLogs": [
+      "✅ Firebase initialized successfully for dev environment (momentocake-admin-dev)",
+      "✅ Firebase initialized successfully",
+      "[Fast Refresh] rebuilding",
+      "[Fast Refresh] done in 107ms",
+      "[Fast Refresh] rebuilding",
+      "[Fast Refresh] done in 233ms",
+      "✅ Firebase initialized successfully for dev environment (momentocake-admin-dev)",
+      "✅ Firebase initialized successfully",
+      "🔍 Fetching clients for special dates dashboard",
+      "🔍 Fetching clients for special dates dashboard",
+      "✅ Retrieved 2 clients for special dates dashboard",
+      "✅ Retrieved 2 clients for special dates dashboard"
+    ]
+  }
+}

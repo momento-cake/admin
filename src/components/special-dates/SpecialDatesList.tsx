@@ -17,8 +17,9 @@ interface SpecialDatesListProps {
  */
 export function SpecialDatesList({ clients, isLoading = false }: SpecialDatesListProps) {
   // Track the current date range
-  const [pastDays, setPastDays] = useState(7)
-  const [futureDays, setFutureDays] = useState(14)
+  // Default: past 30 days + next 365 days to show a full year of upcoming dates
+  const [pastDays, setPastDays] = useState(30)
+  const [futureDays, setFutureDays] = useState(365)
 
   // Track loading state for expand buttons
   const [isLoadingMore, setIsLoadingMore] = useState(false)

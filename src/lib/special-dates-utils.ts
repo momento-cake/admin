@@ -105,7 +105,7 @@ export function getDateYear(dateString: string): number {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
-  let dateThisYear = new Date(today.getFullYear(), month - 1, day)
+  const dateThisYear = new Date(today.getFullYear(), month - 1, day)
   dateThisYear.setHours(0, 0, 0, 0)
 
   if (dateThisYear < today) {

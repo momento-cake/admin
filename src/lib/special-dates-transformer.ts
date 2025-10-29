@@ -30,9 +30,12 @@ export function transformClientDatesToEntries(
 ): SpecialDateWithClient[] {
   const entries: SpecialDateWithClient[] = []
 
+  console.log(`🔄 Transforming dates with range: ${minDaysFromToday} to ${maxDaysFromToday} days`)
+
   for (const client of clients) {
     // Process special dates
     if (client.specialDates && client.specialDates.length > 0) {
+      console.log(`📅 Client ${client.id} has ${client.specialDates.length} special dates`)
       for (const specialDate of client.specialDates) {
         if (!isValidISODate(specialDate.date)) {
           console.warn(`Invalid date format for client ${client.id}: ${specialDate.date}`)
@@ -40,11 +43,14 @@ export function transformClientDatesToEntries(
         }
 
         const daysFromToday = calculateDaysFromToday(specialDate.date)
+        console.log(`📌 Date ${specialDate.date}: ${daysFromToday} days from today`)
 
         // Filter by date range
         if (daysFromToday < minDaysFromToday || daysFromToday > maxDaysFromToday) {
+          console.log(`   ❌ Filtered out (outside range ${minDaysFromToday} to ${maxDaysFromToday})`)
           continue
         }
+        console.log(`   ✅ Included in results`)
 
         const yearOfDate = getDateYear(specialDate.date)
 
