@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Plus } from 'lucide-react'
 import { Client } from '@/types/client'
 import { ClientsList } from '@/components/clients/ClientsList'
@@ -35,21 +36,31 @@ export default function ClientsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Clientes</h1>
-          <p className="text-muted-foreground">
-            Gerencie seus clientes e suas informações
-          </p>
-        </div>
+      <div>
+        <h1 className="text-3xl font-bold text-momento-text">Clientes</h1>
+        <p className="text-muted-foreground">
+          Gerencie seus clientes e suas informações
+        </p>
       </div>
 
-      {/* Clients List */}
-      <ClientsList
-        onClientEdit={handleEdit}
-        onClientView={(client) => setViewingClient(client)}
-        onClientCreate={handleCreate}
-      />
+      {/* Clients List Container */}
+      <div className="space-y-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>Catálogo de Clientes</CardTitle>
+            <CardDescription>
+              Gerencie seus clientes, contatos e informações personalizadas
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ClientsList
+              onClientEdit={handleEdit}
+              onClientView={(client) => setViewingClient(client)}
+              onClientCreate={handleCreate}
+            />
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Create/Edit Modal */}
       {showModal && (
