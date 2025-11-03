@@ -15,7 +15,6 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Search, Plus, Package, RefreshCw, Eye, Edit, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatErrorMessage, logError } from '@/lib/error-handler';
-import { ProductListSkeleton } from './ProductListSkeleton';
 
 interface ProductListProps {
   onProductEdit?: (product: Product) => void;
@@ -167,7 +166,12 @@ export function ProductList({
   });
 
   if (loading) {
-    return <ProductListSkeleton />;
+    return (
+      <div className="flex items-center justify-center p-8">
+        <RefreshCw className="h-6 w-6 animate-spin mr-2" />
+        <span>Carregando produtos...</span>
+      </div>
+    );
   }
 
   if (error) {
