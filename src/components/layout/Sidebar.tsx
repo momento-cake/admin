@@ -22,7 +22,8 @@ import {
   DollarSign,
   Settings,
   UserCheck,
-  Calendar
+  Calendar,
+  FolderOpen
 } from 'lucide-react'
 
 const navigation = [
@@ -62,6 +63,11 @@ const navigation = [
         icon: ChefHat
       },
       {
+        name: 'Categorias de Produtos',
+        href: '/products/categories',
+        icon: FolderOpen
+      },
+      {
         name: 'Ingredientes',
         href: '/ingredients/inventory',
         icon: Package
@@ -70,6 +76,11 @@ const navigation = [
         name: 'Fornecedores',
         href: '/ingredients/suppliers',
         icon: Truck
+      },
+      {
+        name: 'Embalagens',
+        href: '/packaging/inventory',
+        icon: Package
       },
       {
         name: 'Análise de Custos',

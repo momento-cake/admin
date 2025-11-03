@@ -131,14 +131,62 @@ service cloud.firestore {
       // Allow all reads and writes (testing only - will be restricted later)
       allow read, write: if true;
     }
-    
+
+    // Packaging collection - for packaging item management
+    match /packaging/{packagingId} {
+      // Admins can manage all packaging items, viewers can read
+      allow read: if isViewer();
+      allow write: if isAdmin();
+    }
+
+    // Packaging stock history collection - for tracking packaging stock movements
+    match /packaging_stock_history/{historyId} {
+      // Admins can manage all stock history, viewers can read
+      allow read: if isViewer();
+      allow write: if isAdmin();
+    }
+
+    // Packaging price history collection - for tracking packaging price changes
+    match /packaging_price_history/{historyId} {
+      // Admins can manage all price history, viewers can read
+      allow read: if isViewer();
+      allow write: if isAdmin();
+    }
+
     // Recipe settings collection - for system-wide recipe configuration
     match /recipe_settings/{settingsId} {
       // Admins can manage recipe settings, viewers can read
       allow read: if isViewer();
       allow write: if isAdmin();
     }
-    
+
+    // Products collection - Product catalog management
+    match /products/{productId} {
+      // Admins can manage all products, viewers can read
+      allow read: if isViewer();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Product Categories collection - Category management
+    match /productCategories/{categoryId} {
+      // All authenticated users can read categories, only admins can write
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Product Subcategories collection - Subcategory management
+    match /productSubcategories/{subcategoryId} {
+      // All authenticated users can read subcategories, only admins can write
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // SKU Counters collection - Internal counter management for SKU generation
+    match /skuCounters/{document=**} {
+      // Only the system can access SKU counters (via transactions)
+      allow read, write: if false;
+    }
+
     // Businesses collection - Business entity management
     match /businesses/{businessId} {
       // Admins can read all, authorized users can read their business
