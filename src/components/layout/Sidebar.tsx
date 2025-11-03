@@ -58,6 +58,11 @@ const navigation = [
     hasSubmenu: true,
     submenu: [
       {
+        name: 'Catálogo',
+        href: '/products',
+        icon: Package
+      },
+      {
         name: 'Receitas',
         href: '/recipes',
         icon: ChefHat
