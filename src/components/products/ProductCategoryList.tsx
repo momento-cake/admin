@@ -19,11 +19,11 @@ import {
   ChevronDown,
   ChevronRight,
   Search,
-  Loader2,
-  AlertCircle,
-  FolderOpen
+  FolderOpen,
+  RefreshCw
 } from 'lucide-react';
 import { useDebounce } from '@/hooks/useDebounce';
+import { cn } from '@/lib/utils';
 
 interface ProductCategoryListProps {
   onCategoryEdit?: (category: ProductCategory) => void;
@@ -32,6 +32,7 @@ interface ProductCategoryListProps {
   onSubcategoryEdit?: (subcategory: ProductSubcategory) => void;
   onSubcategoryDelete?: (subcategory: ProductSubcategory) => void;
   onSubcategoryCreate?: (parentCategoryId: string) => void;
+  onRefresh?: () => void;
   className?: string;
 }
 
@@ -42,6 +43,7 @@ export function ProductCategoryList({
   onSubcategoryEdit,
   onSubcategoryDelete,
   onSubcategoryCreate,
+  onRefresh,
   className
 }: ProductCategoryListProps) {
   const [categories, setCategories] = useState<ProductCategory[]>([]);
@@ -141,8 +143,9 @@ export function ProductCategoryList({
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <div className="flex items-center justify-center p-8">
+        <RefreshCw className="h-6 w-6 animate-spin mr-2" />
+        <span>Carregando categorias...</span>
       </div>
     );
   }
@@ -150,7 +153,6 @@ export function ProductCategoryList({
   if (error) {
     return (
       <Alert variant="destructive">
-        <AlertCircle className="h-4 w-4" />
         <AlertDescription>{error}</AlertDescription>
       </Alert>
     );
@@ -160,22 +162,28 @@ export function ProductCategoryList({
     return (
       <EmptyState
         icon={FolderOpen}
-        title="Nenhuma categoria encontrada"
-        description={searchInput ? 'Tente ajustar seus critérios de busca' : 'Comece criando sua primeira categoria'}
-        action={{
-          label: 'Nova Categoria',
+        title={searchInput ? "Nenhuma categoria encontrada" : "Nenhuma categoria cadastrada"}
+        description={
+          searchInput
+            ? "Tente ajustar seus critérios de busca"
+            : "Comece criando sua primeira categoria"
+        }
+        action={onCategoryCreate ? {
+          label: "Nova Categoria",
           onClick: onCategoryCreate
-        }}
+        } : undefined}
       />
     );
   }
 
   return (
-    <div className={className}>
-      <div className="space-y-4 mb-6">
-        <div className="flex gap-3">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+    <div className={cn('space-y-6', className)}>
+      {/* Header with Search */}
+      <div className="flex flex-col gap-4">
+        {/* Search and Actions */}
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
               placeholder="Buscar categorias ou subcategorias..."
               value={searchInput}
@@ -183,195 +191,213 @@ export function ProductCategoryList({
               className="pl-10"
             />
           </div>
-          <Button onClick={onCategoryCreate} className="gap-2">
-            <Plus className="h-4 w-4" />
-            Nova Categoria
-          </Button>
+
+          {onCategoryCreate && (
+            <Button onClick={onCategoryCreate}>
+              <Plus className="h-4 w-4 mr-2" />
+              Nova Categoria
+            </Button>
+          )}
         </div>
       </div>
 
-      <div className="space-y-3">
-        {filteredCategories.map((category) => {
-          const isExpanded = expandedCategories.has(category.id);
-          const cats = filteredSubcategories(category.id);
-          const hasSubcategories = cats.length > 0;
+      {/* Results */}
+      <div className="space-y-4">
+        <div className="flex justify-between items-center">
+          <p className="text-sm text-muted-foreground">
+            {filteredCategories.length} categor{filteredCategories.length !== 1 ? 'ias' : 'ia'} encontrada{filteredCategories.length !== 1 ? 's' : ''}
+          </p>
+          {onRefresh && (
+            <Button variant="outline" size="sm" onClick={onRefresh}>
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Atualizar
+            </Button>
+          )}
+        </div>
 
-          return (
-            <div key={category.id} className="border rounded-lg overflow-hidden">
-              {/* Category Header */}
-              <div className="bg-background">
-                <div className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors">
-                  <div className="flex items-center gap-3 flex-1">
-                    {hasSubcategories && (
-                      <button
-                        onClick={() => toggleCategory(category.id)}
-                        className="p-0 hover:bg-muted rounded"
-                      >
-                        {isExpanded ? (
-                          <ChevronDown className="h-4 w-4" />
-                        ) : (
-                          <ChevronRight className="h-4 w-4" />
-                        )}
-                      </button>
-                    )}
-                    {!hasSubcategories && (
-                      <div className="w-4" />
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium">{category.name}</div>
-                      <div className="text-sm text-muted-foreground flex items-center gap-2 mt-1">
-                        <Badge variant="outline" className="font-mono text-xs">
-                          {category.code}
-                        </Badge>
-                        {category.description && (
-                          <span className="text-xs">{category.description}</span>
-                        )}
+        <div className="border rounded-md bg-white">
+          <div className="space-y-0">
+            {filteredCategories.map((category) => {
+              const isExpanded = expandedCategories.has(category.id);
+              const cats = filteredSubcategories(category.id);
+              const hasSubcategories = cats.length > 0;
+
+              return (
+                <div key={category.id} className="border-b last:border-b-0">
+                  {/* Category Header */}
+                  <div className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors">
+                    <div className="flex items-center gap-3 flex-1">
+                      {hasSubcategories && (
+                        <button
+                          onClick={() => toggleCategory(category.id)}
+                          className="p-0 hover:bg-muted rounded"
+                        >
+                          {isExpanded ? (
+                            <ChevronDown className="h-4 w-4" />
+                          ) : (
+                            <ChevronRight className="h-4 w-4" />
+                          )}
+                        </button>
+                      )}
+                      {!hasSubcategories && (
+                        <div className="w-4" />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium">{category.name}</div>
+                        <div className="text-sm text-muted-foreground flex items-center gap-2 mt-1">
+                          <Badge variant="outline" className="font-mono text-xs">
+                            {category.code}
+                          </Badge>
+                          {category.description && (
+                            <span className="text-xs">{category.description}</span>
+                          )}
+                        </div>
                       </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 ml-4 flex-shrink-0">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => onCategoryEdit?.(category)}
+                        className="h-8 w-8 p-0"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                            onClick={() => setDeletingId(category.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        {deletingId === category.id && (
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Deletar Categoria</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Tem certeza que deseja deletar &quot;{category.name}&quot;? Esta ação não pode ser desfeita.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                              <AlertDialogAction
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                onClick={() => handleDeleteCategory(category)}
+                              >
+                                Deletar
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        )}
+                      </AlertDialog>
+
+                      {hasSubcategories && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => onSubcategoryCreate?.(category.id)}
+                          className="h-8 gap-1 text-xs"
+                        >
+                          <Plus className="h-3 w-3" />
+                          Subcategoria
+                        </Button>
+                      )}
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 ml-4 flex-shrink-0">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => onCategoryEdit?.(category)}
-                      className="h-8 w-8 p-0"
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                          onClick={() => setDeletingId(category.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </AlertDialogTrigger>
-                      {deletingId === category.id && (
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Deletar Categoria</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Tem certeza que deseja deletar &quot;{category.name}&quot;? Esta ação não pode ser desfeita.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                            <AlertDialogAction
-                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                              onClick={() => handleDeleteCategory(category)}
-                            >
-                              Deletar
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      )}
-                    </AlertDialog>
-
-                    {hasSubcategories && (
+                  {!hasSubcategories && (
+                    <div className="px-4 pb-3">
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={() => onSubcategoryCreate?.(category.id)}
-                        className="h-8 gap-1 text-xs"
+                        className="h-8 gap-1 text-xs w-full"
                       >
                         <Plus className="h-3 w-3" />
-                        Subcategoria
+                        Adicionar Subcategoria
                       </Button>
-                    )}
-                  </div>
-                </div>
+                    </div>
+                  )}
 
-                {!hasSubcategories && (
-                  <div className="px-4 pb-3">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => onSubcategoryCreate?.(category.id)}
-                      className="h-8 gap-1 text-xs w-full"
-                    >
-                      <Plus className="h-3 w-3" />
-                      Adicionar Subcategoria
-                    </Button>
-                  </div>
-                )}
-              </div>
-
-              {/* Subcategories */}
-              {isExpanded && hasSubcategories && (
-                <div className="border-t bg-muted/20">
-                  {cats.map((subcategory) => (
-                    <div
-                      key={subcategory.id}
-                      className="flex items-center justify-between p-4 border-b last:border-b-0 hover:bg-muted/50 transition-colors"
-                    >
-                      <div className="flex items-center gap-3 flex-1 ml-9">
-                        <div className="flex-1 min-w-0">
-                          <div className="text-sm font-medium">{subcategory.name}</div>
-                          <div className="text-xs text-muted-foreground flex items-center gap-2 mt-1">
-                            <Badge variant="outline" className="font-mono text-xs">
-                              {subcategory.code}
-                            </Badge>
-                            {subcategory.description && (
-                              <span className="text-xs">{subcategory.description}</span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-2 ml-4 flex-shrink-0">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => onSubcategoryEdit?.(subcategory)}
-                          className="h-8 w-8 p-0"
+                  {/* Subcategories */}
+                  {isExpanded && hasSubcategories && (
+                    <div className="border-t bg-muted/20">
+                      {cats.map((subcategory) => (
+                        <div
+                          key={subcategory.id}
+                          className="flex items-center justify-between p-4 border-b last:border-b-0 hover:bg-muted/50 transition-colors"
                         >
-                          <Edit className="h-4 w-4" />
-                        </Button>
+                          <div className="flex items-center gap-3 flex-1 ml-9">
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm font-medium">{subcategory.name}</div>
+                              <div className="text-xs text-muted-foreground flex items-center gap-2 mt-1">
+                                <Badge variant="outline" className="font-mono text-xs">
+                                  {subcategory.code}
+                                </Badge>
+                                {subcategory.description && (
+                                  <span className="text-xs">{subcategory.description}</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
 
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
+                          <div className="flex items-center gap-2 ml-4 flex-shrink-0">
                             <Button
                               size="sm"
                               variant="ghost"
-                              className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                              onClick={() => setDeletingId(subcategory.id)}
+                              onClick={() => onSubcategoryEdit?.(subcategory)}
+                              className="h-8 w-8 p-0"
                             >
-                              <Trash2 className="h-4 w-4" />
+                              <Edit className="h-4 w-4" />
                             </Button>
-                          </AlertDialogTrigger>
-                          {deletingId === subcategory.id && (
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Deletar Subcategoria</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Tem certeza que deseja deletar &quot;{subcategory.name}&quot;? Esta ação não pode ser desfeita.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                <AlertDialogAction
-                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                  onClick={() => handleDeleteSubcategory(subcategory)}
+
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                                  onClick={() => setDeletingId(subcategory.id)}
                                 >
-                                  Deletar
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          )}
-                        </AlertDialog>
-                      </div>
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              {deletingId === subcategory.id && (
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Deletar Subcategoria</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Tem certeza que deseja deletar &quot;{subcategory.name}&quot;? Esta ação não pode ser desfeita.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                      onClick={() => handleDeleteSubcategory(subcategory)}
+                                    >
+                                      Deletar
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              )}
+                            </AlertDialog>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  )}
                 </div>
-              )}
-            </div>
-          );
-        })}
+              );
+            })}
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -427,8 +427,8 @@ export function ProductForm({
           </CardContent>
         </Card>
 
-        {/* Cost Analysis */}
-        <CostAnalysis product={costAnalysisData} />
+        {/* Cost Analysis - Only show when editing existing product */}
+        {isEditMode && <CostAnalysis product={costAnalysisData} />}
 
         {/* Pricing Section */}
         <Card>

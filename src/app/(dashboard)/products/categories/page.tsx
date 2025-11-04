@@ -39,6 +39,13 @@ export default function ProductCategoriesPage() {
   const [parentCategoryName, setParentCategoryName] = useState<string>('');
   const [isSubcategorySubmitting, setIsSubcategorySubmitting] = useState(false);
 
+  // Refresh trigger for list
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const triggerRefresh = useCallback(() => {
+    setRefreshKey(prev => prev + 1);
+  }, []);
+
   const handleCategorySubmit = useCallback(
     async (data: CreateProductCategoryData | UpdateProductCategoryData) => {
       if (!userModel) return;
@@ -56,6 +63,7 @@ export default function ProductCategoriesPage() {
         }
         setShowCategoryForm(false);
         setEditingCategory(null);
+        triggerRefresh();
       } catch (error) {
         console.error('Error saving category:', error);
         alert(error instanceof Error ? error.message : 'Erro ao salvar categoria');
@@ -63,7 +71,7 @@ export default function ProductCategoriesPage() {
         setIsCategorySubmitting(false);
       }
     },
-    [userModel]
+    [userModel, triggerRefresh]
   );
 
   const handleCategoryDelete = useCallback(
@@ -71,12 +79,13 @@ export default function ProductCategoriesPage() {
       try {
         await deleteProductCategory(category.id);
         console.log('Categoria deletada com sucesso');
+        triggerRefresh();
       } catch (error) {
         console.error('Error deleting category:', error);
         alert(error instanceof Error ? error.message : 'Erro ao deletar categoria');
       }
     },
-    []
+    [triggerRefresh]
   );
 
   const handleCategoryEdit = useCallback((category: ProductCategory) => {
@@ -127,6 +136,7 @@ export default function ProductCategoriesPage() {
         setEditingSubcategory(null);
         setParentCategoryId('');
         setParentCategoryName('');
+        triggerRefresh();
       } catch (error) {
         console.error('Error saving subcategory:', error);
         alert(error instanceof Error ? error.message : 'Erro ao salvar subcategoria');
@@ -134,7 +144,7 @@ export default function ProductCategoriesPage() {
         setIsSubcategorySubmitting(false);
       }
     },
-    [userModel]
+    [userModel, triggerRefresh]
   );
 
   const handleSubcategoryDelete = useCallback(
@@ -142,12 +152,13 @@ export default function ProductCategoriesPage() {
       try {
         await deleteProductSubcategory(subcategory.id);
         console.log('Subcategoria deletada com sucesso');
+        triggerRefresh();
       } catch (error) {
         console.error('Error deleting subcategory:', error);
         alert(error instanceof Error ? error.message : 'Erro ao deletar subcategoria');
       }
     },
-    []
+    [triggerRefresh]
   );
 
   return (
@@ -162,6 +173,7 @@ export default function ProductCategoriesPage() {
 
       {/* Main Content */}
       <ProductCategoryList
+        key={refreshKey}
         onCategoryCreate={() => {
           setEditingCategory(null);
           setShowCategoryForm(true);
@@ -171,6 +183,7 @@ export default function ProductCategoriesPage() {
         onSubcategoryCreate={handleSubcategoryCreate}
         onSubcategoryEdit={handleSubcategoryEdit}
         onSubcategoryDelete={handleSubcategoryDelete}
+        onRefresh={triggerRefresh}
       />
 
       {/* Category Form Modal */}
