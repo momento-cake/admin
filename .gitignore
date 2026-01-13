@@ -90,5 +90,33 @@ deployment-test-results.json
 comprehensive-test-report.json
 detailed-analysis.json
 initial-admin.json
-INGREDIENT_PRICE_UPDATE_RESULTS.md
-RECIPE_FORM_ANALYSIS.md
+
+# temporary reports (prevent root clutter)
+*_REPORT.md
+*_RESULTS.md
+*_SUMMARY.md
+*_ANALYSIS.md
+*_TEST_*.md
+DEBUG_*.md
+FINAL_*.md
+CONSOLE_*.md
+.implementation_status.txt
+
+# temporary output files
+*-output.log
+*-debug.log
+*-run.log
+
+# Agent workflow artifacts
+.agent/logs/**
+.agent/workflows/runs/**
+
+# Unused scaffolding
+.agent/
+
+# Competitor analysis (not core code)
+competitor/
+
+# Competitor test files
+tests/appmaya-*.spec.ts
+tests/competitor-*.spec.ts

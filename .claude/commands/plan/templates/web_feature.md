@@ -1,63 +1,93 @@
-# Web Platform Architecture
+# Web Platform Architecture (Momento Cake Admin)
 
 ## Pages and Routes
-**Pages/Routes:**
-- `/dashboard/<route>` - <description and purpose>
+**Pages/Routes (Next.js App Router):**
+- `app/<route>/page.tsx` - <description and purpose>
+- `/dashboard` - Main dashboard overview
+- `/users/active` - Active users management
+- `/users/invitations` - User invitations
+- `/ingredients/inventory` - Ingredient inventory
+- `/ingredients/suppliers` - Suppliers management
+- `/products/catalog` - Product catalog
+- `/clients` - Client management
 
 ## Components
 **Components:**
 - `<ComponentName>` - <responsibility and props>
 - shadcn/ui components to use: <list>
 
+**Component Locations:**
+- `src/components/ui/` - Shadcn UI base components
+- `src/components/<feature>/` - Feature-specific components
+- `src/components/common/` - Shared/reusable components
+
 ## State Management
-**TanStack Query hooks:**
-- `use<Resource>Query` - <query purpose>
-- `use<Resource>Mutation` - <mutation purpose>
+**React Hooks:**
+- `use<Resource>` - Custom hooks in `src/hooks/`
+- Firebase real-time listeners for live data
 
 **Context/Store:**
-- <if needed for global state>
+- Auth context for user authentication
+- Firebase context for Firestore access
 
 ## Forms
 **Form Fields:**
 - <list form fields>
 
 **Validation:**
-- Zod schemas for validation
-- Error handling and user feedback
+- Zod schemas for validation in `src/lib/validations/`
+- React Hook Form for form management
+- Error handling and user feedback with toast notifications
 
 ## Styling
 **Tailwind CSS:**
 - Custom classes and design system usage
 - Responsive design considerations (mobile, tablet, desktop)
+- Fixed sidebar layout (64px mobile, 256px desktop)
+
+## Firebase Integration
+**Firestore Collections:**
+- `users`, `invitations`, `ingredients`, `suppliers`
+- `recipes`, `clients`, `products`, `orders`
+
+**Firebase Services:**
+- `src/lib/firebase/` - Firebase configuration and services
+- `src/services/` - Business logic services
 
 ## Relevant Web Files
-- `src/pages/<Page>.tsx` - <page purpose>
-- `src/components/<Component>.tsx` - <component purpose>
-- `src/hooks/use<Hook>.ts` - <hook functionality>
-- `src/lib/api/<resource>.ts` - <API client functions>
+- `app/<route>/page.tsx` - Next.js page components
+- `src/components/<Component>.tsx` - React components
+- `src/hooks/use<Hook>.ts` - Custom hooks
+- `src/services/<resource>.ts` - Firebase service functions
+- `src/types/<resource>.ts` - TypeScript type definitions
 
 ## Web Implementation Tasks
 
-### API Client
-- [ ] Create API client functions in `src/lib/api/`
-- [ ] Define TypeScript types for requests/responses
-- [ ] Implement error handling
-- [ ] Add request/response logging
+### Firebase Services
+- [ ] Create Firebase service functions in `src/services/`
+- [ ] Define TypeScript types in `src/types/`
+- [ ] Implement Firestore CRUD operations
+- [ ] Add error handling and logging
 
 ### UI Components
 - [ ] Create/customize shadcn/ui components
-- [ ] Implement form components with validation (Zod)
-- [ ] Add loading skeletons
+- [ ] Implement form components with validation (Zod + React Hook Form)
+- [ ] Add loading skeletons with Skeleton component
 - [ ] Implement error states
 - [ ] Ensure responsive design (mobile, tablet, desktop)
 - [ ] Write component tests
 
 ### Data Integration
-- [ ] Create TanStack Query hooks (useQuery, useMutation)
-- [ ] Implement optimistic updates
+- [ ] Create custom hooks in `src/hooks/`
+- [ ] Implement Firebase real-time listeners
 - [ ] Add error handling and retries
-- [ ] Implement cache invalidation strategy
-- [ ] Write integration tests
+- [ ] Implement optimistic updates where applicable
+
+### Page Implementation
+- [ ] Create Next.js page in `app/`
+- [ ] Implement proper layout with sidebar
+- [ ] Add breadcrumb navigation
+- [ ] Ensure mobile responsiveness
 
 ## Web Testing Strategy
 
@@ -68,18 +98,15 @@
 - Error states
 - Loading states
 
-### Integration Tests
-- Data fetching and mutations
-- Routing and navigation
+### E2E Tests (Playwright)
+- User workflows
 - Authentication flows
-- API client functions
+- CRUD operations
+- Navigation and routing
 
 ## Web Validation Commands
 
 ```bash
-# Navigate to web directory
-cd gango-web
-
 # Install dependencies
 npm install
 
@@ -89,12 +116,15 @@ npm run type-check
 # Run linting
 npm run lint
 
-# Run unit tests
-npm run test
-
 # Build for production
 npm run build
 
-# Start web locally for manual testing
-PORT=3001 npm run dev
+# Start locally for manual testing (ALWAYS use port 4000)
+npm run dev
+
+# Run E2E tests
+npx playwright test
+
+# Deploy Firebase indexes (if new queries added)
+firebase deploy --only firestore:indexes
 ```

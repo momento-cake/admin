@@ -1,10 +1,10 @@
-# Multi-Platform Test Suite
+# Momento Cake Admin Test Suite
 
-Execute comprehensive validation tests for Gango's backend (Java/Spring Boot), web (React/Vite), and mobile (Flutter) platforms.
+Execute comprehensive validation tests for Momento Cake Admin (Next.js + Firebase).
 
 ## Purpose
 
-Proactively identify and fix issues across all platforms before they impact users:
+Proactively identify and fix issues before they impact users:
 - Detect compilation errors, type mismatches, and import failures
 - Identify broken tests or security vulnerabilities
 - Verify build processes and dependencies
@@ -12,113 +12,68 @@ Proactively identify and fix issues across all platforms before they impact user
 
 ## Variables
 
-platform_filter: $ARGUMENT (optional: all | backend | web | mobile | quick)
+test_filter: $ARGUMENT (optional: all | quick | e2e)
 TEST_COMMAND_TIMEOUT: 10 minutes per test
 
-## Platform Filtering
+## Test Filtering
 
-- `all` or no argument: Run all 15 tests across all platforms (default)
-- `backend`: Run only backend tests (tests 1-4)
-- `web`: Run only web tests (tests 5-9)
-- `mobile`: Run only mobile tests (tests 10-15)
-- `quick`: Run fast tests only (compilation, analysis, unit tests - skip builds)
+- `all` or no argument: Run all tests (default)
+- `quick`: Run fast tests only (type check + lint - skip builds)
+- `e2e`: Run only Playwright E2E tests
 
 ## Test Execution Sequence
 
-### Backend Tests (Java/Spring Boot + Maven)
+### Web Tests (Next.js + Firebase + npm)
 
-**1. Java Compilation Check**
-- Command: `cd gango-backend && ./mvnw clean compile -DskipTests`
-- test_name: `backend_compilation`
-- test_purpose: "Validates Java syntax and compilation without running tests"
-
-**2. Backend Unit Tests**
-- Command: `cd gango-backend && ./mvnw test`
-- test_name: `backend_unit_tests`
-- test_purpose: "Validates Spring Boot services, controllers, repositories, and business logic"
-
-**3. Backend Integration Tests**
-- Command: `cd gango-backend && ./mvnw verify -Pintegration`
-- test_name: `backend_integration_tests`
-- test_purpose: "Validates API endpoints, database operations, and external service integrations"
-
-**4. Backend Code Quality**
-- Command: `cd gango-backend && ./mvnw checkstyle:check`
-- test_name: `backend_code_quality`
-- test_purpose: "Validates Java code style and best practices"
-
-### Web Tests (React + Vite + npm)
-
-**5. Node Dependencies Check**
-- Command: `cd gango-web && npm install --dry-run`
+**1. Node Dependencies Check**
+- Command: `npm install --dry-run`
 - test_name: `web_dependencies`
 - test_purpose: "Validates package.json dependencies are resolvable"
 
-**6. TypeScript Type Check**
-- Command: `cd gango-web && npm run type-check`
+**2. TypeScript Type Check**
+- Command: `npm run type-check`
 - test_name: `web_typescript_check`
 - test_purpose: "Validates TypeScript type correctness, catching type errors and incorrect function signatures"
 
-**7. Web Linting**
-- Command: `cd gango-web && npm run lint`
+**3. Web Linting**
+- Command: `npm run lint`
 - test_name: `web_linting`
-- test_purpose: "Validates React/TypeScript code quality and identifies potential bugs"
+- test_purpose: "Validates Next.js/TypeScript code quality and identifies potential bugs"
 
-**8. Web Unit Tests**
-- Command: `cd gango-web && npm run test`
-- test_name: `web_unit_tests`
-- test_purpose: "Validates React component behavior and utility functions"
+**4. Web Build (Dev Environment)**
+- Command: `NEXT_PUBLIC_ENVIRONMENT=dev npm run build`
+- test_name: `web_build_dev`
+- test_purpose: "Validates the complete Next.js build process for dev environment"
 
-**9. Web Build**
-- Command: `cd gango-web && npm run build`
-- test_name: `web_build`
-- test_purpose: "Validates the complete frontend build process including bundling and optimization"
+**5. Web Build (Prod Environment)**
+- Command: `NEXT_PUBLIC_ENVIRONMENT=prod npm run build`
+- test_name: `web_build_prod`
+- test_purpose: "Validates the complete Next.js build process for production environment"
 
-### Mobile Tests (Flutter + FVM)
+### E2E Tests (Playwright)
 
-**10. Flutter Dependencies Check**
-- Command: `cd gangoapp && fvm flutter pub get --dry-run`
-- test_name: `mobile_dependencies`
-- test_purpose: "Validates pubspec.yaml dependencies are resolvable"
-
-**11. Flutter Analyze**
-- Command: `cd gangoapp && fvm flutter analyze`
-- test_name: `mobile_analyze`
-- test_purpose: "Validates Dart code quality, identifies unused imports and potential bugs"
-
-**12. Flutter Unit Tests**
-- Command: `cd gangoapp && fvm flutter test test/unit/`
-- test_name: `mobile_unit_tests`
-- test_purpose: "Validates business logic, services, and ViewModels"
-
-**13. Flutter Widget Tests**
-- Command: `cd gangoapp && fvm flutter test test/widgets/`
-- test_name: `mobile_widget_tests`
-- test_purpose: "Validates UI components and screen interactions"
-
-**14. Flutter Build Check (Android)**
-- Command: `cd gangoapp && fvm flutter build apk --debug --flavor dev`
-- test_name: `mobile_build_android`
-- test_purpose: "Validates Android build process completes without errors"
-
-**15. Flutter Build Check (iOS)**
-- Command: `cd gangoapp && fvm flutter build ios --debug --flavor dev --no-codesign`
-- test_name: `mobile_build_ios`
-- test_purpose: "Validates iOS build process completes without errors (macOS only)"
+**6. Playwright E2E Tests**
+- Command: `npx playwright test`
+- test_name: `e2e_tests`
+- test_purpose: "Validates user workflows, authentication, and CRUD operations"
 
 ## Quick Mode Tests
 
-When platform_filter is `quick`, run only these tests:
-- Backend: compilation + unit tests (tests 1-2)
-- Web: TypeScript check + linting (tests 6-7)
-- Mobile: analyze + unit tests (tests 11-12)
+When test_filter is `quick`, run only these tests:
+- TypeScript check (test 2)
+- Linting (test 3)
 
-Total: 6 tests instead of 15
+Total: 2 tests instead of 6
+
+## E2E Mode Tests
+
+When test_filter is `e2e`, run only:
+- Playwright E2E tests (test 6)
 
 ## Instructions
 
-- Execute tests based on platform_filter
-- Always run `pwd` and `cd` before each test
+- Execute tests based on test_filter
+- Always run from project root directory
 - Capture both stdout and stderr
 - If a test fails, continue to next test (don't stop)
 - Timeout each command after TEST_COMMAND_TIMEOUT
@@ -130,7 +85,7 @@ Total: 6 tests instead of 15
 [
   {
     "test_name": "string",
-    "platform": "backend|web|mobile",
+    "platform": "web",
     "passed": boolean,
     "execution_command": "string",
     "test_purpose": "string",
@@ -148,17 +103,17 @@ Total: 6 tests instead of 15
     "test_name": "web_typescript_check",
     "platform": "web",
     "passed": false,
-    "execution_command": "cd gango-web && npm run type-check",
+    "execution_command": "npm run type-check",
     "test_purpose": "Validates TypeScript type correctness",
-    "error": "TS2345: Argument of type 'string' is not assignable to parameter of type 'number' at WorkoutCard.tsx:45",
+    "error": "TS2345: Argument of type 'string' is not assignable to parameter of type 'number' at ProductCard.tsx:45",
     "execution_time_seconds": 12.4
   },
   {
-    "test_name": "backend_unit_tests",
-    "platform": "backend",
+    "test_name": "web_build_dev",
+    "platform": "web",
     "passed": true,
-    "execution_command": "cd gango-backend && ./mvnw test",
-    "test_purpose": "Validates Spring Boot services and business logic",
+    "execution_command": "NEXT_PUBLIC_ENVIRONMENT=dev npm run build",
+    "test_purpose": "Validates Next.js build process for dev environment",
     "execution_time_seconds": 45.2
   }
 ]
@@ -177,4 +132,4 @@ Total: 6 tests instead of 15
 - Capture non-zero exit codes as failures
 - Include stderr output in error field
 - Track execution time for performance monitoring
-- Handle missing tools gracefully (e.g., no FVM installed)
+- Handle missing tools gracefully

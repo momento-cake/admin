@@ -1,58 +1,14 @@
-# Health Check
+# Health Check - Momento Cake Admin
 
-Verify development environment is properly configured for all Gango platforms (backend, web, mobile, infrastructure).
+Verify development environment is properly configured for Momento Cake Admin (Next.js + Firebase).
 
 ## Purpose
 
-Validate that your development machine has all required tools, dependencies, and configurations for multi-platform Gango development.
+Validate that your development machine has all required tools, dependencies, and configurations for Momento Cake development.
 
 ## Execution
 
 Execute health checks in order. If any check fails, address the issue before continuing.
-
-## Backend Health Checks
-
-### Java Version
-```bash
-java -version
-```
-**Expected**: Java 17 or higher
-
-### Maven Wrapper
-```bash
-cd gango-backend && ./mvnw --version
-```
-**Expected**: Maven 3.8 or higher
-
-### Backend Compilation
-```bash
-cd gango-backend && ./mvnw clean compile -DskipTests
-```
-**Expected**: Build SUCCESS, no errors
-
-### Redis (Local Development)
-```bash
-redis-cli ping
-```
-**Expected**: PONG
-**If Failed**: Start Redis: `brew services start redis` (macOS) or `sudo systemctl start redis` (Linux)
-
-### PostgreSQL Dev Database
-```bash
-./scripts/connect-dev-db.sh
-```
-**Expected**: Connection successful, query returns "SUCCESS"
-**If Failed**:
-- Check Cloud SQL Proxy is running
-- Verify credentials in Secret Manager
-- Check VPC connectivity
-
-### Backend Environment Variables
-```bash
-cd gango-backend && ./mvnw validate
-```
-**Expected**: Validation successful
-**If Failed**: Check `application-dev.properties` for missing variables
 
 ## Web Health Checks
 
@@ -70,113 +26,72 @@ npm --version
 
 ### Web Dependencies
 ```bash
-cd gango-web && npm install --dry-run
+npm install --dry-run
 ```
 **Expected**: No errors, all dependencies resolvable
 
 ### TypeScript Compilation
 ```bash
-cd gango-web && npm run type-check
+npm run type-check
 ```
 **Expected**: No type errors
 
-### Web Build
+### Web Build (Dev)
 ```bash
-cd gango-web && npm run build
+NEXT_PUBLIC_ENVIRONMENT=dev npm run build
 ```
-**Expected**: Build successful, dist/ directory created
+**Expected**: Build successful, .next/ directory created
 
-## Mobile Health Checks
-
-### FVM (Flutter Version Manager)
+### Web Build (Prod)
 ```bash
-fvm --version
+NEXT_PUBLIC_ENVIRONMENT=prod npm run build
 ```
-**Expected**: FVM installed
-**If Failed**: Install FVM: `brew tap leoafarias/fvm && brew install fvm` (macOS)
+**Expected**: Build successful, .next/ directory created
 
-### Flutter Version
+### Dev Server Port
 ```bash
-fvm flutter --version
+lsof -i :4000 | head -5
 ```
-**Expected**: Flutter stable channel
-**If Failed**: Run `fvm install stable && fvm use stable`
+**Expected**: Port 4000 available or only dev server running
+**If Failed**: Kill process: `kill -9 $(lsof -t -i:4000)`
 
-### Flutter Doctor
+## Firebase Health Checks
+
+### Firebase CLI
 ```bash
-cd gangoapp && fvm flutter doctor
+firebase --version
 ```
-**Expected**: No critical issues (✓ marks)
-**Acceptable Warnings**: Android licenses, optional tools
+**Expected**: Firebase CLI 12 or higher
+**If Failed**: Install: `npm install -g firebase-tools`
 
-### Mobile Dependencies
+### Firebase Authentication
 ```bash
-cd gangoapp && fvm flutter pub get
+firebase login:list
 ```
-**Expected**: All packages downloaded successfully
+**Expected**: Authenticated account shown
+**If Failed**: Run `firebase login`
 
-### Flutter Analyze
+### Firebase Project
 ```bash
-cd gangoapp && fvm flutter analyze
+firebase use
 ```
-**Expected**: No issues found
+**Expected**: Project selected (momentocake-dev or similar)
+**If Failed**: Run `firebase use --add`
 
-### iOS Simulators (macOS only)
+## Testing Health Checks
+
+### Playwright
 ```bash
-xcrun simctl list devices available | grep "iPhone"
+npx playwright --version
 ```
-**Expected**: At least one iPhone simulator listed
-**If Failed**: Install Xcode and run `xcode-select --install`
+**Expected**: Playwright installed
+**If Failed**: Run `npx playwright install`
 
-### Android Emulators
+### Playwright Browsers
 ```bash
-fvm flutter emulators
+npx playwright install --dry-run
 ```
-**Expected**: At least one Android emulator available
-**If Failed**: Install Android Studio and create AVD
-
-## Infrastructure Health Checks
-
-### gcloud CLI
-```bash
-gcloud --version
-```
-**Expected**: gcloud CLI installed
-**If Failed**: Install: `brew install google-cloud-sdk` (macOS)
-
-### gcloud Project
-```bash
-gcloud config get-value project
-```
-**Expected**: `gango-app-dev` or `gango-app`
-**If Failed**: Set project: `gcloud config set project gango-app-dev`
-
-### gcloud Authentication
-```bash
-gcloud auth list
-```
-**Expected**: Active account shown
-**If Failed**: Authenticate: `gcloud auth login`
-
-### Terraform (if working on infrastructure)
-```bash
-terraform --version
-```
-**Expected**: Terraform 1.5 or higher
-**Note**: Infrastructure changes go in `gango-infrastructure` repository
-
-### AWS CLI (for DynamoDB/S3/SNS)
-```bash
-aws --version
-```
-**Expected**: AWS CLI 2.x
-**If Failed**: Install: `brew install awscli` (macOS)
-
-### AWS Configuration
-```bash
-aws configure list
-```
-**Expected**: Profile configured with credentials
+**Expected**: Browsers available or can be installed
 
 ## Git Configuration
 
@@ -198,24 +113,22 @@ git config --global user.name "Your Name"
 git config --global user.email "your.email@example.com"
 ```
 
-### Submodules
+### Current Branch
 ```bash
-git submodule status
+git branch --show-current
 ```
-**Expected**: All submodules initialized and up-to-date
-**If Failed**: Run `git submodule update --init --recursive`
+**Expected**: On a valid branch (usually `develop` or `main`)
 
 ## Optional Tools
 
-### Docker (for containerized services)
+### Docker (for local Firebase emulators)
 ```bash
 docker --version
-docker-compose --version
 ```
 **Expected**: Docker installed and running
-**Note**: Optional, but useful for local service testing
+**Note**: Optional, useful for Firebase emulators
 
-### Postman or curl (for API testing)
+### curl (for API testing)
 ```bash
 curl --version
 ```
@@ -227,41 +140,28 @@ Return results as JSON:
 
 ```json
 {
-  "backend": {
-    "java": "passed|failed",
-    "maven": "passed|failed",
-    "compilation": "passed|failed",
-    "redis": "passed|failed",
-    "postgres": "passed|failed",
-    "env_vars": "passed|failed"
-  },
   "web": {
     "node": "passed|failed",
     "npm": "passed|failed",
     "dependencies": "passed|failed",
     "typescript": "passed|failed",
-    "build": "passed|failed"
+    "build_dev": "passed|failed",
+    "build_prod": "passed|failed",
+    "port_4000": "passed|failed"
   },
-  "mobile": {
-    "fvm": "passed|failed",
-    "flutter": "passed|failed",
-    "flutter_doctor": "passed|failed",
-    "dependencies": "passed|failed",
-    "analyze": "passed|failed",
-    "ios_simulator": "passed|failed|skipped",
-    "android_emulator": "passed|failed"
+  "firebase": {
+    "cli": "passed|failed",
+    "auth": "passed|failed",
+    "project": "passed|failed"
   },
-  "infrastructure": {
-    "gcloud": "passed|failed",
-    "gcloud_project": "passed|failed",
-    "gcloud_auth": "passed|failed",
-    "terraform": "passed|failed|skipped",
-    "aws": "passed|failed"
+  "testing": {
+    "playwright": "passed|failed",
+    "browsers": "passed|failed"
   },
   "git": {
     "version": "passed|failed",
     "user_config": "passed|failed",
-    "submodules": "passed|failed"
+    "branch": "passed|failed"
   },
   "summary": {
     "total_checks": number,
@@ -292,49 +192,24 @@ HEALTH CHECK SUMMARY
 Overall Status: READY FOR DEVELOPMENT ✓
 
 Platform Status:
-- Backend: ✓ READY (6/6 checks passed)
-- Web: ✓ READY (5/5 checks passed)
-- Mobile: ⚠ MOSTLY READY (6/7 checks passed, 1 warning)
-- Infrastructure: ✓ READY (4/4 checks passed)
+- Web: ✓ READY (7/7 checks passed)
+- Firebase: ✓ READY (3/3 checks passed)
+- Testing: ✓ READY (2/2 checks passed)
 - Git: ✓ READY (3/3 checks passed)
 
-Warnings:
-- Android emulator not found (optional for development)
+Total: 15/15 checks passed
 
-Total: 24/25 checks passed
-
-You can start development on backend and web immediately.
-For mobile development, create an Android emulator or use a physical device.
+You can start development immediately.
+Run `npm run dev` to start the dev server on port 4000.
 ```
 
 ## Troubleshooting
 
-### Redis Not Running
+### Port 4000 Already in Use
 ```bash
-# macOS
-brew services start redis
-
-# Linux
-sudo systemctl start redis
-sudo systemctl enable redis
-```
-
-### PostgreSQL Connection Failed
-```bash
-# Check Cloud SQL Proxy is running
-ps aux | grep cloud-sql-proxy
-
-# Start dev database connection
-./scripts/connect-dev-db.sh
-```
-
-### Flutter Doctor Issues
-```bash
-# Accept Android licenses
-fvm flutter doctor --android-licenses
-
-# Install missing iOS tools (macOS)
-sudo gem install cocoapods
+# Find and kill process
+lsof -i :4000
+kill -9 $(lsof -t -i:4000)
 ```
 
 ### Node/npm Issues
@@ -345,18 +220,29 @@ nvm use --lts
 
 # Clear npm cache
 npm cache clean --force
+
+# Reinstall dependencies
+rm -rf node_modules package-lock.json
+npm install
 ```
 
-### gcloud Issues
+### Firebase Issues
 ```bash
 # Re-authenticate
-gcloud auth login
+firebase logout
+firebase login
 
-# Set correct project
-gcloud config set project gango-app-dev
+# Select project
+firebase use --add
+```
 
-# Update components
-gcloud components update
+### Playwright Issues
+```bash
+# Install browsers
+npx playwright install
+
+# Install system dependencies (Linux)
+npx playwright install-deps
 ```
 
 ## Quick Fix Commands
@@ -364,29 +250,24 @@ gcloud components update
 Run this to attempt auto-fixing common issues:
 
 ```bash
-# Update all package managers
-brew update && brew upgrade  # macOS
-sudo apt update && sudo apt upgrade  # Linux
+# Kill dev server if running
+kill -9 $(lsof -t -i:4000) 2>/dev/null || true
 
-# Install/update Flutter packages
-cd gangoapp && fvm flutter pub get && fvm flutter pub upgrade
+# Clear caches and reinstall
+rm -rf node_modules .next
+npm install
 
-# Install/update Web packages
-cd gango-web && npm install
+# Install Playwright browsers
+npx playwright install
 
-# Clear caches
-cd gango-web && npm cache clean --force
-cd gangoapp && fvm flutter clean
-cd gango-backend && ./mvnw clean
+# Verify Firebase
+firebase login:list
+firebase use
 ```
 
 ## Usage
 
 ```bash
 # In Claude Code
-/health_check
-
-# Or run manually
-claude --dangerously-skip-permissions
-Read and execute .claude/commands/health_check.md
+/validate:health_check
 ```
