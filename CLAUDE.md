@@ -182,25 +182,84 @@ await page.waitForLoadState('load'); // ✅ Use this
 - Validate data at client and server
 - Never trust client-side authentication alone
 
+### Firestore Indexes (CRITICAL)
+
+**IMPORTANT**: When adding new queries with compound filters or ordering, you MUST create corresponding indexes.
+
+**Index Configuration File**: `firestore.indexes.json`
+
+**Deployment Commands**:
+```bash
+# Deploy indexes to Firestore
+firebase deploy --only firestore:indexes
+
+# Deploy security rules
+firebase deploy --only firestore:rules
+
+# Deploy both indexes and rules
+firebase deploy --only firestore
+
+# Verify deployed indexes
+firebase firestore:indexes
+```
+
+**When to Create New Indexes**:
+- Any query with `.where()` + `.orderBy()` on different fields
+- Any query with multiple `.where()` clauses on different fields
+- Any query that fails with "requires an index" error in console
+
+**Index Structure Example**:
+```json
+{
+  "collectionGroup": "collectionName",
+  "queryScope": "COLLECTION",
+  "fields": [
+    { "fieldPath": "fieldA", "order": "ASCENDING" },
+    { "fieldPath": "fieldB", "order": "DESCENDING" }
+  ]
+}
+```
+
+**Current Collections with Indexes**:
+- `users`, `orders`, `invitations`, `ingredients`, `suppliers`
+- `recipes`, `clients`, `stock_history`, `priceHistory`
+- `packaging`, `packaging_stock_history`, `packaging_price_history`
+- `products`, `productCategories`, `productSubcategories`
+
+**Index Deployment Checklist**:
+1. Add index to `firestore.indexes.json`
+2. Run `firebase deploy --only firestore:indexes`
+3. Wait 5-10 minutes for index to build (check Firebase Console)
+4. Verify index shows "Enabled" status
+5. Test the query works without errors
+
+**Troubleshooting**:
+- If query fails with index error, check Firebase Console for auto-generated index link
+- Indexes take 5-10 minutes to build after deployment
+- Verify project ID matches: `firebase use` to check current project
+
+See `docs/PACKAGING-INDEXES-DEPLOYMENT.md` for detailed deployment example.
+
 ## Documentation
 
 ### Feature Documentation
-- Located in `docs/features/`
-- Include implementation details
-- Document API contracts
-- Add screenshots/examples
+Located in `docs/features/`:
+- `CLIENTS_QUICK_START.md` - Client management architecture and API reference
+- `PHASES_7_8_COMPLETION_SUMMARY.md` - Related Persons, Special Dates, Tags features
+- `clients.md`, `dashboard.md`, `ingredients.md`, `recipes.md`, `vendors.md`
 
 ### Development Guides
-- Located in `docs/development/`
-- Setup instructions
-- Architecture decisions
-- Common patterns and best practices
+Located in `docs/development/`:
+- `IMPLEMENTATION_SUMMARY.md` - TypeScript migration and project deliverables
+- `LAYOUT_IMPROVEMENTS_SUMMARY.md` - Modal and form layout patterns
+- `LAYOUT_STRUCTURE.txt` - Flexbox layout patterns with ASCII diagrams
+- `PACKAGING-PHASE4-*.md` - Testing patterns and performance metrics
+- `data-models.md`, `guidelines.md`
 
 ### Testing Documentation
-- Located in `docs/testing/`
-- Test setup and running
-- Test patterns and examples
-- Troubleshooting guide
+Located in `docs/testing/`:
+- `TESTING_GUIDE.md` - Comprehensive testing patterns and best practices
+- `recipe-nested-costs-testing.md` - Recipe cost calculation test cases
 
 ## MCP Server Configuration
 
@@ -271,33 +330,309 @@ To enable additional MCP servers, see `.claude/commands/` templates.
 - Email: admin@momentocake.com.br
 - Password: G8j5k188
 
+## PRD Workflow Commands
+
+Momento Cake Admin uses a structured PRD (Product Requirements Document) workflow for planning and executing features, bugs, and chores. This workflow is adapted from enterprise development practices and uses AI handoff prompts for phase-by-phase execution.
+
+### Available Commands
+
+**Planning**:
+- `/plan` - Create comprehensive PRD with AI handoff prompts
+
+**Implementation**:
+- `/implement` - Execute single phase implementation
+- `/execute` - Orchestrate multi-phase execution with fresh Claude sessions
+
+### Command: `/plan` - Create PRD
+
+Creates a comprehensive Product Requirements Document using a three-phase planning process.
+
+**Usage**:
+```bash
+/plan "scope-name" "Work item description"
+/plan "offline-product-photos" "Add offline sync for product photos using IndexedDB"
+```
+
+**Three-Phase Planning Process**:
+
+1. **Phase 0: Exploratory Analysis** (Silent)
+   - Ask for scope name if not provided (URL-friendly: lowercase, hyphens, max 40 chars)
+   - Search codebase for related patterns and implementations
+   - Identify existing components, services, hooks to reference
+   - Prepare context-aware clarifying questions
+
+2. **Phase 1: Requirements Analysis & Clarification**
+   - Ask context-aware questions using AskUserQuestion tool
+   - Reference specific files found during Phase 0
+   - Wait for user answers (DO NOT proceed without answers)
+   - Document all clarifications
+
+3. **Phase 2: PRD Creation**
+   - Create comprehensive PRD in `context/specs/{SCOPE}/PRD.md`
+   - Reference specific files and patterns from Phase 0
+   - Structure implementation into logical phases
+
+4. **Phase 3: AI Handoff Generation**
+   - Create `context/specs/{SCOPE}/ai-handoff.json`
+   - Generate handoff prompts for each implementation phase
+   - Include dependencies and validation commands
+
+**Output**:
+- `context/specs/{SCOPE}/PRD.md` - Complete requirements document
+- `context/specs/{SCOPE}/ai-handoff.json` - Machine-readable handoff prompts
+
+**Example**:
+```bash
+/plan "user-profile-edit" "Allow users to edit their profile information"
+# Creates:
+# - context/specs/user-profile-edit/PRD.md
+# - context/specs/user-profile-edit/ai-handoff.json
+```
+
+### Command: `/implement` - Execute Phase
+
+Implements a plan step-by-step following best practices and Momento Cake's architecture patterns.
+
+**Usage**:
+```bash
+/implement context/specs/{SCOPE}/PRD.md
+/implement "Inline plan description"
+```
+
+**Implementation Workflow**:
+1. Read and analyze plan
+2. Search for existing patterns FIRST (never duplicate code)
+3. Clarify requirements (ask questions, wait for answers)
+4. Write tests (unit, component, E2E as appropriate)
+5. Implement by architecture layer (types → services → hooks → components → pages)
+6. Run tests and validation continuously
+7. Self-review and finalize
+
+**Best Practices**:
+- **Critical Thinking**: Question assumptions, present alternatives
+- **Transparent Reasoning**: Explain WHY before implementing
+- **Upfront Information**: Ask ALL questions first, then WAIT
+- **Quality Over Speed**: Think through solutions properly
+
+**Architecture Layers** (in order):
+1. Types (`src/types/`) - TypeScript interfaces, Zod schemas
+2. Services (`src/services/`, `src/lib/firebase/`) - Firebase operations, business logic
+3. Hooks (`src/hooks/`) - Custom React hooks
+4. Components (`src/components/`) - React components with shadcn/ui
+5. Pages (`app/`) - Next.js pages and routing
+6. Tests (`tests/`) - Unit tests, E2E tests (Playwright)
+
+**Validation Commands**:
+```bash
+npm run test          # Unit tests
+npx playwright test   # E2E tests
+npm run lint          # ESLint
+npm run build         # TypeScript compilation
+npm run dev           # Local testing
+```
+
+### Command: `/execute` - Orchestrate Multi-Phase Execution
+
+Orchestrates sequential and parallel execution of AI handoff phases by spawning fresh Claude sessions.
+
+**Usage**:
+```bash
+/execute scope-name
+/execute offline-product-photos
+# OR
+/execute context/specs/offline-product-photos/ai-handoff.json
+```
+
+**Git Strategy Options** (user is asked to choose):
+1. **Use worktree** (recommended): Creates new worktree in `.worktrees/` - keeps main codebase untouched
+2. **Create new branch**: Creates and switches to new branch from current location
+3. **Use current branch**: Works on current branch (ensure clean working tree first)
+
+**Execution Strategy**:
+- Loads phases from `ai-handoff.json`
+- Analyzes dependencies and creates execution plan
+- Spawns fresh Claude session for each phase
+- Executes phases sequentially or in parallel based on dependencies
+- Monitors with 60-second heartbeat (prevents timeout)
+- Runs final tests and validation
+- Commits changes and creates PR (if using worktree/new branch)
+
+**Expected Duration**: 30-90 minutes depending on number of phases
+
+**Prerequisites**:
+- PRD and ai-handoff.json must exist (run `/plan` first)
+- Clean git working tree (or choose current branch option)
+- Claude CLI installed and authenticated
+- Bash timeout configured (90+ minutes in ~/.claude/settings.json)
+
+**Key Features**:
+- **Fresh Context**: Each phase gets new Claude session (no context exhaustion)
+- **Optimized Execution**: Parallel execution for independent phases
+- **Flexible Git Strategy**: User chooses worktree, new branch, or current branch
+- **Heartbeat Monitoring**: 60-second progress updates prevent timeout
+- **Fully Automated**: Minimal user interaction required
+
+**Example Workflow**:
+```bash
+# 1. Create PRD
+/plan "product-csv-export" "Add CSV export for product list"
+
+# 2. Review PRD and ai-handoff.json
+# Files created:
+# - context/specs/product-csv-export/PRD.md
+# - context/specs/product-csv-export/ai-handoff.json
+
+# 3. Execute all phases
+/execute product-csv-export
+# Claude asks:
+# - Git strategy? (worktree/new branch/current branch)
+# - Branch name? (e.g., "product-csv-export-feature")
+# Then executes all phases automatically
+
+# 4. PR created automatically (if worktree/new branch)
+```
+
+### PRD Structure
+
+Each PRD follows a standardized template adapted for Next.js + Firebase web architecture:
+
+**Key Sections**:
+- **Metadata**: Scope name, type (feature/bug/chore), complexity
+- **Problem & Solution**: Clear problem statement and proposed solution
+- **Web Architecture**: Pages, components, hooks, services, Firebase integration
+- **Types & Schemas**: TypeScript interfaces and Zod validation
+- **Implementation Tasks**: Organized by phases with validation commands
+- **Testing Strategy**: Unit tests, E2E tests, edge cases
+- **Acceptance Criteria**: Functional and technical requirements
+
+**AI Handoff Phases** (typical structure for features):
+1. **Phase 1: Data Layer** - Types, schemas, Firebase services
+2. **Phase 2: Business Logic** - Custom hooks, state management
+3. **Phase 3: UI Components** - React components, shadcn/ui integration
+4. **Phase 4: Pages & Routing** - Next.js pages, navigation
+5. **Phase 5: Testing & Validation** - Comprehensive testing, quality checks
+
+**For Bugs** (typical structure):
+1. **Phase 1: Reproduce & Verify** - Confirm root cause
+2. **Phase 2: Write Failing Test** - TDD: prove the bug exists
+3. **Phase 3: Implement Minimal Fix** - Fix only what's broken
+4. **Phase 4: Verify & Validate** - All tests pass, no regressions
+
+### Helper Scripts
+
+**Location**: `.claude/commands/scripts/`
+
+**analyze_dependencies.py**:
+- Analyzes phase dependencies from ai-handoff.json
+- Generates execution plan with parallel/sequential grouping
+
+**orchestrate_execution.py**:
+- Python orchestrator for phase execution
+- Spawns Claude sessions with proper process management
+- Real-time output streaming
+- Heartbeat monitoring
+- Signal handling for graceful cleanup
+
+**validate_prerequisites.sh**:
+- Validates environment and prerequisites
+- Resolves scope paths
+- Checks for PRD and ai-handoff.json files
+
+**cleanup_execution.sh**:
+- Removes worktrees and temporary files
+- Cleans up failed/aborted executions
+
+### Scope-Based Naming Convention
+
+Unlike ticket-based systems, this project uses **scope names** for organizing work:
+
+**Format**: URL-friendly, lowercase, hyphens, max 40 chars
+- ✅ Good: `offline-product-photos`, `user-auth-fix`, `dependency-update`
+- ❌ Bad: `Offline_Product_Photos`, `UserAuthFix`, `update dependencies`
+
+**Directory Structure**:
+```
+context/specs/
+├── offline-product-photos/
+│   ├── PRD.md
+│   └── ai-handoff.json
+├── user-auth-fix/
+│   ├── PRD.md
+│   └── ai-handoff.json
+└── product-csv-export/
+    ├── PRD.md
+    └── ai-handoff.json
+```
+
+### Configuration Requirements
+
+**Bash Timeout** (required for `/execute`):
+
+Edit `~/.claude/settings.json`:
+```json
+{
+  "env": {
+    "BASH_DEFAULT_TIMEOUT_MS": "5400000",
+    "BASH_MAX_TIMEOUT_MS": "7200000"
+  }
+}
+```
+
+Then restart Claude Code completely.
+
+**Explanation**:
+- `BASH_DEFAULT_TIMEOUT_MS`: 5,400,000ms = 90 minutes (matches max phase duration)
+- `BASH_MAX_TIMEOUT_MS`: 7,200,000ms = 120 minutes (buffer for multiple phases)
+
+---
+
 ## Quality & Planning Guidelines
 
-### Two-Phase Planning Process (MANDATORY)
+### Three-Phase Planning Process (MANDATORY)
 
-When working on features, bugs, or chores, ALWAYS follow this two-phase process:
+When using `/plan` command, ALWAYS follow this three-phase process:
 
-#### Phase 1: Analysis & Clarification (FIRST)
-- [ ] Read the request thoroughly
-- [ ] Identify incomplete or ambiguous information
-- [ ] Ask clarifying questions to the user
-- [ ] **WAIT for answers before proceeding**
-- [ ] Perform analysis with complete information
-- [ ] Document clarifications received
+#### Phase 0: Exploratory Analysis (FIRST - SILENT)
+- [ ] Ask for scope name if not provided
+- [ ] Extract key concepts from work description
+- [ ] Search codebase for related implementations
+- [ ] Identify existing patterns to reference
+- [ ] Prepare context-aware clarifying questions
+- [ ] **DO NOT ask questions yet** - only gather context
+
+**DO NOT proceed to Phase 1 until Phase 0 is complete.**
+
+#### Phase 1: Requirements Analysis & Clarification
+- [ ] Ask context-aware clarifying questions
+- [ ] Reference specific files found in Phase 0
+- [ ] Use AskUserQuestion tool with checkbox options
+- [ ] **WAIT for user to provide answers**
+- [ ] Document all clarifications received
+- [ ] **DO NOT proceed without answers**
 
 **DO NOT proceed to Phase 2 until Phase 1 is complete.**
 
-#### Phase 2: Plan Creation (ONLY AFTER Phase 1)
-- [ ] Only create plans after all clarifications are answered
-- [ ] Use answers from Phase 1 to inform the plan
-- [ ] Create master plan in `context/specs/0_master/`
-- [ ] Create web-specific plans in `context/specs/web/` if needed
-- [ ] Reference clarifications in plan documents
+#### Phase 2: PRD Creation (ONLY AFTER Phase 0 & 1)
+- [ ] Create comprehensive PRD in `context/specs/{SCOPE}/PRD.md`
+- [ ] Include specific file references from Phase 0
+- [ ] Reference existing patterns discovered
+- [ ] Create detailed implementation tasks by phase
 
-### Violation of Two-Phase Process
+**DO NOT proceed to Phase 3 until Phase 2 is complete.**
 
-The following actions indicate Phase 1 is being skipped (DO NOT DO):
-- ❌ Reading codebase before asking clarifying questions
+#### Phase 3: AI Handoff Generation (ONLY AFTER Phase 2)
+- [ ] Create `context/specs/{SCOPE}/ai-handoff.json`
+- [ ] Generate handoff prompts for each phase
+- [ ] Include concrete file paths from Phase 0
+- [ ] Include pattern references and dependencies
+- [ ] Return both file paths (PRD + AI Handoff)
+
+### Violation of Three-Phase Process
+
+The following actions indicate phases are being skipped (DO NOT DO):
+- ❌ Proceeding without a valid scope name
+- ❌ Skipping Phase 0: Asking questions without exploring codebase first
+- ❌ Asking vague questions without referencing specific files from Phase 0
 - ❌ Creating detailed plans without confirming requirements
 - ❌ Assuming problem scope without explicit user confirmation
 - ❌ Writing plan documents without documented answers
