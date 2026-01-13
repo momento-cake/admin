@@ -7,8 +7,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { EmptyState } from '@/components/ui/empty-state'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { UserModel } from '@/types'
-import { Users, RefreshCw, CheckCircle, XCircle, Shield, Eye } from 'lucide-react'
+import { UserModel, ROLE_LABELS } from '@/types'
+import { UserEditDialog } from './UserEditDialog'
+import { Users, RefreshCw, CheckCircle, XCircle, Shield, UserCog, Pencil } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { collection, getDocs, query, orderBy } from 'firebase/firestore'
@@ -18,6 +19,7 @@ export function UsersList() {
   const [users, setUsers] = useState<UserModel[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [editingUser, setEditingUser] = useState<UserModel | null>(null)
 
   const fetchUsers = async () => {
     try {
@@ -59,14 +61,15 @@ export function UsersList() {
     return role === 'admin' ? (
       <Shield className="h-4 w-4 text-blue-500" />
     ) : (
-      <Eye className="h-4 w-4 text-gray-500" />
+      <UserCog className="h-4 w-4 text-gray-500" />
     )
   }
 
   const getRoleBadge = (role: string) => {
+    const roleKey = role as keyof typeof ROLE_LABELS
     return (
       <Badge variant={role === 'admin' ? 'default' : 'secondary'}>
-        {role === 'admin' ? 'Administrador' : 'Visualizador'}
+        {ROLE_LABELS[roleKey] || role}
       </Badge>
     )
   }
@@ -131,12 +134,13 @@ export function UsersList() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Usuário</TableHead>
+              <TableHead>Usuario</TableHead>
               <TableHead>Email</TableHead>
-              <TableHead>Função</TableHead>
+              <TableHead>Funcao</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Data de Criação</TableHead>
-              <TableHead>Último Acesso</TableHead>
+              <TableHead>Data de Criacao</TableHead>
+              <TableHead>Ultimo Acesso</TableHead>
+              <TableHead className="w-[100px]">Acoes</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -186,16 +190,36 @@ export function UsersList() {
                   {user.createdAt && format(user.createdAt, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                 </TableCell>
                 <TableCell>
-                  {user.lastSignInAt 
+                  {user.lastSignInAt
                     ? format(user.lastSignInAt, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })
                     : 'Nunca'
                   }
+                </TableCell>
+                <TableCell>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setEditingUser(user)}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
                 </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
       </div>
+
+      {editingUser && (
+        <UserEditDialog
+          user={editingUser}
+          open={!!editingUser}
+          onOpenChange={(open) => !open && setEditingUser(null)}
+          onSuccess={() => {
+            fetchUsers()
+          }}
+        />
+      )}
     </div>
   )
 }

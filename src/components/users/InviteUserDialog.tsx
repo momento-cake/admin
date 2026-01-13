@@ -16,9 +16,9 @@ import { UserRole } from '@/types'
 import { Loader2, Send } from 'lucide-react'
 
 const inviteSchema = z.object({
-  email: z.string().email('Digite um email válido'),
+  email: z.string().email('Digite um email valido'),
   name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
-  role: z.enum(['admin', 'viewer'] as const),
+  role: z.enum(['admin', 'atendente'] as const),
   department: z.string().optional(),
   notes: z.string().optional(),
 })
@@ -41,7 +41,7 @@ export function InviteUserDialog({ open, onClose }: InviteUserDialogProps) {
     defaultValues: {
       email: '',
       name: '',
-      role: 'viewer',
+      role: 'atendente',
       department: '',
       notes: '',
     },
@@ -152,13 +152,13 @@ export function InviteUserDialog({ open, onClose }: InviteUserDialogProps) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="role">Função *</Label>
-            <Select onValueChange={(value) => form.setValue('role', value as UserRole)} defaultValue="viewer">
+            <Label htmlFor="role">Funcao *</Label>
+            <Select onValueChange={(value) => form.setValue('role', value as UserRole)} defaultValue="atendente">
               <SelectTrigger disabled={isLoading}>
-                <SelectValue placeholder="Selecione uma função" />
+                <SelectValue placeholder="Selecione uma funcao" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="viewer">Visualizador</SelectItem>
+                <SelectItem value="atendente">Atendente</SelectItem>
                 <SelectItem value="admin">Administrador</SelectItem>
               </SelectContent>
             </Select>

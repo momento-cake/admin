@@ -16,17 +16,18 @@ from collections import defaultdict, deque
 
 def build_dependency_graph(phases):
     """Build dependency graph from phases."""
-    graph = defaultdict(list)  # phase_num -> [dependent_phase_nums]
-    reverse_graph = defaultdict(list)  # phase_num -> [dependency_phase_nums]
+    graph = defaultdict(list)  # phase_id -> [dependent_phase_ids]
+    reverse_graph = defaultdict(list)  # phase_id -> [dependency_phase_ids]
 
     for phase in phases:
-        phase_num = phase['number']
+        # Support both 'id' and 'number' fields for phase identification
+        phase_id = phase.get('id') or phase.get('number')
         dependencies = phase.get('dependencies', [])
 
-        reverse_graph[phase_num] = dependencies
+        reverse_graph[phase_id] = dependencies
 
         for dep in dependencies:
-            graph[dep].append(phase_num)
+            graph[dep].append(phase_id)
 
     return graph, reverse_graph
 
@@ -37,13 +38,14 @@ def topological_sort_with_groups(phases):
     Returns groups of phases where phases in the same group can run in parallel.
     """
     graph, reverse_graph = build_dependency_graph(phases)
-    phase_nums = [p['number'] for p in phases]
+    # Support both 'id' and 'number' fields
+    phase_ids = [p.get('id') or p.get('number') for p in phases]
 
     # Calculate in-degree for each phase
-    in_degree = {num: len(reverse_graph[num]) for num in phase_nums}
+    in_degree = {pid: len(reverse_graph[pid]) for pid in phase_ids}
 
     # Initialize queue with phases that have no dependencies
-    queue = deque([num for num in phase_nums if in_degree[num] == 0])
+    queue = deque([pid for pid in phase_ids if in_degree[pid] == 0])
 
     execution_groups = []
     visited = set()
@@ -57,11 +59,11 @@ def topological_sort_with_groups(phases):
         queue.clear()
 
         # Process current group
-        for phase_num in current_group:
-            visited.add(phase_num)
+        for phase_id in current_group:
+            visited.add(phase_id)
 
             # Reduce in-degree for dependent phases
-            for dependent in graph[phase_num]:
+            for dependent in graph[phase_id]:
                 in_degree[dependent] -= 1
 
                 # If all dependencies satisfied, add to queue
@@ -69,8 +71,8 @@ def topological_sort_with_groups(phases):
                     queue.append(dependent)
 
     # Check for cycles
-    if len(visited) != len(phase_nums):
-        unvisited = set(phase_nums) - visited
+    if len(visited) != len(phase_ids):
+        unvisited = set(phase_ids) - visited
         raise ValueError(f"Circular dependency detected. Unvisited phases: {unvisited}")
 
     return execution_groups
@@ -100,11 +102,11 @@ def generate_execution_plan(ai_handoff_path, output_path):
     for i, group in enumerate(execution_groups, 1):
         parallel = len(group) > 1
         print(f"  Group {i} ({'parallel' if parallel else 'sequential'}):")
-        for phase_num in group:
-            phase = next(p for p in phases if p['number'] == phase_num)
+        for phase_id in group:
+            phase = next(p for p in phases if (p.get('id') or p.get('number')) == phase_id)
             deps = phase.get('dependencies', [])
             deps_str = f" (deps: {deps})" if deps else ""
-            print(f"    - Phase {phase_num}: {phase['name']}{deps_str}")
+            print(f"    - {phase_id}: {phase['name']}{deps_str}")
         print()
 
     # Create execution plan

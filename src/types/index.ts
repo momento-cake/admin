@@ -1,9 +1,17 @@
 /**
  * User roles for role-based access control.
  * - `admin`: Full system access including user management
- * - `viewer`: Read-only access to recipes and ingredients
+ * - `atendente`: Access to dashboard and client management only
  */
-export type UserRole = 'admin' | 'viewer';
+export type UserRole = 'admin' | 'atendente';
+
+/**
+ * Portuguese labels for user roles.
+ */
+export const ROLE_LABELS: Record<UserRole, string> = {
+  admin: 'Administrador',
+  atendente: 'Atendente',
+};
 
 /**
  * Represents an authenticated user in the system.

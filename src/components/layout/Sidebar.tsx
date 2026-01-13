@@ -6,6 +6,9 @@ import { useState } from 'react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/hooks/useAuth'
+import { usePermissions } from '@/hooks/usePermissions'
+import { FeatureKey } from '@/lib/permissions'
+import { ROLE_LABELS } from '@/types'
 import {
   Users,
   Package,
@@ -18,25 +21,42 @@ import {
   Mail,
   Truck,
   ChefHat,
-  Book,
   DollarSign,
   Settings,
   UserCheck,
   Calendar,
-  FolderOpen
+  FolderOpen,
+  Lock
 } from 'lucide-react'
 
-const navigation = [
+interface NavSubmenuItem {
+  name: string;
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+  hasSubmenu?: boolean;
+  submenu?: NavSubmenuItem[];
+}
+
+interface NavItem {
+  name: string;
+  href?: string;
+  icon: React.ComponentType<{ className?: string }>;
+  feature: FeatureKey;
+  hasSubmenu?: boolean;
+  submenu?: NavSubmenuItem[];
+}
+
+const navigation: NavItem[] = [
   {
     name: 'Dashboard',
     href: '/dashboard',
     icon: Home,
-    roles: ['admin', 'viewer']
+    feature: 'dashboard'
   },
   {
     name: 'Usuários',
     icon: Users,
-    roles: ['admin'],
+    feature: 'users',
     hasSubmenu: true,
     submenu: [
       {
@@ -54,7 +74,7 @@ const navigation = [
   {
     name: 'Produtos',
     icon: Package,
-    roles: ['admin', 'viewer'],
+    feature: 'products',
     hasSubmenu: true,
     submenu: [
       {
@@ -97,7 +117,7 @@ const navigation = [
   {
     name: 'Clientes',
     icon: UserCheck,
-    roles: ['admin', 'viewer'],
+    feature: 'clients',
     hasSubmenu: true,
     submenu: [
       {
@@ -116,21 +136,17 @@ const navigation = [
     name: 'Configurações',
     href: '/recipes/settings',
     icon: Settings,
-    roles: ['admin']
+    feature: 'settings'
   }
 ]
 
 export function Sidebar() {
   const pathname = usePathname()
   const { userModel, logout } = useAuth()
+  const { canAccess, role } = usePermissions()
   const [expandedItems, setExpandedItems] = useState<string[]>([])
 
   if (!userModel) return null
-
-  const userRole = userModel.role.type
-  const filteredNavigation = navigation.filter(item => 
-    item.roles.includes(userRole)
-  )
 
   const toggleExpanded = (itemName: string) => {
     setExpandedItems(prev => 
@@ -163,15 +179,36 @@ export function Sidebar() {
             Momento Cake Admin
           </h1>
         </div>
-        
+
         <div className="mt-8 flex-grow flex flex-col">
           <nav className="flex-1 px-2 pb-4 space-y-1">
-            {filteredNavigation.map((item) => {
+            {navigation.map((item) => {
               const Icon = item.icon
               const isActive = item.href ? pathname === item.href : isActiveSubmenu(item)
               const hasSubmenu = item.hasSubmenu && item.submenu
               const expanded = isExpanded(item.name)
-              
+              const hasAccess = canAccess(item.feature)
+
+              // Render disabled menu item with title tooltip
+              if (!hasAccess) {
+                return (
+                  <div
+                    key={item.name}
+                    title="Acesso restrito"
+                    className={cn(
+                      'group flex items-center justify-between w-full px-2 py-2 text-sm font-medium rounded-md',
+                      'text-sidebar-foreground/40 cursor-not-allowed opacity-50'
+                    )}
+                  >
+                    <div className="flex items-center">
+                      <Icon className="mr-3 h-5 w-5 flex-shrink-0" />
+                      {item.name}
+                    </div>
+                    <Lock className="h-3 w-3" />
+                  </div>
+                )
+              }
+
               return (
                 <div key={item.name}>
                   {hasSubmenu ? (
@@ -313,7 +350,7 @@ export function Sidebar() {
                 {userModel.displayName || userModel.email}
                 <br />
                 <span className="font-medium">
-                  {getRoleDisplayName(userModel.role.type)}
+                  {ROLE_LABELS[role] || role}
                   {userModel.metadata?.isInitialAdmin && ' (Master)'}
                 </span>
               </div>
@@ -332,15 +369,4 @@ export function Sidebar() {
       </div>
     </div>
   )
-}
-
-function getRoleDisplayName(role: string): string {
-  switch (role) {
-    case 'admin':
-      return 'Administrador'
-    case 'viewer':
-      return 'Visualizador'
-    default:
-      return role
-  }
 }

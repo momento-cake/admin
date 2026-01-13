@@ -226,7 +226,7 @@ export function isUser(obj: unknown): obj is UserModel {
   return (
     typeof candidate.uid === 'string' &&
     typeof candidate.email === 'string' &&
-    ['admin', 'viewer'].includes(candidate.role?.type) &&
+    ['admin', 'atendente'].includes(candidate.role?.type) &&
     typeof candidate.emailVerified === 'boolean' &&
     typeof candidate.isActive === 'boolean' &&
     typeof candidate.metadata === 'object'
@@ -246,7 +246,7 @@ export function isUserInvitation(obj: unknown): obj is UserInvitation {
     typeof candidate.id === 'string' &&
     typeof candidate.email === 'string' &&
     typeof candidate.name === 'string' &&
-    ['admin', 'viewer'].includes(candidate.role) &&
+    ['admin', 'atendente'].includes(candidate.role) &&
     ['pending', 'accepted', 'expired', 'cancelled'].includes(candidate.status) &&
     typeof candidate.token === 'string' &&
     typeof candidate.invitedBy === 'string' &&
@@ -262,7 +262,7 @@ export function isUserInvitation(obj: unknown): obj is UserInvitation {
  * @returns true if value is a valid UserRole
  */
 export function isUserRole(value: unknown): value is UserRole {
-  return ['admin', 'viewer'].includes(value as string);
+  return ['admin', 'atendente'].includes(value as string);
 }
 
 /**
@@ -345,7 +345,7 @@ export function getValidRecipeDifficulties(): RecipeDifficulty[] {
  * @returns Array of valid UserRole values
  */
 export function getValidUserRoles(): UserRole[] {
-  return ['admin', 'viewer'];
+  return ['admin', 'atendente'];
 }
 
 /**

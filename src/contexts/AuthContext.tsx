@@ -70,7 +70,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
                 displayName: firebaseUser.displayName || undefined,
                 photoURL: firebaseUser.photoURL || undefined,
                 emailVerified: firebaseUser.emailVerified,
-                role: userData.role || { type: 'viewer' },
+                role: userData.role || { type: 'atendente' },
                 createdAt: userData.createdAt?.toDate(),
                 lastSignInAt: userData.lastSignInAt?.toDate(),
                 isActive: userData.isActive,
@@ -87,7 +87,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
               displayName: firebaseUser.displayName || undefined,
               photoURL: firebaseUser.photoURL || undefined,
               emailVerified: firebaseUser.emailVerified,
-              role: { type: 'viewer' },
+              role: { type: 'atendente' },
               isActive: true,
               metadata: {}
             }
@@ -132,9 +132,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }
 
-  // Check if user has platform access (admin or viewer)
+  // Check if user has platform access (admin or atendente)
   const hasPlatformAccess = () => {
-    return userModel?.role.type === 'admin' || userModel?.role.type === 'viewer'
+    return userModel?.role.type === 'admin' || userModel?.role.type === 'atendente'
   }
 
   // Check if user is platform admin

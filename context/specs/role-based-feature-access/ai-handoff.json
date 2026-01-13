@@ -1,0 +1,109 @@
+{
+  "scope": "role-based-feature-access",
+  "type": "feature",
+  "title": "Role-Based Feature Access",
+  "description": "Implement role-based feature access with admin (full access) and atendente (clients + dashboard only) roles",
+  "platforms": ["web"],
+  "complexity": "medium",
+  "phases": [
+    {
+      "id": "phase-1",
+      "name": "Core Permission System",
+      "description": "Update types and create permission infrastructure",
+      "dependencies": [],
+      "estimated_duration": "30-45 minutes",
+      "handoff_prompt": "## Task: Implement Core Permission System for Role-Based Access\n\n### Context\nYou are implementing Phase 1 of the role-based feature access system for Momento Cake Admin. This phase establishes the foundation for permission checking.\n\n### Requirements\n1. Update `UserRole` type from `'admin' | 'viewer'` to `'admin' | 'atendente'`\n2. Add `ROLE_LABELS` constant for Portuguese display names\n3. Create new permissions module at `src/lib/permissions.ts`\n4. Create new `usePermissions` hook at `src/hooks/usePermissions.ts`\n\n### Files to Modify\n- `src/types/index.ts` - Update UserRole type, add ROLE_LABELS\n\n### Files to Create\n- `src/lib/permissions.ts` - Feature permission map and helper functions\n- `src/hooks/usePermissions.ts` - React hook for permission checks\n\n### Permission Mapping\n- Dashboard: admin, atendente\n- Clients: admin, atendente\n- Users: admin only\n- Ingredients: admin only\n- Recipes: admin only\n- Products: admin only\n- Packaging: admin only\n- Orders: admin only\n- Reports: admin only\n- Settings: admin only\n\n### Implementation Details\nSee `context/specs/web/role-based-feature-access.md` for detailed code examples.\n\n### Validation\n```bash\nnpm run type-check\nnpm run lint\n```\n\n### Success Criteria\n- [ ] UserRole type updated\n- [ ] ROLE_LABELS exported from types\n- [ ] permissions.ts created with canAccessFeature, canAccessPath functions\n- [ ] usePermissions hook created and working\n- [ ] Type checking passes\n- [ ] Linting passes",
+      "validation_commands": [
+        "npm run type-check",
+        "npm run lint"
+      ],
+      "files_to_modify": [
+        "src/types/index.ts"
+      ],
+      "files_to_create": [
+        "src/lib/permissions.ts",
+        "src/hooks/usePermissions.ts"
+      ]
+    },
+    {
+      "id": "phase-2",
+      "name": "Navigation Updates",
+      "description": "Update sidebar to show disabled menu items for restricted features",
+      "dependencies": ["phase-1"],
+      "estimated_duration": "45-60 minutes",
+      "handoff_prompt": "## Task: Update Navigation for Role-Based Access\n\n### Context\nYou are implementing Phase 2 of the role-based feature access system. Phase 1 (permission system) is complete. Now update the sidebar navigation to show disabled states for restricted features.\n\n### Requirements\n1. Update Sidebar component to use `usePermissions` hook\n2. Add `feature` key to each navigation item\n3. Show disabled (grayed out) styling for items the user can't access\n4. Add tooltip showing 'Acesso restrito' on disabled items\n5. Prevent click/navigation on disabled items\n\n### File to Modify\n- `src/components/layout/Sidebar.tsx`\n\n### Behavior\n- Atendente users should see ALL menu items\n- Restricted items (users, ingredients, recipes, etc.) should be:\n  - Visually grayed out (opacity-50)\n  - Show 'Acesso restrito' tooltip on hover\n  - Not clickable (cursor-not-allowed)\n- Dashboard and Clients should be fully functional for all roles\n\n### Implementation\n1. Import `usePermissions` from `@/hooks/usePermissions`\n2. Add `feature: FeatureKey` to navigation item type\n3. Use `canAccess(item.feature)` to check permissions\n4. Apply conditional styling based on access\n5. Use shadcn/ui Tooltip component for restricted items\n\nSee `context/specs/web/role-based-feature-access.md` for code examples.\n\n### Validation\n```bash\nnpm run type-check\nnpm run lint\nnpm run dev\n# Manually verify:\n# - Login as admin: all items clickable\n# - Create test atendente user and verify disabled states\n```\n\n### Success Criteria\n- [ ] Navigation items have feature keys\n- [ ] Permission check integrated\n- [ ] Disabled styling applied correctly\n- [ ] Tooltip shows on hover for disabled items\n- [ ] No navigation on disabled item click",
+      "validation_commands": [
+        "npm run type-check",
+        "npm run lint"
+      ],
+      "files_to_modify": [
+        "src/components/layout/Sidebar.tsx"
+      ],
+      "files_to_create": []
+    },
+    {
+      "id": "phase-3",
+      "name": "Route Protection",
+      "description": "Add middleware-level route protection and access denied notifications",
+      "dependencies": ["phase-1"],
+      "estimated_duration": "30-45 minutes",
+      "handoff_prompt": "## Task: Implement Route Protection for Role-Based Access\n\n### Context\nYou are implementing Phase 3 of the role-based feature access system. Phase 1 (permission system) is complete. Now add middleware-level route protection.\n\n### Requirements\n1. Update middleware to check feature permissions using `canAccessPath`\n2. Redirect unauthorized access to dashboard with `access_denied=true` query param\n3. Show toast notification when user is redirected due to access denial\n\n### Files to Modify\n- `src/middleware.ts` - Add permission checks\n- `src/app/(dashboard)/layout.tsx` - Add access denied notification hook\n\n### Files to Create (optional)\n- `src/hooks/useAccessDeniedNotification.ts` - Hook to show toast on access denial\n\n### Middleware Logic\n1. Get `user-role` cookie\n2. For protected routes, call `canAccessPath(role, pathname)`\n3. If access denied, redirect to `/dashboard?access_denied=true` (for atendente) or `/clients?access_denied=true`\n4. Pass through if access allowed\n\n### Access Denied Notification\n1. Check for `access_denied=true` in URL params\n2. Show toast: 'Você não tem permissão para acessar esta página'\n3. Clean up URL by removing the query param\n\n### Important\n- Import permission functions from `@/lib/permissions`\n- Use `getDefaultRedirectPath(role)` for redirect destination\n- Handle edge case where role cookie might be missing\n\nSee `context/specs/web/role-based-feature-access.md` for code examples.\n\n### Validation\n```bash\nnpm run type-check\nnpm run lint\nnpm run build\nnpm run dev\n# Manually test:\n# - As atendente, try accessing /users directly - should redirect with toast\n# - As admin, access /users - should work normally\n```\n\n### Success Criteria\n- [ ] Middleware checks permissions\n- [ ] Unauthorized routes redirect to dashboard/clients\n- [ ] Toast notification appears on access denial\n- [ ] URL is cleaned after showing notification\n- [ ] Build succeeds",
+      "validation_commands": [
+        "npm run type-check",
+        "npm run lint",
+        "npm run build"
+      ],
+      "files_to_modify": [
+        "src/middleware.ts",
+        "src/app/(dashboard)/layout.tsx"
+      ],
+      "files_to_create": []
+    },
+    {
+      "id": "phase-4",
+      "name": "User Role Management",
+      "description": "Create UI for admins to change user roles",
+      "dependencies": ["phase-1"],
+      "estimated_duration": "45-60 minutes",
+      "handoff_prompt": "## Task: Implement User Role Management UI\n\n### Context\nYou are implementing Phase 4 of the role-based feature access system. Phase 1 (permission system) is complete. Now create the UI for admins to edit user roles.\n\n### Requirements\n1. Create UserEditDialog component for editing user details including role\n2. Add edit button to UsersList component\n3. Update role display to use ROLE_LABELS\n4. Update InviteUserDialog to use new role options\n5. Prevent admin from changing their own role\n\n### Files to Create\n- `src/components/users/UserEditDialog.tsx`\n\n### Files to Modify\n- `src/components/users/UsersList.tsx` - Add edit button, integrate dialog\n- `src/components/users/InviteUserDialog.tsx` - Update role options\n\n### UserEditDialog Features\n- Display user name and email (read-only)\n- Role dropdown: Administrador / Atendente\n- Disable role change if editing own account\n- Show helper text explaining why own role can't be changed\n- Save changes to Firestore `users/{uid}` document\n- Show success/error toast\n\n### UsersList Updates\n- Add edit (pencil) icon button in actions column\n- Open UserEditDialog on click\n- Update role badge to use `ROLE_LABELS[user.role.type]`\n- Refetch users after successful edit\n\n### InviteUserDialog Updates\n- Change role options from admin/viewer to admin/atendente\n- Update labels to Administrador/Atendente\n\nSee `context/specs/web/role-based-feature-access.md` for code examples.\n\n### Validation\n```bash\nnpm run type-check\nnpm run lint\nnpm run dev\n# Manually test:\n# - Edit a user's role\n# - Verify role change persists\n# - Try to edit own role (should be disabled)\n# - Create new invitation with atendente role\n```\n\n### Success Criteria\n- [ ] UserEditDialog created and functional\n- [ ] Edit button added to UsersList\n- [ ] Role can be changed and saved\n- [ ] Own role change is prevented\n- [ ] Role badges show Portuguese labels\n- [ ] Invitation dialog uses new role options",
+      "validation_commands": [
+        "npm run type-check",
+        "npm run lint"
+      ],
+      "files_to_modify": [
+        "src/components/users/UsersList.tsx",
+        "src/components/users/InviteUserDialog.tsx"
+      ],
+      "files_to_create": [
+        "src/components/users/UserEditDialog.tsx"
+      ]
+    },
+    {
+      "id": "phase-5",
+      "name": "Migration and Testing",
+      "description": "Migrate existing users and create E2E tests",
+      "dependencies": ["phase-1", "phase-2", "phase-3", "phase-4"],
+      "estimated_duration": "30-45 minutes",
+      "handoff_prompt": "## Task: Migration and Testing for Role-Based Access\n\n### Context\nYou are implementing Phase 5 (final phase) of the role-based feature access system. All previous phases are complete. Now migrate existing users and create E2E tests.\n\n### Requirements\n1. Update any hardcoded 'viewer' references to 'atendente'\n2. Create E2E tests for role-based access\n3. Document migration steps for existing users\n\n### Files to Search and Update\nSearch for 'viewer' string literal and update to 'atendente':\n- Check all files in `src/` for hardcoded 'viewer' references\n- Update default role assignments\n- Update role validation checks\n- Update any test fixtures\n\n### Files to Create\n- `tests/role-based-access.spec.ts` - E2E tests\n\n### Migration Notes\nExisting users with `role.type: 'viewer'` need to be updated to `role.type: 'atendente'`. This can be done:\n1. Manually in Firebase Console\n2. Via one-time migration script\n3. The code should handle both values during transition\n\n### E2E Test Scenarios\n1. **Atendente can access clients**\n   - Login as atendente\n   - Navigate to /clients\n   - Verify page loads correctly\n\n2. **Atendente cannot access users**\n   - Login as atendente\n   - Try to navigate to /users/active\n   - Verify redirect to allowed page\n   - Verify toast notification\n\n3. **Atendente sees disabled menu items**\n   - Login as atendente\n   - Check sidebar\n   - Verify users/ingredients menu items are disabled\n\n4. **Admin can access all features**\n   - Login as admin\n   - Navigate to various pages\n   - Verify all accessible\n\n5. **Admin can change user roles**\n   - Login as admin\n   - Go to users list\n   - Edit a user's role\n   - Verify change persists\n\n### Validation\n```bash\nnpm run type-check\nnpm run lint\nnpm run build\nnpx playwright test tests/role-based-access.spec.ts\n```\n\n### Success Criteria\n- [ ] No 'viewer' hardcoded references remain\n- [ ] E2E tests created and passing\n- [ ] Build succeeds\n- [ ] All role scenarios work correctly",
+      "validation_commands": [
+        "npm run type-check",
+        "npm run lint",
+        "npm run build",
+        "npx playwright test tests/role-based-access.spec.ts"
+      ],
+      "files_to_modify": [],
+      "files_to_create": [
+        "tests/role-based-access.spec.ts"
+      ]
+    }
+  ],
+  "final_validation": [
+    "npm run type-check",
+    "npm run lint",
+    "npm run build",
+    "npx playwright test"
+  ],
+  "rollback_strategy": "Git revert to commit before implementation",
+  "created_at": "2026-01-12",
+  "estimated_total_duration": "3-4 hours"
+}

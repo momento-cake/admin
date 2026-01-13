@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { InvitationStatus } from '@/types';
 
 // Define valid UserRole values as a constant for Zod
-const USER_ROLES = ['admin', 'viewer'] as const;
+const USER_ROLES = ['admin', 'atendente'] as const;
 const INVITATION_STATUSES = ['pending', 'accepted', 'expired', 'cancelled'] as const;
 
 /**

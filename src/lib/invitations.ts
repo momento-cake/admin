@@ -30,7 +30,7 @@ export async function sendInvitationEmail({
     inviteUrl,
     invitedBy,
     companyName: 'MomentoCake Admin',
-    role: role || 'viewer'
+    role: role || 'atendente'
   })
   
   // For development: log the invitation details and email content

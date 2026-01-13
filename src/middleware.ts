@@ -1,21 +1,19 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import type { UserRole } from '@/types'
 
 // Protected routes that require authentication
 const protectedRoutes = [
   '/dashboard',
   '/profile',
   '/users',
-  '/clients', 
+  '/clients',
   '/ingredients',
   '/recipes',
+  '/products',
+  '/packaging',
+  '/orders',
   '/reports',
-  '/settings'
-]
-
-// Admin-only routes that require admin role
-const adminRoutes = [
-  '/users',
   '/settings'
 ]
 
@@ -29,9 +27,58 @@ const publicRoutes = [
   '/api/invitations'
 ]
 
+// Feature permissions map (duplicated from permissions.ts for edge runtime compatibility)
+const FEATURE_PERMISSIONS: Record<string, UserRole[]> = {
+  dashboard: ['admin', 'atendente'],
+  clients: ['admin', 'atendente'],
+  users: ['admin'],
+  ingredients: ['admin'],
+  recipes: ['admin'],
+  products: ['admin'],
+  packaging: ['admin'],
+  orders: ['admin'],
+  reports: ['admin'],
+  settings: ['admin'],
+}
+
+// Path to feature mapping
+const PATH_TO_FEATURE: Record<string, string> = {
+  '/dashboard': 'dashboard',
+  '/users': 'users',
+  '/clients': 'clients',
+  '/ingredients': 'ingredients',
+  '/recipes': 'recipes',
+  '/products': 'products',
+  '/packaging': 'packaging',
+  '/orders': 'orders',
+  '/reports': 'reports',
+  '/settings': 'settings',
+}
+
+function canAccessPath(role: UserRole, path: string): boolean {
+  const normalizedPath = path.replace(/\/$/, '')
+
+  // Find feature for path
+  for (const [pathPrefix, feature] of Object.entries(PATH_TO_FEATURE)) {
+    if (normalizedPath === pathPrefix || normalizedPath.startsWith(pathPrefix + '/')) {
+      return FEATURE_PERMISSIONS[feature]?.includes(role) ?? false
+    }
+  }
+
+  // Default to allowed for routes not in the map
+  return true
+}
+
+function getDefaultRedirectPath(role: UserRole): string {
+  if (role === 'atendente') {
+    return '/clients'
+  }
+  return '/dashboard'
+}
+
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
-  
+
   // Skip middleware for static files, API routes, and Next.js internal routes
   if (
     pathname.startsWith('/_next/') ||
@@ -43,10 +90,10 @@ export function middleware(request: NextRequest) {
   }
 
   // Check if the route is public
-  const isPublicRoute = publicRoutes.some(route => 
+  const isPublicRoute = publicRoutes.some(route =>
     pathname === route || pathname.startsWith(`${route}/`)
   )
-  
+
   if (isPublicRoute) {
     return NextResponse.next()
   }
@@ -56,17 +103,11 @@ export function middleware(request: NextRequest) {
     pathname.startsWith(route)
   )
 
-  const isAdminRoute = adminRoutes.some(route =>
-    pathname.startsWith(route)
-  )
-
-  // Get authentication status from cookies or headers
-  // Note: This is a basic implementation. In production, you might want to 
-  // verify Firebase tokens server-side for better security
+  // Get authentication status from cookies
   const authToken = request.cookies.get('auth-token')?.value
-  const userRole = request.cookies.get('user-role')?.value
+  const userRole = request.cookies.get('user-role')?.value as UserRole | undefined
 
-  if (isProtectedRoute || isAdminRoute) {
+  if (isProtectedRoute) {
     // If no auth token, redirect to login
     if (!authToken) {
       const loginUrl = new URL('/login', request.url)
@@ -74,10 +115,12 @@ export function middleware(request: NextRequest) {
       return NextResponse.redirect(loginUrl)
     }
 
-    // If admin route but user is not admin, redirect to dashboard
-    if (isAdminRoute && userRole !== 'admin') {
-      const dashboardUrl = new URL('/dashboard', request.url)
-      return NextResponse.redirect(dashboardUrl)
+    // Check feature access based on role
+    if (userRole && !canAccessPath(userRole, pathname)) {
+      const redirectPath = getDefaultRedirectPath(userRole)
+      const redirectUrl = new URL(redirectPath, request.url)
+      redirectUrl.searchParams.set('access_denied', 'true')
+      return NextResponse.redirect(redirectUrl)
     }
   }
 
