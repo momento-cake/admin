@@ -24,7 +24,7 @@ Orchestrate multi-phase execution by spawning fresh Claude sessions for each pha
 
 ### 1. Validate
 ```bash
-bash .claude/commands/scripts/validate_prerequisites.sh "$ARGUMENT"
+bash .claude/scripts/validate_prerequisites.sh "$ARGUMENT"
 ```
 
 ### 2. Choose Git Strategy
@@ -35,7 +35,7 @@ Ask user (AskUserQuestion):
 
 ### 3. Analyze Dependencies
 ```bash
-python3 .claude/commands/scripts/analyze_dependencies.py "$HANDOFF_PATH" /tmp/execution_plan.json
+python3 .claude/scripts/analyze_dependencies.py "$HANDOFF_PATH" /tmp/execution_plan.json
 ```
 
 ### 4. Setup Git
@@ -53,7 +53,7 @@ git checkout -b "$BRANCH"
 
 ### 5. Execute Phases
 ```bash
-python3 .claude/commands/scripts/orchestrate_execution.py \
+python3 .claude/scripts/orchestrate_execution.py \
   "/tmp/execution_plan.json" \
   "$WORK_DIR" \
   "$PRD_PATH" \
@@ -103,5 +103,5 @@ Expect 30-90 minutes depending on number of phases. The heartbeat keeps the sess
 
 **Cleanup worktree**:
 ```bash
-bash .claude/commands/scripts/cleanup_execution.sh branch-name
+bash .claude/scripts/cleanup_execution.sh branch-name
 ```

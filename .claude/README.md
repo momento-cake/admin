@@ -234,6 +234,20 @@ firebase deploy          # Deploy to production
 admin/
 ├── .claude/
 │   ├── agents/                    # Agent specifications
+│   ├── commands/                  # Slash commands (/plan, /execute, /implement)
+│   │   ├── plan.md                # Create PRD and AI handoff
+│   │   ├── execute.md             # Orchestrate multi-phase execution
+│   │   ├── implement.md           # Execute single phase
+│   │   └── validate/              # Validation commands
+│   ├── scripts/                   # Helper scripts (outside commands)
+│   │   ├── analyze_dependencies.py
+│   │   ├── orchestrate_execution.py
+│   │   ├── validate_prerequisites.sh
+│   │   └── cleanup_execution.sh
+│   ├── templates/                 # PRD and platform templates (outside commands)
+│   │   ├── PRD.md
+│   │   ├── web_feature.md
+│   │   └── ...
 │   └── README.md                  # This file
 ├── .vscode/                       # VS Code configuration
 ├── src/

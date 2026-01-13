@@ -410,7 +410,7 @@ export function validateCNPJ(cnpj: string): boolean {
   // Validate CNPJ check digits
   let length = numbers.length - 2;
   let numberSequence = numbers.substring(0, length);
-  let digits = numbers.substring(length);
+  const digits = numbers.substring(length);
   let sum = 0;
   let pos = length - 7;
   

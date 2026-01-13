@@ -231,27 +231,27 @@ export interface CreatePriceHistoryRequest {
 /**
  * Response type for ingredient list endpoint
  */
-export interface IngredientsListResponse extends PaginatedResponse<Ingredient> {}
+export type IngredientsListResponse = PaginatedResponse<Ingredient>;
 
 /**
  * Response type for ingredient detail endpoint
  */
-export interface IngredientDetailResponse extends ApiResponse<Ingredient> {}
+export type IngredientDetailResponse = ApiResponse<Ingredient>;
 
 /**
  * Response type for suppliers list endpoint
  */
-export interface SuppliersListResponse extends PaginatedResponse<Supplier> {}
+export type SuppliersListResponse = PaginatedResponse<Supplier>;
 
 /**
  * Response type for supplier detail endpoint
  */
-export interface SupplierDetailResponse extends ApiResponse<Supplier> {}
+export type SupplierDetailResponse = ApiResponse<Supplier>;
 
 /**
  * Response type for price history endpoint
  */
-export interface PriceHistoryResponse extends PaginatedResponse<PriceHistoryEntry> {}
+export type PriceHistoryResponse = PaginatedResponse<PriceHistoryEntry>;
 
 // ============================================================================
 // Recipe API Types
@@ -304,17 +304,17 @@ export interface CalculateCostRequest {
 /**
  * Response type for recipes list endpoint
  */
-export interface RecipesListResponse extends PaginatedResponse<Recipe> {}
+export type RecipesListResponse = PaginatedResponse<Recipe>;
 
 /**
  * Response type for recipe detail endpoint
  */
-export interface RecipeDetailResponse extends ApiResponse<Recipe> {}
+export type RecipeDetailResponse = ApiResponse<Recipe>;
 
 /**
  * Response type for cost calculation endpoint
  */
-export interface CostCalculationResponse extends ApiResponse<CostBreakdown> {}
+export type CostCalculationResponse = ApiResponse<CostBreakdown>;
 
 // ============================================================================
 // User & Authentication API Types
@@ -331,11 +331,11 @@ export interface LoginRequest {
 /**
  * Response type for login endpoint
  */
-export interface LoginResponse extends ApiResponse<{
+export type LoginResponse = ApiResponse<{
   user: UserModel;
   token: string;
   expiresIn: number;
-}> {}
+}>;
 
 /**
  * Request body for user registration
@@ -354,7 +354,7 @@ export interface RegisterRequest {
 /**
  * Response type for registration endpoint
  */
-export interface RegisterResponse extends ApiResponse<UserModel> {}
+export type RegisterResponse = ApiResponse<UserModel>;
 
 /**
  * Request body for inviting a new user
@@ -369,12 +369,12 @@ export interface CreateInvitationRequest {
 /**
  * Response type for invitation creation
  */
-export interface CreateInvitationResponse extends ApiResponse<UserInvitation> {}
+export type CreateInvitationResponse = ApiResponse<UserInvitation>;
 
 /**
  * Response type for invitations list
  */
-export interface InvitationsListResponse extends PaginatedResponse<UserInvitation> {}
+export type InvitationsListResponse = PaginatedResponse<UserInvitation>;
 
 /**
  * Request body for updating user profile
@@ -392,7 +392,7 @@ export interface UpdateProfileRequest {
 /**
  * Response type for profile update
  */
-export interface UpdateProfileResponse extends ApiResponse<UserModel> {}
+export type UpdateProfileResponse = ApiResponse<UserModel>;
 
 /**
  * Request body for password change
@@ -405,7 +405,7 @@ export interface ChangePasswordRequest {
 /**
  * Response type for password change
  */
-export interface ChangePasswordResponse extends ApiResponse<{ message: string }> {}
+export type ChangePasswordResponse = ApiResponse<{ message: string }>;
 
 // ============================================================================
 // Error Response Types

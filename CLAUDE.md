@@ -520,7 +520,7 @@ Each PRD follows a standardized template adapted for Next.js + Firebase web arch
 
 ### Helper Scripts
 
-**Location**: `.claude/commands/scripts/`
+**Location**: `.claude/scripts/`
 
 **analyze_dependencies.py**:
 - Analyzes phase dependencies from ai-handoff.json

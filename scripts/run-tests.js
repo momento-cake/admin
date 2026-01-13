@@ -1,11 +1,12 @@
 #!/usr/bin/env node
+/* eslint-disable @typescript-eslint/no-require-imports, @typescript-eslint/no-unused-vars */
 
 /**
  * Test Runner Script for Ingredients Management E2E Tests
- * 
+ *
  * Usage:
  * node scripts/run-tests.js [options]
- * 
+ *
  * Options:
  * --suite=<suite>    Run specific test suite (crud, stock, suppliers, search, errors)
  * --browser=<name>   Run on specific browser (chromium, firefox, webkit)

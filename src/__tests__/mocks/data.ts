@@ -1,6 +1,8 @@
 // Test data fixtures and factories for unit tests
 
-export const mockIngredients = [
+// Note: These mocks use simplified types for testing purposes
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const mockIngredients: any[] = [
   {
     id: 'ing-1',
     name: 'Flour',

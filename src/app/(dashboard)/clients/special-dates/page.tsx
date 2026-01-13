@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { fetchSpecialDatesForDashboard } from '@/lib/clients'
 import { SpecialDatesList } from '@/components/special-dates/SpecialDatesList'
 import { Client } from '@/types/client'
@@ -44,9 +45,9 @@ export default function SpecialDatesPage() {
         <div className="mb-8">
           {/* Breadcrumb */}
           <nav className="flex items-center gap-2 text-sm text-gray-600 mb-4">
-            <a href="/clients" className="hover:text-gray-900">
+            <Link href="/clients" className="hover:text-gray-900">
               Clientes
-            </a>
+            </Link>
             <span>/</span>
             <span className="text-gray-900 font-medium">Datas Especiais</span>
           </nav>

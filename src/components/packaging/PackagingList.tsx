@@ -93,7 +93,7 @@ export function PackagingList({
 
   // Filter and sort packagings
   const filteredAndSortedPackagings = useMemo(() => {
-    let filtered = packagings.filter(p => {
+    const filtered = packagings.filter(p => {
       const matchesSearch =
         p.name.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
         p.brand?.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||

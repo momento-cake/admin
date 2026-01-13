@@ -35,6 +35,8 @@ Create `context/specs/{SCOPE}/PRD.md` with:
 - Implementation tasks (1-3 phases, not always 5)
 - Acceptance criteria
 
+**Template reference**: `.claude/templates/PRD.md`
+
 ### Step 5: Create AI Handoff
 Create `context/specs/{SCOPE}/ai-handoff.json`:
 
@@ -78,6 +80,12 @@ Return:
 - Self-contained (include file paths)
 - Action-oriented (what to do, not theory)
 - Testable (include validation commands)
+
+## Platform Templates
+
+For platform-specific guidance, reference templates in `.claude/templates/`:
+- `web_feature.md`, `web_bug.md`, `web_chore.md` - Web (Next.js + Firebase)
+- `base_feature.md`, `base_bug.md`, `base_chore.md` - Common patterns
 
 ## Example Usage
 
