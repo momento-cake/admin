@@ -7,7 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Ingredient } from '@/types/ingredient';
-import { Recipe, getCategoryDisplayName } from '@/lib/recipes';
+import { Recipe } from '@/types/recipe';
+import { getCategoryDisplayName } from '@/lib/recipes';
 import { getCategoryDisplayName as getIngredientCategoryDisplayName } from '@/lib/ingredients';
 
 interface IngredientSelectionModalProps {
@@ -195,10 +196,10 @@ export function IngredientSelectionModal({
                             </span>
                           )}
                           <span className="text-xs">
-                            Unidade: {ingredient.unit === 'GRAM' ? 'g' : 
-                                     ingredient.unit === 'KILOGRAM' ? 'kg' :
-                                     ingredient.unit === 'MILLILITER' ? 'ml' :
-                                     ingredient.unit === 'LITER' ? 'l' : 'unidade'}
+                            Unidade: {ingredient.unit === 'gram' ? 'g' :
+                                     ingredient.unit === 'kilogram' ? 'kg' :
+                                     ingredient.unit === 'milliliter' ? 'ml' :
+                                     ingredient.unit === 'liter' ? 'l' : 'unidade'}
                           </span>
                         </div>
                       </div>
@@ -235,10 +236,10 @@ export function IngredientSelectionModal({
                           )}
                           <span className="text-xs">
                             Rende: {recipe.generatedAmount} {
-                              recipe.generatedUnit === 'GRAM' ? 'g' : 
-                              recipe.generatedUnit === 'KILOGRAM' ? 'kg' :
-                              recipe.generatedUnit === 'MILLILITER' ? 'ml' :
-                              recipe.generatedUnit === 'LITER' ? 'l' : 'unidade'
+                              recipe.generatedUnit === 'gram' ? 'g' :
+                              recipe.generatedUnit === 'kilogram' ? 'kg' :
+                              recipe.generatedUnit === 'milliliter' ? 'ml' :
+                              recipe.generatedUnit === 'liter' ? 'l' : 'unidade'
                             }
                           </span>
                         </div>

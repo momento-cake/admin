@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/firebase'
-import { collection, query, where, orderBy, getDocs, addDoc, serverTimestamp, doc, updateDoc } from 'firebase/firestore'
+import { collection, query, where, orderBy, getDocs, addDoc, serverTimestamp } from 'firebase/firestore'
 import { generateInvitationToken, sendInvitationEmail } from '@/lib/invitations'
 import { UserInvitation, UserRole } from '@/types'
 
@@ -12,10 +12,10 @@ export async function GET() {
       invitationsRef,
       orderBy('invitedAt', 'desc')
     )
-    
+
     const querySnapshot = await getDocs(q)
     const invitations: UserInvitation[] = []
-    
+
     querySnapshot.forEach((doc) => {
       const data = doc.data()
       invitations.push({
@@ -34,33 +34,33 @@ export async function GET() {
       })
     })
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       invitations,
-      count: invitations.length 
+      count: invitations.length
     })
   } catch (error) {
     // Always log the full error details for debugging
     console.error('=== INVITATIONS API ERROR ===')
     console.error('Error fetching invitations:', {
-      message: error?.message,
-      code: error?.code,
-      stack: error?.stack,
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
       timestamp: new Date().toISOString(),
       endpoint: 'GET /api/invitations'
     })
     console.error('Full error object:', error)
     console.error('============================')
-    
+
     // Return empty array if it's a permissions error or collection doesn't exist yet
     // but still log the error above for monitoring
-    if (error?.code === 'permission-denied' || error?.code === 'not-found') {
-      console.warn(`Returning empty invitations array due to: ${error.code}`)
-      return NextResponse.json({ 
+    const errorCode = (error as { code?: string })?.code
+    if (errorCode === 'permission-denied' || errorCode === 'not-found') {
+      console.warn(`Returning empty invitations array due to: ${errorCode}`)
+      return NextResponse.json({
         invitations: [],
         count: 0
       })
     }
-    
+
     // For other errors, return 500 but ensure they're properly logged
     console.error('Returning 500 error to client for unhandled error type')
     return NextResponse.json(
@@ -121,7 +121,7 @@ export async function POST(request: NextRequest) {
       where('email', '==', email),
       where('status', 'in', ['pending'])
     )
-    
+
     const existingSnapshot = await getDocs(existingQuery)
     if (!existingSnapshot.empty) {
       return NextResponse.json(
@@ -180,7 +180,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { 
+      {
         invitation: newInvitation,
         message: 'Invitation created successfully'
       },
@@ -190,16 +190,15 @@ export async function POST(request: NextRequest) {
     // Always log the full error details for debugging
     console.error('=== INVITATIONS CREATE ERROR ===')
     console.error('Error creating invitation:', {
-      message: error?.message,
-      code: error?.code,
-      stack: error?.stack,
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
       timestamp: new Date().toISOString(),
       endpoint: 'POST /api/invitations',
       requestData: { body, email, name, role, invitedBy }
     })
     console.error('Full error object:', error)
     console.error('=================================')
-    
+
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

@@ -69,8 +69,8 @@ export async function POST(request: NextRequest) {
     // Validate request body
     const validation = createProductValidation.safeParse(body);
     if (!validation.success) {
-      const errors = validation.error.errors.map(e => ({
-        field: e.path.join('.'),
+      const errors = validation.error.issues.map((e) => ({
+        field: String(e.path.join('.')),
         message: e.message
       }));
       return NextResponse.json(
@@ -79,8 +79,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create product
-    const product = await createProduct(validation.data, user.uid);
+    // Create product - cast to expected type as Zod schema may have optional id
+    const product = await createProduct(validation.data as Parameters<typeof createProduct>[0], user.uid);
 
     return NextResponse.json(
       { success: true, data: product },

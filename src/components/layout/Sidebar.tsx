@@ -254,7 +254,7 @@ export function Sidebar() {
                         const isSubActive = pathname === subItem.href
                         const hasNestedSubmenu = subItem.hasSubmenu && subItem.submenu
                         const isNestedExpanded = isExpanded(subItem.name)
-                        const isNestedActive = hasNestedSubmenu && subItem.submenu.some((nestedItem: any) => pathname === nestedItem.href)
+                        const isNestedActive = hasNestedSubmenu && subItem.submenu?.some((nestedItem: { href: string }) => pathname === nestedItem.href)
                         
                         return (
                           <div key={subItem.name}>

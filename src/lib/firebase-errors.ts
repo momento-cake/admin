@@ -180,7 +180,7 @@ export const retryConfig = {
 /**
  * Enhanced error logging for debugging and monitoring
  */
-export function logFirebaseError(error: { code?: string; message?: string }, operation: string, context?: Record<string, unknown>) {
+export function logFirebaseError(error: { code?: string; message?: string; stack?: string }, operation: string, context?: Record<string, unknown>) {
   const errorInfo = handleFirebaseError(error)
   
   const logData = {
@@ -224,31 +224,32 @@ export async function withRetry<T>(
   maxAttempts = 3,
   baseDelay = 1000
 ): Promise<T> {
-  let lastError: { code?: string; message?: string }
+  let lastError: { code?: string; message?: string; stack?: string } | undefined
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
       return await operation()
-    } catch (error) {
+    } catch (caughtError) {
+      const error = caughtError as { code?: string; message?: string; stack?: string }
       lastError = error
       const errorInfo = handleFirebaseError(error)
-      
+
       // Don't retry if error is not retryable
       if (!errorInfo.retryable) {
         logFirebaseError(error, operationName, { attempt, final: true })
-        throw error
+        throw caughtError
       }
 
       // Don't retry on last attempt
       if (attempt === maxAttempts) {
         logFirebaseError(error, operationName, { attempt, final: true })
-        throw error
+        throw caughtError
       }
 
       // Calculate delay with exponential backoff
       const delay = baseDelay * Math.pow(2, attempt - 1)
       logFirebaseError(error, operationName, { attempt, retrying: true, delay })
-      
+
       // Wait before retrying
       await new Promise(resolve => setTimeout(resolve, delay))
     }

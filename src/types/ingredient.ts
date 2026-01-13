@@ -179,6 +179,9 @@ export interface Supplier {
   /** Whether supplier is still active */
   isActive: boolean;
 
+  /** Additional notes about the supplier */
+  notes?: string;
+
   /** Timestamp of supplier creation */
   createdAt: Date;
 
@@ -244,6 +247,12 @@ export interface CreateIngredientData {
 
   /** ID of preferred supplier (optional) */
   supplierId?: string;
+
+  /** Name of preferred supplier (optional) */
+  supplierName?: string;
+
+  /** Additional notes about the ingredient */
+  notes?: string;
 
   /** Minimum stock level threshold before reorder */
   minStock: number;
@@ -379,6 +388,12 @@ export interface PriceHistoryEntry {
 
   /** When this price record was created */
   createdAt: Date;
+
+  /** Date field for price history tracking (alias for createdAt) */
+  date?: Date;
+
+  /** Percentage change from previous price */
+  changePercentage?: number;
 
   /** UID of user who recorded this price */
   createdBy: string;

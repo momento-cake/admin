@@ -7,8 +7,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { RecipeList } from '@/components/recipes/RecipeList';
 import { RecipeForm } from '@/components/recipes/RecipeForm';
 import { RecipeDetailView } from '@/components/recipes/RecipeDetailView';
-import { Recipe } from '@/types/recipe';
-import { createRecipe, updateRecipe, deleteRecipe, CreateRecipeData, UpdateRecipeData } from '@/lib/recipes';
+import { Recipe, CreateRecipeData, UpdateRecipeData } from '@/types/recipe';
+import { createRecipe, updateRecipe, deleteRecipe } from '@/lib/recipes';
 import { fetchIngredients } from '@/lib/ingredients';
 
 export default function RecipesPage() {
@@ -110,8 +110,8 @@ export default function RecipesPage() {
   const loadFormData = async () => {
     try {
       // Load ingredients
-      const ingredientsData = await fetchIngredients();
-      setAvailableIngredients((ingredientsData.ingredients || []).map((ingredient: any) => ({
+      const ingredients = await fetchIngredients();
+      setAvailableIngredients(ingredients.map((ingredient) => ({
         id: ingredient.id,
         name: ingredient.name,
         unit: ingredient.unit
@@ -168,8 +168,6 @@ export default function RecipesPage() {
             onSubmit={handleSubmitCreate}
             onCancel={handleCancelForm}
             isSubmitting={isSubmitting}
-            availableIngredients={availableIngredients}
-            availableRecipes={availableRecipes}
           />
         </DialogContent>
       </Dialog>
@@ -186,8 +184,6 @@ export default function RecipesPage() {
               onSubmit={handleSubmitEdit}
               onCancel={handleCancelForm}
               isSubmitting={isSubmitting}
-              availableIngredients={availableIngredients}
-              availableRecipes={availableRecipes}
             />
           )}
         </DialogContent>

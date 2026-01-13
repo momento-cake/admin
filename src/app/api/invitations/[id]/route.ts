@@ -5,12 +5,14 @@ import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore'
 // PATCH /api/invitations/[id] - Update invitation status
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
+  let status: string | undefined
+
   try {
-    const { id } = params
     const body = await request.json()
-    const { status } = body
+    status = body.status
 
     // Validate status
     const validStatuses = ['cancelled', 'accepted', 'expired']
@@ -43,7 +45,7 @@ export async function PATCH(
     }
 
     // Update the invitation with new status and timestamp
-    const updateData: any = {
+    const updateData: Record<string, unknown> = {
       status,
       updatedAt: serverTimestamp()
     }
@@ -63,7 +65,7 @@ export async function PATCH(
 
     await updateDoc(invitationRef, updateData)
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       message: `Invitation ${status} successfully`,
       id,
       status
@@ -72,9 +74,8 @@ export async function PATCH(
     // Always log the full error details for debugging
     console.error('=== INVITATION UPDATE ERROR ===')
     console.error('Error updating invitation:', {
-      message: error?.message,
-      code: error?.code,
-      stack: error?.stack,
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
       timestamp: new Date().toISOString(),
       endpoint: `PATCH /api/invitations/${id}`,
       invitationId: id,
@@ -82,7 +83,7 @@ export async function PATCH(
     })
     console.error('Full error object:', error)
     console.error('===============================')
-    
+
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -93,11 +94,11 @@ export async function PATCH(
 // GET /api/invitations/[id] - Get specific invitation
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    const { id } = params
+  const { id } = await params
 
+  try {
     const invitationRef = doc(db, 'invitations', id)
     const invitationSnap = await getDoc(invitationRef)
 
@@ -129,16 +130,15 @@ export async function GET(
     // Always log the full error details for debugging
     console.error('=== INVITATION FETCH ERROR ===')
     console.error('Error fetching invitation:', {
-      message: error?.message,
-      code: error?.code,
-      stack: error?.stack,
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
       timestamp: new Date().toISOString(),
       endpoint: `GET /api/invitations/${id}`,
       invitationId: id
     })
     console.error('Full error object:', error)
     console.error('===============================')
-    
+
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -149,11 +149,11 @@ export async function GET(
 // DELETE /api/invitations/[id] - Delete invitation
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    const { id } = params
+  const { id } = await params
 
+  try {
     const invitationRef = doc(db, 'invitations', id)
     const invitationSnap = await getDoc(invitationRef)
 
@@ -171,7 +171,7 @@ export async function DELETE(
       updatedAt: serverTimestamp()
     })
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       message: 'Invitation cancelled successfully',
       id
     })
@@ -179,16 +179,15 @@ export async function DELETE(
     // Always log the full error details for debugging
     console.error('=== INVITATION DELETE ERROR ===')
     console.error('Error cancelling invitation:', {
-      message: error?.message,
-      code: error?.code,
-      stack: error?.stack,
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
       timestamp: new Date().toISOString(),
       endpoint: `DELETE /api/invitations/${id}`,
       invitationId: id
     })
     console.error('Full error object:', error)
     console.error('===============================')
-    
+
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

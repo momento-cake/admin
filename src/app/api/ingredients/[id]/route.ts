@@ -3,16 +3,10 @@ import { fetchIngredient, updateIngredient, deleteIngredient } from '@/lib/ingre
 import { UpdateIngredientData } from '@/types/ingredient'
 import { updateIngredientValidation } from '@/lib/validators/ingredient'
 
-interface RouteParams {
-  params: {
-    id: string
-  }
-}
-
 // GET /api/ingredients/[id] - Get single ingredient
-export async function GET(request: NextRequest, { params }: RouteParams) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   try {
-    const { id } = params
     console.log(`🔍 GET /api/ingredients/${id} - Fetching ingredient`)
 
     if (!id) {
@@ -31,17 +25,17 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       success: true
     })
   } catch (error) {
-    console.error(`❌ Error fetching ingredient ${params.id}:`, error)
-    
+    console.error(`❌ Error fetching ingredient ${id}:`, error)
+
     if (error instanceof Error && error.message.includes('não encontrado')) {
       return NextResponse.json(
         { error: 'Ingrediente não encontrado', success: false },
         { status: 404 }
       )
     }
-    
+
     return NextResponse.json(
-      { 
+      {
         error: error instanceof Error ? error.message : 'Erro interno do servidor',
         success: false
       },
@@ -51,9 +45,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 }
 
 // PUT /api/ingredients/[id] - Update ingredient
-export async function PUT(request: NextRequest, { params }: RouteParams) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   try {
-    const { id } = params
     console.log(`🔄 PUT /api/ingredients/${id} - Updating ingredient`)
 
     if (!id) {
@@ -74,10 +68,10 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     if (!validationResult.success) {
       console.error('❌ Validation failed:', validationResult.error)
       return NextResponse.json(
-        { 
+        {
           error: 'Dados inválidos',
-          details: validationResult.error.errors.map(err => ({
-            field: err.path.join('.'),
+          details: validationResult.error.issues.map((err) => ({
+            field: String(err.path.join('.')),
             message: err.message
           }))
         },
@@ -97,17 +91,17 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       message: 'Ingrediente atualizado com sucesso'
     })
   } catch (error) {
-    console.error(`❌ Error updating ingredient ${params.id}:`, error)
-    
+    console.error(`❌ Error updating ingredient ${id}:`, error)
+
     if (error instanceof Error && error.message.includes('não encontrado')) {
       return NextResponse.json(
         { error: 'Ingrediente não encontrado', success: false },
         { status: 404 }
       )
     }
-    
+
     return NextResponse.json(
-      { 
+      {
         error: error instanceof Error ? error.message : 'Erro interno do servidor',
         success: false
       },
@@ -117,9 +111,9 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 }
 
 // DELETE /api/ingredients/[id] - Delete ingredient
-export async function DELETE(request: NextRequest, { params }: RouteParams) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   try {
-    const { id } = params
     console.log(`🗑️ DELETE /api/ingredients/${id} - Deleting ingredient`)
 
     if (!id) {
@@ -138,17 +132,17 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       message: 'Ingrediente removido com sucesso'
     })
   } catch (error) {
-    console.error(`❌ Error deleting ingredient ${params.id}:`, error)
-    
+    console.error(`❌ Error deleting ingredient ${id}:`, error)
+
     if (error instanceof Error && error.message.includes('não encontrado')) {
       return NextResponse.json(
         { error: 'Ingrediente não encontrado', success: false },
         { status: 404 }
       )
     }
-    
+
     return NextResponse.json(
-      { 
+      {
         error: error instanceof Error ? error.message : 'Erro interno do servidor',
         success: false
       },

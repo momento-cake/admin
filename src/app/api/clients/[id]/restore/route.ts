@@ -24,7 +24,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       message: 'Cliente restaurado com sucesso'
     })
   } catch (error) {
-    console.error(`❌ Error restoring client ${params.id}:`, error)
+    console.error(`❌ Error restoring client ${id}:`, error)
 
     if (error instanceof Error && error.message.includes('não encontrado')) {
       return NextResponse.json(

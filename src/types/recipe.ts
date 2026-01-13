@@ -184,9 +184,13 @@ export interface CreateRecipeData {
   generatedAmount: number;
   generatedUnit: IngredientUnit;
   servings: number;
-  // Time will be calculated from steps, no need to include preparationTime here
+  // Time fields
+  preparationTime?: number;
+  cookingTime?: number;
   difficulty: RecipeDifficulty;
   recipeItems: CreateRecipeItemData[];
+  // Alias for recipeItems (backwards compatibility)
+  ingredients?: CreateRecipeItemData[];
   instructions: CreateRecipeStepData[];
   notes?: string;
 }
@@ -248,6 +252,7 @@ export interface RecipeItemCost {
   unit: IngredientUnit;
   unitCost: number;
   totalCost: number;
+  proportionUsed?: number;
 }
 
 export interface RecipeScalingOptions {

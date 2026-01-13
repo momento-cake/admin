@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { 
+import {
   fetchRecipes,
-  createRecipe,
-  RecipeFilters 
+  createRecipe
 } from '@/lib/recipes';
-import { CreateRecipeData } from '@/types/recipe';
+import { CreateRecipeData, RecipeFilters } from '@/types/recipe';
 
 // GET /api/recipes - List recipes with optional filters
 export async function GET(request: NextRequest) {

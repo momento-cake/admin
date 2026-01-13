@@ -24,7 +24,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       data: client
     })
   } catch (error) {
-    console.error(`❌ Error fetching client ${params.id}:`, error)
+    console.error(`❌ Error fetching client ${id}:`, error)
 
     if (error instanceof Error && error.message.includes('não encontrado')) {
       return NextResponse.json(
@@ -70,8 +70,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         {
           success: false,
           error: 'Dados inválidos',
-          details: validationResult.error.errors.map(err => ({
-            field: err.path.join('.'),
+          details: validationResult.error.issues.map((err) => ({
+            field: String(err.path.join('.')),
             message: err.message
           }))
         },
@@ -91,7 +91,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       message: 'Cliente atualizado com sucesso'
     })
   } catch (error) {
-    console.error(`❌ Error updating client ${params.id}:`, error)
+    console.error(`❌ Error updating client ${id}:`, error)
 
     if (error instanceof Error && error.message.includes('não encontrado')) {
       return NextResponse.json(
@@ -132,7 +132,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
       message: 'Cliente removido com sucesso'
     })
   } catch (error) {
-    console.error(`❌ Error deleting client ${params.id}:`, error)
+    console.error(`❌ Error deleting client ${id}:`, error)
 
     if (error instanceof Error && error.message.includes('não encontrado')) {
       return NextResponse.json(

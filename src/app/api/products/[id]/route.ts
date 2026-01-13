@@ -57,8 +57,8 @@ export async function PUT(
       ...body
     });
     if (!validation.success) {
-      const errors = validation.error.errors.map(e => ({
-        field: e.path.join('.'),
+      const errors = validation.error.issues.map((e) => ({
+        field: String(e.path.join('.')),
         message: e.message
       }));
       return NextResponse.json(

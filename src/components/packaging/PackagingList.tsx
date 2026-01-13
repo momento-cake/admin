@@ -181,6 +181,7 @@ export function PackagingList({
   }, [sortBy, sortOrder]);
 
   const handleDelete = useCallback(async (packaging: Packaging) => {
+    if (!onPackagingDelete) return;
     if (confirm(`Tem certeza que deseja deletar "${packaging.name}"?`)) {
       try {
         onPackagingDelete(packaging);

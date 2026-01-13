@@ -60,8 +60,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { 
           error: 'Dados inválidos',
-          details: validationResult.error.errors.map(err => ({
-            field: err.path.join('.'),
+          details: validationResult.error.issues.map((err) => ({
+            field: String(err.path.join('.')),
             message: err.message
           }))
         },

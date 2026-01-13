@@ -241,14 +241,14 @@ export default function NewClientPage() {
 
       router.push('/clients')
       router.refresh()
-    } catch (err) {
-      setValidationErrors({ submit: err instanceof Error ? err.message : 'Erro ao criar cliente' })
+    } catch (error) {
+      setValidationErrors({ submit: error instanceof Error ? error.message : 'Erro ao criar cliente' })
     } finally {
       setLoading(false)
     }
   }
 
-  const Error = ({ message }: { message?: string }) =>
+  const FieldError = ({ message }: { message?: string }) =>
     message ? <p className="text-sm text-destructive mt-1">{message}</p> : null
 
   return (
@@ -319,7 +319,7 @@ export default function NewClientPage() {
               className="w-full mt-1 px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
               placeholder={clientType === 'person' ? 'João da Silva' : 'Empresa LTDA'}
             />
-            <Error message={validationErrors.name} />
+            <FieldError message={validationErrors.name} />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -374,7 +374,7 @@ export default function NewClientPage() {
           </div>
 
           {validationErrors.contactMethods && (
-            <Error message={validationErrors.contactMethods} />
+            <FieldError message={validationErrors.contactMethods} />
           )}
 
           <div className="space-y-3">
@@ -539,7 +539,7 @@ export default function NewClientPage() {
                   className="w-full mt-1 px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
                   placeholder="00.000.000/0000-00"
                 />
-                <Error message={validationErrors['companyInfo.cnpj']} />
+                <FieldError message={validationErrors['companyInfo.cnpj']} />
               </div>
 
               <div>
@@ -551,7 +551,7 @@ export default function NewClientPage() {
                   onChange={handleCompanyInfoChange}
                   className="w-full mt-1 px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
                 />
-                <Error message={validationErrors['companyInfo.companyName']} />
+                <FieldError message={validationErrors['companyInfo.companyName']} />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -590,7 +590,7 @@ export default function NewClientPage() {
                   onChange={handleRepresentativeChange}
                   className="w-full mt-1 px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
                 />
-                <Error message={validationErrors['representative.name']} />
+                <FieldError message={validationErrors['representative.name']} />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -603,7 +603,7 @@ export default function NewClientPage() {
                     onChange={handleRepresentativeChange}
                     className="w-full mt-1 px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
                   />
-                  <Error message={validationErrors['representative.email']} />
+                  <FieldError message={validationErrors['representative.email']} />
                 </div>
                 <div>
                   <label className="text-sm font-medium">Telefone *</label>
@@ -614,7 +614,7 @@ export default function NewClientPage() {
                     onChange={handleRepresentativeChange}
                     className="w-full mt-1 px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
                   />
-                  <Error message={validationErrors['representative.phone']} />
+                  <FieldError message={validationErrors['representative.phone']} />
                 </div>
               </div>
 

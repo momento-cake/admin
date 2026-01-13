@@ -198,7 +198,9 @@ export async function fetchRecipes(filters?: RecipeFilters): Promise<RecipesResp
 
     return {
       recipes,
-      total: recipes.length
+      total: recipes.length,
+      page: 1,
+      limit: recipes.length
     };
   } catch (error) {
     console.error('❌ Error fetching recipes:', error);

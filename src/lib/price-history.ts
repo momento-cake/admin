@@ -1,4 +1,12 @@
-import { PriceHistory } from '@/types/ingredient';
+import { PriceHistoryEntry } from '@/types/ingredient';
+
+// Type alias for backwards compatibility
+type PriceHistory = PriceHistoryEntry;
+
+// Helper to get date from entry (uses date if available, falls back to createdAt)
+function getEntryDate(entry: PriceHistory): Date {
+  return entry.date || entry.createdAt;
+}
 
 export async function fetchPriceHistory(
   ingredientId: string,
@@ -8,22 +16,23 @@ export async function fetchPriceHistory(
 ): Promise<{ priceHistory: PriceHistory[] }> {
   const params = new URLSearchParams();
   params.set('ingredientId', ingredientId);
-  
+
   if (limit) params.set('limit', limit.toString());
   if (fromDate) params.set('from', fromDate.toISOString());
   if (toDate) params.set('to', toDate.toISOString());
 
   const response = await fetch(`/api/ingredients/price-history?${params}`);
-  
+
   if (!response.ok) {
     throw new Error('Failed to fetch price history');
   }
 
   const data = await response.json();
   return {
-    priceHistory: data.priceHistory.map((entry: { date: string; [key: string]: unknown }) => ({
+    priceHistory: data.priceHistory.map((entry: { date?: string; createdAt?: string; [key: string]: unknown }) => ({
       ...entry,
-      date: new Date(entry.date),
+      date: entry.date ? new Date(entry.date) : undefined,
+      createdAt: entry.createdAt ? new Date(entry.createdAt) : new Date(),
     })),
   };
 }
@@ -54,7 +63,8 @@ export async function addPriceEntry(
   const data = await response.json();
   return {
     ...data,
-    date: new Date(data.date),
+    date: data.date ? new Date(data.date) : undefined,
+    createdAt: data.createdAt ? new Date(data.createdAt) : new Date(),
   };
 }
 
@@ -65,7 +75,7 @@ export function calculatePriceChange(current: number, previous: number): {
 } {
   const change = current - previous;
   const percentage = (change / previous) * 100;
-  
+
   let trend: 'up' | 'down' | 'stable' = 'stable';
   if (Math.abs(percentage) > 1) { // Consider changes > 1% as significant
     trend = percentage > 0 ? 'up' : 'down';
@@ -77,11 +87,11 @@ export function calculatePriceChange(current: number, previous: number): {
 export function getAveragePrice(priceHistory: PriceHistory[], days: number = 30): number {
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate() - days);
-  
-  const recentPrices = priceHistory.filter(entry => entry.date >= cutoffDate);
-  
+
+  const recentPrices = priceHistory.filter(entry => getEntryDate(entry) >= cutoffDate);
+
   if (recentPrices.length === 0) return 0;
-  
+
   return recentPrices.reduce((sum, entry) => sum + entry.price, 0) / recentPrices.length;
 }
 
@@ -110,12 +120,12 @@ export function detectPriceAlerts(
 export function generatePriceTrendData(priceHistory: PriceHistory[], days: number = 30) {
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate() - days);
-  
+
   return priceHistory
-    .filter(entry => entry.date >= cutoffDate)
-    .sort((a, b) => a.date.getTime() - b.date.getTime())
+    .filter(entry => getEntryDate(entry) >= cutoffDate)
+    .sort((a, b) => getEntryDate(a).getTime() - getEntryDate(b).getTime())
     .map(entry => ({
-      date: entry.date.toLocaleDateString(),
+      date: getEntryDate(entry).toLocaleDateString(),
       price: entry.price,
       change: entry.changePercentage || 0,
     }));

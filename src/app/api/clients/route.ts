@@ -34,8 +34,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(
         {
           error: 'Parâmetros de consulta inválidos',
-          details: validationResult.error.errors.map(err => ({
-            field: err.path.join('.'),
+          details: validationResult.error.issues.map((err) => ({
+            field: String(err.path.join('.')),
             message: err.message
           }))
         },
@@ -76,13 +76,12 @@ export async function POST(request: NextRequest) {
     const validationResult = createClientSchema.safeParse(body)
     if (!validationResult.success) {
       console.error('❌ Validation failed:', validationResult.error)
-      const errors = validationResult.error.errors || []
       return NextResponse.json(
         {
           success: false,
           error: 'Dados inválidos',
-          details: errors.map(err => ({
-            field: Array.isArray(err.path) ? err.path.join('.') : String(err.path),
+          details: validationResult.error.issues.map((err) => ({
+            field: String(err.path.join('.')),
             message: err.message
           }))
         },
