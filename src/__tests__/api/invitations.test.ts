@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { GET, POST } from '@/app/api/invitations/route';
 import { GET as GET_BY_ID } from '@/app/api/invitations/[id]/route';

@@ -148,24 +148,34 @@ export const mockUsers = [
   },
 ];
 
-export const mockInvitations = [
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const mockInvitations: any[] = [
   {
     id: 'inv-1',
     email: 'newuser@example.com',
-    role: 'viewer',
+    name: 'New User',
+    role: 'atendente',
     status: 'pending',
+    token: 'test-token-1',
     invitedBy: 'user-1',
     invitedAt: new Date('2025-01-10'),
     expiresAt: new Date('2025-02-10'),
+    cancelledAt: null,
+    metadata: {},
   },
   {
     id: 'inv-2',
     email: 'accepted@example.com',
+    name: 'Accepted User',
     role: 'admin',
     status: 'accepted',
+    token: 'test-token-2',
     invitedBy: 'user-1',
     invitedAt: new Date('2025-01-05'),
+    expiresAt: new Date('2025-02-05'),
     acceptedAt: new Date('2025-01-06'),
+    cancelledAt: null,
+    metadata: {},
   },
 ];
 
