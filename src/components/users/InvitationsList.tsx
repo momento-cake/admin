@@ -11,6 +11,8 @@ import { isInvitationExpired } from '@/lib/invitations'
 import { Mail, RefreshCw, X, Clock, CheckCircle, XCircle } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+import { db } from '@/lib/firebase'
+import { collection, query, orderBy, getDocs, doc, updateDoc, serverTimestamp } from 'firebase/firestore'
 
 export function InvitationsList() {
   const [invitations, setInvitations] = useState<UserInvitation[]>([])
@@ -21,14 +23,32 @@ export function InvitationsList() {
   const fetchInvitations = async () => {
     try {
       setIsLoading(true)
-      const response = await fetch('/api/invitations')
-      
-      if (!response.ok) {
-        throw new Error('Erro ao carregar convites')
-      }
 
-      const data = await response.json()
-      setInvitations(data.invitations || [])
+      // Fetch directly from Firestore
+      const invitationsRef = collection(db, 'invitations')
+      const q = query(invitationsRef, orderBy('invitedAt', 'desc'))
+      const querySnapshot = await getDocs(q)
+
+      const invitationsList: UserInvitation[] = []
+      querySnapshot.forEach((docSnap) => {
+        const data = docSnap.data()
+        invitationsList.push({
+          id: docSnap.id,
+          email: data.email,
+          name: data.name,
+          role: data.role,
+          status: data.status,
+          token: data.token,
+          invitedBy: data.invitedBy,
+          invitedAt: data.invitedAt?.toDate() || new Date(),
+          expiresAt: data.expiresAt?.toDate ? data.expiresAt.toDate() : new Date(data.expiresAt),
+          acceptedAt: data.acceptedAt?.toDate?.(),
+          cancelledAt: data.cancelledAt?.toDate?.(),
+          metadata: data.metadata
+        })
+      })
+
+      setInvitations(invitationsList)
       setError(null)
     } catch (error) {
       console.error('Error fetching invitations:', error)
@@ -41,17 +61,13 @@ export function InvitationsList() {
   const updateInvitationStatus = async (id: string, status: 'cancelled') => {
     try {
       setProcessingId(id)
-      const response = await fetch(`/api/invitations/${id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ status }),
-      })
 
-      if (!response.ok) {
-        throw new Error('Erro ao atualizar convite')
-      }
+      // Update directly in Firestore
+      const invitationRef = doc(db, 'invitations', id)
+      await updateDoc(invitationRef, {
+        status,
+        cancelledAt: serverTimestamp()
+      })
 
       // Refresh the list
       await fetchInvitations()
@@ -186,7 +202,7 @@ export function InvitationsList() {
                 <TableCell>{invitation.email}</TableCell>
                 <TableCell>
                   <Badge variant="outline">
-                    {invitation.role === 'admin' ? 'Administrador' : 'Visualizador'}
+                    {invitation.role === 'admin' ? 'Administrador' : 'Atendente'}
                   </Badge>
                 </TableCell>
                 <TableCell>
