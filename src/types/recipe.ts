@@ -197,6 +197,11 @@ export interface CreateRecipeData {
 
 export interface UpdateRecipeData extends Partial<CreateRecipeData> {
   id: string;
+  // Calculated cost fields that can be updated directly
+  totalCost?: number;
+  costPerServing?: number;
+  laborCost?: number;
+  suggestedPrice?: number;
 }
 
 export interface CreateRecipeItemData {

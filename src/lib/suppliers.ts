@@ -53,7 +53,8 @@ function docToSupplier(doc: DocumentSnapshot): Supplier {
     rating: data.rating || 0,
     categories: data.categories || [],
     isActive: data.isActive !== false,
-    createdAt: data.createdAt?.toDate() || new Date()
+    createdAt: data.createdAt?.toDate() || new Date(),
+    updatedAt: data.updatedAt?.toDate() || data.createdAt?.toDate() || new Date()
   };
 }
 

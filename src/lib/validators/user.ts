@@ -240,7 +240,7 @@ export function validateEmail(email: string): { isValid: boolean; error?: string
     return { isValid: true };
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return { isValid: false, error: error.errors[0]?.message };
+      return { isValid: false, error: error.issues[0]?.message };
     }
     return { isValid: false, error: 'Email inválido' };
   }
@@ -260,7 +260,7 @@ export function validatePassword(password: string): { isValid: boolean; error?: 
     return { isValid: true };
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return { isValid: false, error: error.errors[0]?.message };
+      return { isValid: false, error: error.issues[0]?.message };
     }
     return { isValid: false, error: 'Senha inválida' };
   }
@@ -277,7 +277,7 @@ export function validatePhoneNumber(phone: string): { isValid: boolean; error?: 
     return { isValid: true };
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return { isValid: false, error: error.errors[0]?.message };
+      return { isValid: false, error: error.issues[0]?.message };
     }
     return { isValid: false, error: 'Telefone inválido' };
   }

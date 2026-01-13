@@ -501,11 +501,24 @@ export async function duplicateRecipe(id: string, newName: string): Promise<Reci
       description: originalRecipe.description,
       category: originalRecipe.category,
       difficulty: originalRecipe.difficulty,
+      generatedAmount: originalRecipe.generatedAmount,
+      generatedUnit: originalRecipe.generatedUnit,
       servings: originalRecipe.servings,
       preparationTime: originalRecipe.preparationTime,
-      cookingTime: originalRecipe.cookingTime,
-      ingredients: originalRecipe.ingredients,
-      instructions: originalRecipe.instructions,
+      recipeItems: originalRecipe.recipeItems.map(item => ({
+        type: item.type,
+        ingredientId: item.ingredientId,
+        subRecipeId: item.subRecipeId,
+        quantity: item.quantity,
+        unit: item.unit,
+        notes: item.notes
+      })),
+      instructions: originalRecipe.instructions.map(step => ({
+        stepNumber: step.stepNumber,
+        instruction: step.instruction,
+        timeMinutes: step.timeMinutes,
+        notes: step.notes
+      })),
       notes: originalRecipe.notes
     };
 

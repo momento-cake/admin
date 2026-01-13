@@ -213,7 +213,7 @@ export function validateRecipeName(name: string): { isValid: boolean; error?: st
     return { isValid: true };
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const firstError = error.errors?.[0];
+      const firstError = error.issues?.[0];
       return { isValid: false, error: firstError?.message || 'Nome inválido' };
     }
     return { isValid: false, error: 'Nome inválido' };
@@ -226,7 +226,7 @@ export function validateRecipeItem(item: unknown): { isValid: boolean; error?: s
     return { isValid: true };
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const firstError = error.errors?.[0];
+      const firstError = error.issues?.[0];
       return { isValid: false, error: firstError?.message || 'Item de receita inválido' };
     }
     return { isValid: false, error: 'Item de receita inválido' };
@@ -239,7 +239,7 @@ export function validateRecipeStep(step: unknown): { isValid: boolean; error?: s
     return { isValid: true };
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const firstError = error.errors?.[0];
+      const firstError = error.issues?.[0];
       return { isValid: false, error: firstError?.message || 'Passo de receita inválido' };
     }
     return { isValid: false, error: 'Passo de receita inválido' };

@@ -77,9 +77,7 @@ export const stockUpdateValidation = z.object({
   quantity: z.number()
     .min(0.01, 'Quantidade deve ser maior que zero')
     .max(999999.99, 'Quantidade muito alta'),
-  type: z.enum(['adjustment', 'purchase', 'usage', 'waste', 'correction'], {
-    errorMap: () => ({ message: 'Tipo de movimentação inválido' })
-  }),
+  type: z.enum(['adjustment', 'purchase', 'usage', 'waste', 'correction']),
   notes: z.string().max(500, 'Observações devem ter no máximo 500 caracteres').optional(),
   reason: z.string().max(200, 'Motivo deve ter no máximo 200 caracteres').optional(),
   supplierId: z.string().optional(),
@@ -133,9 +131,7 @@ export const enhancedIngredientValidation = ingredientValidation.extend({
 // Batch operations validation
 export const batchIngredientUpdateValidation = z.object({
   ingredientIds: z.array(z.string().min(1)).min(1, 'Selecione pelo menos um ingrediente'),
-  updateType: z.enum(['price', 'supplier', 'category', 'stock'], {
-    errorMap: () => ({ message: 'Tipo de atualização inválido' })
-  }),
+  updateType: z.enum(['price', 'supplier', 'category', 'stock']),
   price: z.number().min(0).optional(),
   supplierId: z.string().optional(),
   category: z.nativeEnum(IngredientCategory).optional(),
@@ -182,7 +178,7 @@ export function validateIngredientName(name: string): { isValid: boolean; error?
     return { isValid: true };
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return { isValid: false, error: error.errors[0]?.message };
+      return { isValid: false, error: error.issues[0]?.message };
     }
     return { isValid: false, error: 'Nome inválido' };
   }
@@ -198,7 +194,7 @@ export function validatePrice(price: number): { isValid: boolean; error?: string
     return { isValid: true };
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return { isValid: false, error: error.errors[0]?.message };
+      return { isValid: false, error: error.issues[0]?.message };
     }
     return { isValid: false, error: 'Preço inválido' };
   }
@@ -214,7 +210,7 @@ export function validateStock(stock: number, context: 'current' | 'minimum' = 'c
     return { isValid: true };
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return { isValid: false, error: error.errors[0]?.message };
+      return { isValid: false, error: error.issues[0]?.message };
     }
     return { isValid: false, error: 'Estoque inválido' };
   }
