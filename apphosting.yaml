@@ -1,5 +1,10 @@
 # Firebase App Hosting configuration
 # https://firebase.google.com/docs/app-hosting
+#
+# Environment variables are stored as secrets per backend.
+# To configure for a new backend, run:
+#   firebase apphosting:secrets:set <SECRET_NAME> --data-file <file>
+#   firebase apphosting:secrets:grantaccess <SECRET_NAMES> --backend <backend-id>
 
 runConfig:
   runtime: nodejs22
@@ -10,20 +15,20 @@ runConfig:
   maxInstances: 2
 
 env:
-  - variable: NEXT_PUBLIC_ENVIRONMENT
-    value: dev
   - variable: NODE_ENV
     value: production
-  # Firebase Configuration - Dev Environment
+  # Firebase configuration - stored as secrets per backend
+  - variable: NEXT_PUBLIC_ENVIRONMENT
+    secret: NEXT_PUBLIC_ENVIRONMENT
   - variable: NEXT_PUBLIC_FIREBASE_API_KEY
-    value: AIzaSyAtj_dM0gsUaQiG9mnPKeQ5lp1Lcj7PY4s
+    secret: NEXT_PUBLIC_FIREBASE_API_KEY
   - variable: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
-    value: momentocake-admin-dev.firebaseapp.com
+    secret: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
   - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
-    value: momentocake-admin-dev
+    secret: NEXT_PUBLIC_FIREBASE_PROJECT_ID
   - variable: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
-    value: momentocake-admin-dev.firebasestorage.app
+    secret: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
   - variable: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
-    value: "847106871689"
+    secret: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
   - variable: NEXT_PUBLIC_FIREBASE_APP_ID
-    value: 1:847106871689:web:e98fe63fd92acd846c9158
+    secret: NEXT_PUBLIC_FIREBASE_APP_ID
