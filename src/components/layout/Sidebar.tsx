@@ -22,7 +22,6 @@ import {
   Truck,
   ChefHat,
   DollarSign,
-  Settings,
   UserCheck,
   Calendar,
   FolderOpen,
@@ -131,12 +130,6 @@ const navigation: NavItem[] = [
         icon: Calendar
       }
     ]
-  },
-  {
-    name: 'Configurações',
-    href: '/recipes/settings',
-    icon: Settings,
-    feature: 'settings'
   }
 ]
 
