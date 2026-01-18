@@ -14,11 +14,30 @@ export const ROLE_LABELS: Record<UserRole, string> = {
 };
 
 /**
+ * Feature permission configuration for custom user permissions
+ */
+export interface FeaturePermissionConfig {
+  enabled: boolean;
+  actions: ('view' | 'create' | 'update' | 'delete')[];
+}
+
+/**
+ * Custom permissions that can be assigned to a user by an admin
+ * Only applicable to non-admin users (atendente)
+ */
+export type UserCustomPermissions = Partial<Record<
+  'dashboard' | 'users' | 'clients' | 'ingredients' | 'recipes' |
+  'products' | 'packaging' | 'orders' | 'reports' | 'settings',
+  FeaturePermissionConfig
+>>;
+
+/**
  * Represents an authenticated user in the system.
  *
  * @remarks
  * Users are created through invitations and registration. Each user has
  * a unique Firebase UID and email. Roles determine what features they can access.
+ * Admins can customize permissions for atendente users.
  *
  * @example
  * ```typescript
@@ -50,9 +69,26 @@ export interface UserModel {
 
   /** User's role and permissions */
   role: {
-    /** Role type (admin or viewer) */
+    /** Role type (admin or atendente) */
     type: UserRole;
   };
+
+  /**
+   * Custom permissions that override role defaults
+   * Only applicable to non-admin users
+   * Admins always have ALL permissions
+   */
+  customPermissions?: UserCustomPermissions;
+
+  /**
+   * UID of admin who last modified this user's permissions
+   */
+  permissionsModifiedBy?: string;
+
+  /**
+   * When permissions were last modified
+   */
+  permissionsModifiedAt?: Date;
 
   /** When the user account was created */
   createdAt?: Date;

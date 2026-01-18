@@ -27,8 +27,17 @@ const publicRoutes = [
   '/api/invitations'
 ]
 
-// Feature permissions map (duplicated from permissions.ts for edge runtime compatibility)
-const FEATURE_PERMISSIONS: Record<string, UserRole[]> = {
+/**
+ * Default feature permissions map (duplicated from permissions.ts for edge runtime compatibility)
+ *
+ * NOTE: This is the MINIMUM permissions check. Custom permissions are stored in Firestore
+ * and enforced at the component/API level, not in middleware.
+ *
+ * - Admin: ALL features
+ * - Atendente: Only dashboard and clients by default
+ *   (additional permissions are granted via customPermissions in Firestore)
+ */
+const DEFAULT_FEATURE_PERMISSIONS: Record<string, UserRole[]> = {
   dashboard: ['admin', 'atendente'],
   clients: ['admin', 'atendente'],
   users: ['admin'],
@@ -61,7 +70,7 @@ function canAccessPath(role: UserRole, path: string): boolean {
   // Find feature for path
   for (const [pathPrefix, feature] of Object.entries(PATH_TO_FEATURE)) {
     if (normalizedPath === pathPrefix || normalizedPath.startsWith(pathPrefix + '/')) {
-      return FEATURE_PERMISSIONS[feature]?.includes(role) ?? false
+      return DEFAULT_FEATURE_PERMISSIONS[feature]?.includes(role) ?? false
     }
   }
 
