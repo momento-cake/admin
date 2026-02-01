@@ -9,7 +9,8 @@ import {
   ExternalLink,
   Tag,
   Calendar,
-  FileImage
+  FileImage,
+  Globe
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -122,6 +123,16 @@ export function ImageCard({
           className="h-full w-full object-cover transition-transform group-hover:scale-105"
           loading="lazy"
         />
+
+        {/* External badge */}
+        {image.isExternal && (
+          <div className="absolute bottom-2 left-2 z-10">
+            <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-blue-500/90 text-white text-xs font-medium backdrop-blur-sm">
+              <Globe className="h-3 w-3" />
+              Referência
+            </div>
+          </div>
+        )}
 
         {/* Overlay with actions */}
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">

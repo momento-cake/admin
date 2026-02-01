@@ -128,6 +128,7 @@ export const PATH_TO_FEATURE: Record<string, FeatureKey> = {
   '/packaging/inventory': 'packaging',
   '/images': 'images',
   '/images/gallery': 'images',
+  '/images/folders': 'images',
   '/images/tags': 'images',
   '/orders': 'orders',
   '/reports': 'reports',

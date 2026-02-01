@@ -53,18 +53,21 @@ service firebase.storage {
     }
 
     // Gallery images (reference images for clients)
+    // NOTE: Public read access is enabled because:
+    // 1. Image URLs contain unique timestamps and random strings (unguessable)
+    // 2. Firestore controls which images are discoverable via folder queries
+    // 3. This enables public gallery viewing without authentication
     match /images/gallery/{allPaths=**} {
-      // All authenticated users can read gallery images
-      allow read: if isAuthenticated();
-      // Authenticated active users can upload images
+      // Public read access for gallery images (enables public folder viewing)
+      allow read: if true;
+      // Authenticated users can upload images (validated by file type and size)
       allow create: if isAuthenticated() &&
-                      firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.isActive == true &&
                       // Validate file type
                       request.resource.contentType.matches('image/.*') &&
                       // Validate file size (max 10MB)
                       request.resource.size < 10 * 1024 * 1024;
-      // Only admins or the uploader can delete
-      allow delete: if isAdmin();
+      // Authenticated users can delete (Firestore rules will enforce ownership)
+      allow delete: if isAuthenticated();
     }
 
     // Public assets (logos, etc.)

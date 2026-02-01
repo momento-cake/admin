@@ -14,7 +14,8 @@ const protectedRoutes = [
   '/packaging',
   '/orders',
   '/reports',
-  '/settings'
+  '/settings',
+  '/images'
 ]
 
 // Public routes that don't require authentication
@@ -24,7 +25,9 @@ const publicRoutes = [
   '/register',
   '/setup',
   '/api/auth/register',
-  '/api/invitations'
+  '/api/invitations',
+  '/gallery',
+  '/api/public'
 ]
 
 /**
@@ -48,6 +51,7 @@ const DEFAULT_FEATURE_PERMISSIONS: Record<string, UserRole[]> = {
   orders: ['admin'],
   reports: ['admin'],
   settings: ['admin'],
+  images: ['admin'],
 }
 
 // Path to feature mapping
@@ -62,6 +66,7 @@ const PATH_TO_FEATURE: Record<string, string> = {
   '/orders': 'orders',
   '/reports': 'reports',
   '/settings': 'settings',
+  '/images': 'images',
 }
 
 function canAccessPath(role: UserRole, path: string): boolean {

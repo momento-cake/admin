@@ -211,6 +211,17 @@ service cloud.firestore {
                              (isUserActive() && resource.data.createdBy == request.auth.uid);
     }
 
+    // Image Folders collection - Folder/gallery management
+    match /image_folders/{folderId} {
+      // All authenticated users can read folders
+      allow read: if isViewer();
+      // Authenticated users can create folders
+      allow create: if isUserActive();
+      // Users can update/delete their own folders, admins can update/delete any
+      allow update, delete: if isAdmin() ||
+                             (isUserActive() && resource.data.createdBy == request.auth.uid);
+    }
+
     // SKU Counters collection - Internal counter management for SKU generation
     match /skuCounters/{document=**} {
       // Only the system can access SKU counters (via transactions)

@@ -109,6 +109,9 @@ export interface GalleryImage {
 
   /** Whether image is still active (soft delete) */
   isActive: boolean;
+
+  /** Whether this is an external reference (e.g., Pinterest) vs company-created */
+  isExternal: boolean;
 }
 
 /**

@@ -145,6 +145,11 @@ const navigation: NavItem[] = [
         icon: Image
       },
       {
+        name: 'Pastas',
+        href: '/images/folders',
+        icon: FolderOpen
+      },
+      {
         name: 'Gerenciar Tags',
         href: '/images/tags',
         icon: Tag

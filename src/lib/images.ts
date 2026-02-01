@@ -75,7 +75,8 @@ function docToImage(doc: DocumentSnapshot): GalleryImage {
     uploadedBy: data.uploadedBy || 'system',
     uploadedAt: data.uploadedAt?.toDate() || new Date(),
     updatedAt: data.updatedAt?.toDate() || new Date(),
-    isActive: data.isActive !== false
+    isActive: data.isActive !== false,
+    isExternal: data.isExternal === true
   };
 }
 
@@ -430,7 +431,8 @@ export async function createImage(
   file: File,
   tags: string[],
   userId: string,
-  description?: string
+  description?: string,
+  isExternal: boolean = false
 ): Promise<GalleryImage> {
   try {
     console.log('➕ Creating new image:', file.name);
@@ -452,7 +454,8 @@ export async function createImage(
       uploadedBy: userId,
       uploadedAt: Timestamp.now(),
       updatedAt: Timestamp.now(),
-      isActive: true
+      isActive: true,
+      isExternal: isExternal
     };
 
     const docRef = await addDoc(collection(db, IMAGES_COLLECTION), imageData);
