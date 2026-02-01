@@ -46,6 +46,33 @@ export function FolderForm({
   onSubmit,
   isLoading = false
 }: FolderFormProps) {
+  // Only render when dialog is open to prevent hydration issues
+  if (!open) {
+    return null
+  }
+
+  return (
+    <FolderFormContent
+      open={open}
+      onOpenChange={onOpenChange}
+      folder={folder}
+      selectedImageIds={selectedImageIds}
+      clients={clients}
+      onSubmit={onSubmit}
+      isLoading={isLoading}
+    />
+  )
+}
+
+function FolderFormContent({
+  open,
+  onOpenChange,
+  folder,
+  selectedImageIds = [],
+  clients = [],
+  onSubmit,
+  isLoading = false
+}: FolderFormProps) {
   const isEditing = !!folder
 
   const schema = isEditing ? updateFolderSchema : createFolderSchema
@@ -64,14 +91,14 @@ export function FolderForm({
       slug: folder?.slug || '',
       description: folder?.description || '',
       imageIds: folder?.imageIds || selectedImageIds,
-      clientId: folder?.clientId || undefined,
+      clientId: folder?.clientId || '',
       isPublic: folder?.isPublic ?? true
     }
   })
 
   const name = watch('name')
-  const isPublic = watch('isPublic') ?? true
-  const imageIds = watch('imageIds') ?? []
+  const isPublic = watch('isPublic')
+  const imageIds = watch('imageIds')
 
   // Auto-generate slug from name when creating
   React.useEffect(() => {
@@ -80,23 +107,25 @@ export function FolderForm({
     }
   }, [name, isEditing, setValue])
 
-  // Reset form when opening
+  // Reset form when folder changes
   React.useEffect(() => {
-    if (open) {
-      reset({
-        name: folder?.name || '',
-        slug: folder?.slug || '',
-        description: folder?.description || '',
-        imageIds: folder?.imageIds || selectedImageIds,
-        clientId: folder?.clientId || undefined,
-        isPublic: folder?.isPublic ?? true
-      })
-    }
-  }, [open, folder, selectedImageIds, reset])
+    reset({
+      name: folder?.name || '',
+      slug: folder?.slug || '',
+      description: folder?.description || '',
+      imageIds: folder?.imageIds || selectedImageIds,
+      clientId: folder?.clientId || '',
+      isPublic: folder?.isPublic ?? true
+    })
+  }, [folder, selectedImageIds, reset])
 
   const handleFormSubmit = async (data: any) => {
     await onSubmit(data)
   }
+
+  // Safely get values with defaults
+  const safeIsPublic = isPublic === undefined ? true : isPublic
+  const safeImageIds = imageIds || []
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -184,7 +213,7 @@ export function FolderForm({
           <div className="flex items-center justify-between rounded-lg border p-4">
             <div className="space-y-0.5">
               <div className="flex items-center gap-2">
-                {isPublic ? (
+                {safeIsPublic ? (
                   <Eye className="h-4 w-4 text-green-600" />
                 ) : (
                   <EyeOff className="h-4 w-4 text-muted-foreground" />
@@ -194,14 +223,14 @@ export function FolderForm({
                 </Label>
               </div>
               <p className="text-sm text-muted-foreground">
-                {isPublic
+                {safeIsPublic
                   ? 'Qualquer pessoa com o link pode ver esta pasta.'
                   : 'Apenas usuários autenticados podem ver esta pasta.'}
               </p>
             </div>
             <Switch
               id="isPublic"
-              checked={isPublic}
+              checked={safeIsPublic}
               onCheckedChange={(checked) => setValue('isPublic', checked)}
             />
           </div>
@@ -210,7 +239,7 @@ export function FolderForm({
           <div className="flex items-center gap-2 rounded-lg bg-muted p-3">
             <Images className="h-5 w-5 text-muted-foreground" />
             <span className="text-sm">
-              {imageIds?.length || 0} {(imageIds?.length || 0) === 1 ? 'imagem selecionada' : 'imagens selecionadas'}
+              {safeImageIds.length} {safeImageIds.length === 1 ? 'imagem selecionada' : 'imagens selecionadas'}
             </span>
           </div>
           {errors.imageIds && (
