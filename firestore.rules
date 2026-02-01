@@ -189,6 +189,28 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin();
     }
 
+    // Gallery Images collection - Image reference management
+    match /gallery_images/{imageId} {
+      // All authenticated users can read images (viewers can see gallery)
+      allow read: if isViewer();
+      // Authenticated users can create images
+      allow create: if isUserActive();
+      // Users can update/delete their own images, admins can update/delete any
+      allow update, delete: if isAdmin() ||
+                             (isUserActive() && resource.data.uploadedBy == request.auth.uid);
+    }
+
+    // Image Tags collection - Tag management for images
+    match /image_tags/{tagId} {
+      // All authenticated users can read tags
+      allow read: if isViewer();
+      // Authenticated users can create tags
+      allow create: if isUserActive();
+      // Users can update/delete their own tags, admins can update/delete any
+      allow update, delete: if isAdmin() ||
+                             (isUserActive() && resource.data.createdBy == request.auth.uid);
+    }
+
     // SKU Counters collection - Internal counter management for SKU generation
     match /skuCounters/{document=**} {
       // Only the system can access SKU counters (via transactions)

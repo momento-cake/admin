@@ -51,7 +51,22 @@ service firebase.storage {
       allow read: if isAuthenticated();
       allow write: if isAdmin();
     }
-    
+
+    // Gallery images (reference images for clients)
+    match /images/gallery/{allPaths=**} {
+      // All authenticated users can read gallery images
+      allow read: if isAuthenticated();
+      // Authenticated active users can upload images
+      allow create: if isAuthenticated() &&
+                      firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.isActive == true &&
+                      // Validate file type
+                      request.resource.contentType.matches('image/.*') &&
+                      // Validate file size (max 10MB)
+                      request.resource.size < 10 * 1024 * 1024;
+      // Only admins or the uploader can delete
+      allow delete: if isAdmin();
+    }
+
     // Public assets (logos, etc.)
     match /public/{allPaths=**} {
       allow read: if true;

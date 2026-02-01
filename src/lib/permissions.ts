@@ -17,7 +17,8 @@ export type FeatureKey =
   | 'packaging'
   | 'orders'
   | 'reports'
-  | 'settings';
+  | 'settings'
+  | 'images';
 
 /**
  * Action types for granular permission control
@@ -63,6 +64,7 @@ export const FEATURE_METADATA: FeatureMetadata[] = [
   { key: 'recipes', label: 'Receitas', description: 'Cadastro de receitas e custos', availableActions: ['view', 'create', 'update', 'delete'] },
   { key: 'products', label: 'Produtos', description: 'Catálogo de produtos e categorias', availableActions: ['view', 'create', 'update', 'delete'] },
   { key: 'packaging', label: 'Embalagens', description: 'Estoque de embalagens', availableActions: ['view', 'create', 'update', 'delete'] },
+  { key: 'images', label: 'Imagens', description: 'Galeria de imagens de referência', availableActions: ['view', 'create', 'update', 'delete'] },
   { key: 'orders', label: 'Pedidos', description: 'Gestão de pedidos', availableActions: ['view', 'create', 'update', 'delete'] },
   { key: 'reports', label: 'Relatórios', description: 'Relatórios e análises', availableActions: ['view'] },
   { key: 'settings', label: 'Configurações', description: 'Configurações do sistema', availableActions: ['view', 'update'] },
@@ -89,6 +91,7 @@ export const ACTION_LABELS: Record<ActionKey, string> = {
 export const DEFAULT_ATENDENTE_PERMISSIONS: CustomPermissions = {
   dashboard: { enabled: true, actions: ['view'] },
   clients: { enabled: true, actions: ['view', 'create', 'update'] },
+  images: { enabled: true, actions: ['view', 'create', 'update'] },
   // All other features are disabled by default for atendente
 };
 
@@ -97,7 +100,7 @@ export const DEFAULT_ATENDENTE_PERMISSIONS: CustomPermissions = {
  */
 export const ALL_FEATURES: FeatureKey[] = [
   'dashboard', 'users', 'clients', 'ingredients', 'recipes',
-  'products', 'packaging', 'orders', 'reports', 'settings'
+  'products', 'packaging', 'images', 'orders', 'reports', 'settings'
 ];
 
 // ============================================================================
@@ -123,6 +126,9 @@ export const PATH_TO_FEATURE: Record<string, FeatureKey> = {
   '/products/categories': 'products',
   '/packaging': 'packaging',
   '/packaging/inventory': 'packaging',
+  '/images': 'images',
+  '/images/gallery': 'images',
+  '/images/tags': 'images',
   '/orders': 'orders',
   '/reports': 'reports',
   '/settings': 'settings',

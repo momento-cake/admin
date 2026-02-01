@@ -25,7 +25,9 @@ import {
   UserCheck,
   Calendar,
   FolderOpen,
-  Lock
+  Lock,
+  Image,
+  Tag
 } from 'lucide-react'
 
 interface NavSubmenuItem {
@@ -128,6 +130,24 @@ const navigation: NavItem[] = [
         name: 'Datas Especiais',
         href: '/clients/special-dates',
         icon: Calendar
+      }
+    ]
+  },
+  {
+    name: 'Imagens',
+    icon: Image,
+    feature: 'images',
+    hasSubmenu: true,
+    submenu: [
+      {
+        name: 'Galeria',
+        href: '/images/gallery',
+        icon: Image
+      },
+      {
+        name: 'Gerenciar Tags',
+        href: '/images/tags',
+        icon: Tag
       }
     ]
   }
