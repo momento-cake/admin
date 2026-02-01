@@ -6,29 +6,18 @@ import { getStorage, connectStorageEmulator } from 'firebase/storage'
 
 // Determine environment
 const environment = process.env.NEXT_PUBLIC_ENVIRONMENT || 'dev'
-const isProduction = environment === 'prod'
 
-// Environment-specific configuration
+// Firebase configuration from environment variables
+// In App Hosting, secrets are injected directly into NEXT_PUBLIC_* vars
+// Locally, .env.local provides the values
 const getFirebaseConfig = () => {
-  if (isProduction) {
-    return {
-      apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY_PROD,
-      authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN_PROD,
-      projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID_PROD,
-      storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET_PROD,
-      messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID_PROD,
-      appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID_PROD,
-    }
-  } else {
-    return {
-      apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-      authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-      projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-      storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-      messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-      appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-      measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
-    }
+  return {
+    apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+    authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+    projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+    storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+    appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
   }
 }
 
