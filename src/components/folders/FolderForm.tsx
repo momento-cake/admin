@@ -46,15 +46,9 @@ export function FolderForm({
   onSubmit,
   isLoading = false
 }: FolderFormProps) {
-  const [mounted, setMounted] = React.useState(false)
   const isEditing = !!folder
 
   const schema = isEditing ? updateFolderSchema : createFolderSchema
-
-  // Prevent hydration mismatch by only rendering after mount
-  React.useEffect(() => {
-    setMounted(true)
-  }, [])
 
   const {
     register,
@@ -102,11 +96,6 @@ export function FolderForm({
 
   const handleFormSubmit = async (data: any) => {
     await onSubmit(data)
-  }
-
-  // Don't render until mounted to prevent hydration mismatch
-  if (!mounted) {
-    return null
   }
 
   return (
