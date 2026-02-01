@@ -1,9 +1,10 @@
 'use client'
 
 import * as React from 'react'
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Loader2, Images, User, Link2, Eye, EyeOff } from 'lucide-react'
+import { Loader2, Images, User, Link2, Eye, EyeOff, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -26,6 +27,7 @@ import {
 } from '@/lib/validators/folder'
 import { ImageFolder } from '@/types/folder'
 import { Client } from '@/types/client'
+import { ImageSelectorDialog } from './ImageSelectorDialog'
 
 interface FolderFormProps {
   open: boolean
@@ -74,6 +76,7 @@ function FolderFormContent({
   isLoading = false
 }: FolderFormProps) {
   const isEditing = !!folder
+  const [isImageSelectorOpen, setIsImageSelectorOpen] = useState(false)
 
   const schema = isEditing ? updateFolderSchema : createFolderSchema
 
@@ -235,16 +238,39 @@ function FolderFormContent({
             />
           </div>
 
-          {/* Image count info */}
-          <div className="flex items-center gap-2 rounded-lg bg-muted p-3">
-            <Images className="h-5 w-5 text-muted-foreground" />
-            <span className="text-sm">
-              {safeImageIds.length} {safeImageIds.length === 1 ? 'imagem selecionada' : 'imagens selecionadas'}
-            </span>
+          {/* Image selection */}
+          <div className="space-y-2">
+            <Label>Imagens</Label>
+            <div
+              className="flex items-center justify-between rounded-lg border p-3 cursor-pointer hover:bg-muted/50 transition-colors"
+              onClick={() => setIsImageSelectorOpen(true)}
+            >
+              <div className="flex items-center gap-2">
+                <Images className="h-5 w-5 text-muted-foreground" />
+                <span className="text-sm">
+                  {safeImageIds.length} {safeImageIds.length === 1 ? 'imagem selecionada' : 'imagens selecionadas'}
+                </span>
+              </div>
+              <Button type="button" variant="outline" size="sm">
+                <Plus className="h-4 w-4 mr-1" />
+                {safeImageIds.length > 0 ? 'Alterar' : 'Selecionar'}
+              </Button>
+            </div>
+            {errors.imageIds && (
+              <p className="text-sm text-destructive">{errors.imageIds.message}</p>
+            )}
+            <p className="text-xs text-muted-foreground">
+              Clique para selecionar ou alterar as imagens da pasta.
+            </p>
           </div>
-          {errors.imageIds && (
-            <p className="text-sm text-destructive">{errors.imageIds.message}</p>
-          )}
+
+          {/* Image Selector Dialog */}
+          <ImageSelectorDialog
+            open={isImageSelectorOpen}
+            onOpenChange={setIsImageSelectorOpen}
+            selectedImageIds={safeImageIds}
+            onConfirm={(newImageIds) => setValue('imageIds', newImageIds)}
+          />
 
           <DialogFooter>
             <Button
