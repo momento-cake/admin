@@ -35,6 +35,9 @@ export default function FoldersPage() {
   const router = useRouter()
   const { user } = useAuthContext()
 
+  // Hydration fix - only render after mount
+  const [mounted, setMounted] = React.useState(false)
+
   // State
   const [folders, setFolders] = React.useState<ImageFolder[]>([])
   const [clients, setClients] = React.useState<Client[]>([])
@@ -52,6 +55,11 @@ export default function FoldersPage() {
   const [isShareOpen, setIsShareOpen] = React.useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = React.useState(false)
   const [selectedFolder, setSelectedFolder] = React.useState<ImageFolder | null>(null)
+
+  // Mount effect for hydration
+  React.useEffect(() => {
+    setMounted(true)
+  }, [])
 
   // Load folders and clients
   const loadData = React.useCallback(async () => {
@@ -175,6 +183,25 @@ export default function FoldersPage() {
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  // Show loading skeleton during SSR/hydration
+  if (!mounted) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Pastas</h1>
+            <p className="text-muted-foreground">
+              Organize suas imagens em pastas para compartilhar com clientes.
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </div>
+    )
   }
 
   return (
