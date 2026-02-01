@@ -45,7 +45,14 @@ export function FolderCard({
   onShare,
   className
 }: FolderCardProps) {
+  const [mounted, setMounted] = React.useState(false)
+
+  React.useEffect(() => {
+    setMounted(true)
+  }, [])
+
   const formatDate = (timestamp: any) => {
+    if (!mounted) return '' // Avoid hydration mismatch
     const date = timestamp?.toDate ? timestamp.toDate() : new Date(timestamp)
     return new Intl.DateTimeFormat('pt-BR', {
       day: '2-digit',

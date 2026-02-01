@@ -26,21 +26,18 @@ export function FolderShareDialog({
   folder
 }: FolderShareDialogProps) {
   const [copied, setCopied] = React.useState(false)
+  const [displayUrl, setDisplayUrl] = React.useState('')
+
+  // Build URL on client side only to prevent hydration mismatch
+  React.useEffect(() => {
+    if (folder && typeof window !== 'undefined') {
+      const publicUrl = `${window.location.protocol}//gallery.${window.location.host.replace(/^(admin\.)?/, '')}/${folder.slug}`
+      const devUrl = `${window.location.origin}/gallery/${folder.slug}`
+      setDisplayUrl(process.env.NODE_ENV === 'development' ? devUrl : publicUrl)
+    }
+  }, [folder])
 
   if (!folder) return null
-
-  // Build the public URL
-  // In production, this should use the gallery subdomain
-  const publicUrl = typeof window !== 'undefined'
-    ? `${window.location.protocol}//gallery.${window.location.host.replace(/^(admin\.)?/, '')}/${folder.slug}`
-    : `https://gallery.momentocake.com.br/${folder.slug}`
-
-  // For development, use the same domain with /gallery path
-  const devUrl = typeof window !== 'undefined'
-    ? `${window.location.origin}/gallery/${folder.slug}`
-    : ''
-
-  const displayUrl = process.env.NODE_ENV === 'development' ? devUrl : publicUrl
 
   const handleCopy = async () => {
     try {
