@@ -17,18 +17,41 @@ runConfig:
 env:
   - variable: NODE_ENV
     value: production
-  # Firebase configuration - stored as secrets per backend
+    availability:
+      - RUNTIME
+  # Firebase configuration - available at BUILD and RUNTIME for NEXT_PUBLIC_* vars
   - variable: NEXT_PUBLIC_ENVIRONMENT
     secret: NEXT_PUBLIC_ENVIRONMENT
+    availability:
+      - BUILD
+      - RUNTIME
   - variable: NEXT_PUBLIC_FIREBASE_API_KEY
     secret: NEXT_PUBLIC_FIREBASE_API_KEY
+    availability:
+      - BUILD
+      - RUNTIME
   - variable: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
     secret: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+    availability:
+      - BUILD
+      - RUNTIME
   - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
     secret: NEXT_PUBLIC_FIREBASE_PROJECT_ID
+    availability:
+      - BUILD
+      - RUNTIME
   - variable: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
     secret: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+    availability:
+      - BUILD
+      - RUNTIME
   - variable: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
     secret: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+    availability:
+      - BUILD
+      - RUNTIME
   - variable: NEXT_PUBLIC_FIREBASE_APP_ID
     secret: NEXT_PUBLIC_FIREBASE_APP_ID
+    availability:
+      - BUILD
+      - RUNTIME
