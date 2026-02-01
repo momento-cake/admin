@@ -70,8 +70,8 @@ export function FolderForm({
   })
 
   const name = watch('name')
-  const isPublic = watch('isPublic')
-  const imageIds = watch('imageIds')
+  const isPublic = watch('isPublic') ?? true
+  const imageIds = watch('imageIds') ?? []
 
   // Auto-generate slug from name when creating
   React.useEffect(() => {
