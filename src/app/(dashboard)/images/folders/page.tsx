@@ -205,12 +205,12 @@ export default function FoldersPage() {
           />
         </div>
 
-        <Select value={clientFilter} onValueChange={setClientFilter}>
+        <Select value={clientFilter || "all"} onValueChange={(v) => setClientFilter(v === "all" ? "" : v)}>
           <SelectTrigger className="w-[200px]">
             <SelectValue placeholder="Todos os clientes" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Todos os clientes</SelectItem>
+            <SelectItem value="all">Todos os clientes</SelectItem>
             {clients.map((client) => (
               <SelectItem key={client.id} value={client.id}>
                 {client.name}
@@ -219,12 +219,12 @@ export default function FoldersPage() {
           </SelectContent>
         </Select>
 
-        <Select value={publicFilter} onValueChange={setPublicFilter}>
+        <Select value={publicFilter || "all"} onValueChange={(v) => setPublicFilter(v === "all" ? "" : v)}>
           <SelectTrigger className="w-[150px]">
             <SelectValue placeholder="Visibilidade" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Todas</SelectItem>
+            <SelectItem value="all">Todas</SelectItem>
             <SelectItem value="public">Públicas</SelectItem>
             <SelectItem value="private">Privadas</SelectItem>
           </SelectContent>
