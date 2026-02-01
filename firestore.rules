@@ -52,29 +52,37 @@ service cloud.firestore {
       // Only admins can write system settings
       allow write: if isAdmin();
     }
-    
+
+    // System admin setup check - allows checking if initial setup is needed
+    match /system/adminSetup {
+      // Anyone can read to check if setup is complete
+      allow read: if true;
+      // Only authenticated users can create (for initial setup)
+      // Only admins can update/delete after initial creation
+      allow create: if isAuthenticated();
+      allow update, delete: if isAdmin();
+    }
+
     // Users collection - Admin and user management
     match /users/{userId} {
       // Users can read their own document, admins can read all
-      // Also allow limited read access to check if any admin users exist (for setup flow)
-      allow read: if request.auth.uid == userId || isAdmin() || 
-                    // Allow reading user role info to check for admin existence
-                    (request.auth == null && 'role' in resource.data && 'type' in resource.data.role);
-      
+      allow read: if request.auth.uid == userId || isAdmin();
+
       // Users can update their own profile, admins can update any profile
-      allow update: if isOwnerOrAdmin(userId) && 
+      allow update: if isOwnerOrAdmin(userId) &&
                     // Prevent role escalation by non-admins
-                    (isAdmin() || 
+                    (isAdmin() ||
                      (!('role' in request.resource.data.diff(resource.data).affectedKeys()) &&
                       !('isActive' in request.resource.data.diff(resource.data).affectedKeys())));
-      
+
       // Only admins can create new users or delete users
-      // Also allow creating the first admin user when no admins exist
-      allow create: if isAdmin() || 
-                      (request.auth != null && 
+      // Also allow creating the first admin user when no admins exist (checked via system/adminSetup)
+      allow create: if isAdmin() ||
+                      (request.auth != null &&
+                       request.auth.uid == userId &&
                        request.resource.data.role.type == 'admin' &&
-                       !exists(/databases/$(database)/documents/system/adminCount));
-      
+                       !exists(/databases/$(database)/documents/system/adminSetup));
+
       allow delete: if isAdmin();
     }
     

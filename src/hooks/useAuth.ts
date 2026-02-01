@@ -109,16 +109,12 @@ export function useAuth() {
   // Check if any admin users exist in the system
   const checkIfAdminsExist = async (): Promise<boolean> => {
     try {
-      const usersQuery = query(
-        collection(db, 'users'),
-        where('role.type', '==', 'admin'),
-        where('isActive', '==', true)
-      )
-      const adminSnapshot = await getDocs(usersQuery)
-      return !adminSnapshot.empty
+      // Check if the adminSetup document exists (created when first admin is set up)
+      const adminSetupDoc = await getDoc(doc(db, 'system', 'adminSetup'))
+      return adminSetupDoc.exists()
     } catch (error) {
-      console.error('Error checking for admin users:', error)
-      return true // Assume admins exist if there's an error
+      console.error('Error checking for admin setup:', error)
+      return true // Assume admins exist if there's an error (safer default)
     }
   }
 
@@ -126,7 +122,7 @@ export function useAuth() {
   const createInitialAdmin = async (email: string, password: string, displayName: string) => {
     try {
       setError(null)
-      
+
       // Create the user in Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(auth, email, password)
       const user = userCredential.user
@@ -148,7 +144,14 @@ export function useAuth() {
       }
 
       await setDoc(doc(db, 'users', user.uid), userData)
-      
+
+      // Mark that initial admin setup is complete
+      await setDoc(doc(db, 'system', 'adminSetup'), {
+        setupComplete: true,
+        initialAdminUid: user.uid,
+        setupAt: new Date()
+      })
+
       return user
     } catch (error: unknown) {
       const errorCode = (error as { code?: string })?.code || 'unknown-error'
