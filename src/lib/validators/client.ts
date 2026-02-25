@@ -57,17 +57,17 @@ export const specialDateSchema = z.object({
 /**
  * Address validation schema
  */
-export const addressSchema = z
-  .object({
-    cep: z.string().optional(),
-    estado: z.string().optional(),
-    cidade: z.string().optional(),
-    bairro: z.string().optional(),
-    endereco: z.string().optional(),
-    numero: z.string().optional(),
-    complemento: z.string().optional()
-  })
-  .optional()
+export const addressSchema = z.object({
+  id: z.string().optional(),
+  label: z.string().optional(),
+  cep: z.string().optional(),
+  estado: z.string().optional(),
+  cidade: z.string().optional(),
+  bairro: z.string().optional(),
+  endereco: z.string().optional(),
+  numero: z.string().optional(),
+  complemento: z.string().optional()
+})
 
 /**
  * Preferences validation schema
@@ -117,7 +117,7 @@ export const baseClientSchema = z.object({
   email: z.string().email('E-mail inválido').optional().or(z.literal('')),
   cpfCnpj: z.string().optional(),
   phone: z.string().optional(),
-  address: addressSchema,
+  addresses: z.array(addressSchema).optional(),
   contactMethods: z.array(contactMethodSchema).min(1, 'Pelo menos um método de contato é obrigatório'),
   relatedPersons: z.array(relatedPersonSchema).optional(),
   specialDates: z.array(specialDateSchema).optional(),
@@ -158,7 +158,7 @@ export const updateClientSchema = z.object({
   cpfCnpj: z.string().optional(),
   phone: z.string().optional(),
   contactMethods: z.array(contactMethodSchema).optional(),
-  address: addressSchema.optional(),
+  addresses: z.array(addressSchema).optional(),
   tags: z.array(z.string()).optional(),
   relatedPersons: z.array(relatedPersonSchema).optional(),
   specialDates: z.array(specialDateSchema).optional(),

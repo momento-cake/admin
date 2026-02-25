@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Plus } from 'lucide-react'
@@ -13,6 +14,7 @@ export default function ClientsPage() {
   const [showModal, setShowModal] = useState(false)
   const [editingClient, setEditingClient] = useState<Client | null>(null)
   const [viewingClient, setViewingClient] = useState<Client | null>(null)
+  const [refreshTrigger, setRefreshTrigger] = useState(0)
 
   const handleEdit = (client: Client) => {
     setEditingClient(client)
@@ -30,7 +32,10 @@ export default function ClientsPage() {
   }
 
   const handleModalSuccess = () => {
+    const action = editingClient ? 'atualizado' : 'criado'
     handleCloseModal()
+    setRefreshTrigger(prev => prev + 1)
+    toast.success(`Cliente ${action} com sucesso!`)
   }
 
   return (
@@ -57,6 +62,7 @@ export default function ClientsPage() {
               onClientEdit={handleEdit}
               onClientView={(client) => setViewingClient(client)}
               onClientCreate={handleCreate}
+              refreshTrigger={refreshTrigger}
             />
           </CardContent>
         </Card>

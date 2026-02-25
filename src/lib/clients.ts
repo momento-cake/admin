@@ -42,7 +42,7 @@ function docToClient(doc: DocumentSnapshot): Client {
     email: data.email || undefined,
     cpfCnpj: data.cpfCnpj || undefined,
     phone: data.phone || undefined,
-    address: data.address || undefined,
+    addresses: (data.addresses || data.address) ? (data.addresses || [data.address].filter(Boolean)) : undefined,
     contactMethods: (data.contactMethods || []) as ContactMethod[],
     relatedPersons: (data.relatedPersons || []) as RelatedPerson[],
     specialDates: (data.specialDates || []) as SpecialDate[],

@@ -152,17 +152,26 @@ export default function ClientDetailPage() {
           </div>
         )}
 
-        {client.address && Object.values(client.address).some(v => v) && (
+        {client.addresses && client.addresses.length > 0 && (
           <div className="p-6 border rounded-lg">
-            <h2 className="text-lg font-semibold mb-4">Endereço</h2>
-            <div className="space-y-2 text-sm">
-              {client.address.endereco && <p className="text-foreground">{client.address.endereco}, {client.address.numero}</p>}
-              {client.address.complemento && <p className="text-muted-foreground">{client.address.complemento}</p>}
-              {client.address.bairro && <p className="text-muted-foreground">{client.address.bairro}</p>}
-              {(client.address.cidade || client.address.estado) && (
-                <p className="text-muted-foreground">{client.address.cidade}{client.address.cidade && client.address.estado ? ', ' : ''}{client.address.estado}</p>
-              )}
-              {client.address.cep && <p className="text-muted-foreground">{client.address.cep}</p>}
+            <h2 className="text-lg font-semibold mb-4">Enderecos</h2>
+            <div className="space-y-4">
+              {client.addresses.map(addr => (
+                <div key={addr.id} className="space-y-1 text-sm border-b border-border pb-3 last:border-0 last:pb-0">
+                  {addr.label && (
+                    <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+                      {addr.label}
+                    </span>
+                  )}
+                  {addr.endereco && <p className="text-foreground">{addr.endereco}{addr.numero ? ', ' + addr.numero : ''}</p>}
+                  {addr.complemento && <p className="text-muted-foreground">{addr.complemento}</p>}
+                  {addr.bairro && <p className="text-muted-foreground">{addr.bairro}</p>}
+                  {(addr.cidade || addr.estado) && (
+                    <p className="text-muted-foreground">{addr.cidade}{addr.cidade && addr.estado ? ', ' : ''}{addr.estado}</p>
+                  )}
+                  {addr.cep && <p className="text-muted-foreground">{addr.cep}</p>}
+                </div>
+              ))}
             </div>
           </div>
         )}

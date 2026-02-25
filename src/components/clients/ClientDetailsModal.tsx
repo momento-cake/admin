@@ -91,6 +91,38 @@ export function ClientDetailsModal({ client, onClose, onEdit }: ClientDetailsMod
             </div>
           )}
 
+          {/* Addresses */}
+          {client.addresses && client.addresses.length > 0 && (
+            <div>
+              <h3 className="font-semibold text-foreground mb-3">Enderecos</h3>
+              <div className="space-y-2">
+                {client.addresses.map(addr => {
+                  const parts = []
+                  if (addr.endereco) {
+                    let street = addr.endereco
+                    if (addr.numero) street += ', ' + addr.numero
+                    parts.push(street)
+                  }
+                  if (addr.complemento) parts.push(addr.complemento)
+                  if (addr.bairro) parts.push(addr.bairro)
+                  const cityState = [addr.cidade, addr.estado].filter(Boolean).join(' - ')
+                  if (cityState) parts.push(cityState)
+                  if (addr.cep) parts.push('CEP: ' + addr.cep)
+                  return (
+                    <div key={addr.id} className="text-sm p-3 border border-border rounded">
+                      {addr.label && (
+                        <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+                          {addr.label}
+                        </span>
+                      )}
+                      <p className="text-foreground mt-1">{parts.join(', ') || 'Endereco incompleto'}</p>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Related Persons */}
           {client.relatedPersons && client.relatedPersons.length > 0 && (
             <div>

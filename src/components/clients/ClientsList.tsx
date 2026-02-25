@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { toast } from 'sonner'
 import { useDebounce } from '@/hooks/useDebounce'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -21,6 +22,7 @@ interface ClientsListProps {
   onClientCreate?: () => void
   onClientsLoaded?: (clients: Client[]) => void
   onRefresh?: () => void
+  refreshTrigger?: number
   className?: string
 }
 
@@ -31,6 +33,7 @@ export function ClientsList({
   onClientCreate,
   onClientsLoaded,
   onRefresh,
+  refreshTrigger,
   className
 }: ClientsListProps) {
   const [clients, setClients] = useState<Client[]>([])
@@ -88,6 +91,13 @@ export function ClientsList({
     fetchClients(page)
   }, [debouncedSearchQuery, typeFilter, page])
 
+  useEffect(() => {
+    if (refreshTrigger && refreshTrigger > 0) {
+      setPage(1)
+      fetchClients(1)
+    }
+  }, [refreshTrigger])
+
   const handleRefresh = () => {
     fetchClients(page)
     if (onRefresh) {
@@ -121,6 +131,7 @@ export function ClientsList({
       }
 
       fetchClients(page)
+      toast.success('Cliente excluído com sucesso!')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao deletar cliente')
     } finally {

@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { X, Loader2, Trash2 } from 'lucide-react'
+import { X, Loader2, Trash2, AlertCircle } from 'lucide-react'
 import {
   Select,
   SelectContent,
@@ -13,7 +13,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Client, ClientType, RelatedPerson, SpecialDate } from '@/types/client'
+import { Client, ClientType, Address, RelatedPerson, SpecialDate } from '@/types/client'
+import { getContactFieldConfig } from '@/lib/masks'
+import { toast } from 'sonner'
+import { AddressesSection } from './AddressesSection'
 import { RelatedPersonsSection } from './RelatedPersonsSection'
 import { SpecialDatesSection } from './SpecialDatesSection'
 
@@ -36,9 +39,7 @@ export function ClientFormModal({ client, onClose, onSuccess }: ClientFormModalP
     contactMethods: client?.contactMethods && client.contactMethods.length > 0
       ? client.contactMethods
       : [{ id: '1', type: 'phone' as const, value: '', isPrimary: true, notes: '' }],
-    address: client?.address || {
-      cep: '', estado: '', cidade: '', bairro: '', endereco: '', numero: '', complemento: ''
-    },
+    addresses: client?.addresses || [] as Address[],
     notes: client?.notes || '',
     tags: client?.tags || [],
     relatedPersons: client?.relatedPersons || [],
@@ -83,8 +84,26 @@ export function ClientFormModal({ client, onClose, onSuccess }: ClientFormModalP
   const validateForm = () => {
     const errors: Record<string, string> = {}
     if (!formData.name.trim()) errors.name = 'Nome é obrigatório'
-    if (formData.contactMethods.length === 0) errors.contactMethods = 'Pelo menos um método de contato é obrigatório'
+    if (formData.contactMethods.length === 0) {
+      errors.contactMethods = 'Pelo menos um método de contato é obrigatório'
+    } else {
+      formData.contactMethods.forEach((cm, index) => {
+        if (!cm.value.trim()) {
+          errors[`contactMethod_${index}`] = 'Preencha o valor do contato'
+        } else if ((cm.type === 'phone' || cm.type === 'whatsapp') && cm.value.replace(/\D/g, '').length < 10) {
+          errors[`contactMethod_${index}`] = 'Telefone deve ter pelo menos 10 dígitos'
+        } else if (cm.type === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cm.value)) {
+          errors[`contactMethod_${index}`] = 'Email inválido'
+        }
+      })
+    }
     setValidationErrors(errors)
+    if (Object.keys(errors).length > 0) {
+      toast.error('Corrija os erros no formulário')
+      setTimeout(() => {
+        document.querySelector('[data-error="true"]')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }, 100)
+    }
     return Object.keys(errors).length === 0
   }
 
@@ -98,7 +117,7 @@ export function ClientFormModal({ client, onClose, onSuccess }: ClientFormModalP
         type: clientType,
         name: formData.name,
         cpfCnpj: formData.cpfCnpj || undefined,
-        address: Object.values(formData.address).some(v => v) ? formData.address : undefined,
+        addresses: formData.addresses.length > 0 ? formData.addresses : undefined,
         contactMethods: formData.contactMethods,
         tags: formData.tags.length > 0 ? formData.tags : undefined,
         relatedPersons: formData.relatedPersons.length > 0 ? formData.relatedPersons : undefined,
@@ -149,8 +168,9 @@ export function ClientFormModal({ client, onClose, onSuccess }: ClientFormModalP
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           {validationErrors.submit && (
-            <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive">
-              {validationErrors.submit}
+            <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive flex items-start gap-3">
+              <AlertCircle className="h-5 w-5 mt-0.5 flex-shrink-0" />
+              <span>{validationErrors.submit}</span>
             </div>
           )}
 
@@ -190,7 +210,7 @@ export function ClientFormModal({ client, onClose, onSuccess }: ClientFormModalP
             <h3 className="font-semibold">Informações Básicas</h3>
             <div className="space-y-2">
               <Label>
-                {clientType === 'person' ? 'Nome Completo' : 'Razão Social'} *
+                {clientType === 'person' ? 'Nome Completo' : 'Razão Social'} <span className="text-destructive">*</span>
               </Label>
               <Input
                 type="text"
@@ -198,6 +218,9 @@ export function ClientFormModal({ client, onClose, onSuccess }: ClientFormModalP
                 value={formData.name}
                 onChange={handleInputChange}
                 placeholder={clientType === 'person' ? 'João da Silva' : 'Empresa LTDA'}
+                className={validationErrors.name ? 'border-destructive' : ''}
+                data-error={!!validationErrors.name || undefined}
+                aria-required
               />
               {validationErrors.name && <p className="text-sm text-destructive mt-1">{validationErrors.name}</p>}
             </div>
@@ -218,13 +241,13 @@ export function ClientFormModal({ client, onClose, onSuccess }: ClientFormModalP
 
           {/* Contact Methods */}
           <div className="space-y-4">
-            <h3 className="font-semibold">Métodos de Contato *</h3>
+            <h3 className="font-semibold">Métodos de Contato <span className="text-destructive">*</span></h3>
             {validationErrors.contactMethods && (
               <p className="text-sm text-destructive">{validationErrors.contactMethods}</p>
             )}
             <div className="space-y-3">
               {formData.contactMethods.map((cm, index) => (
-                <div key={cm.id} className="p-3 border border-input rounded-md bg-muted/30">
+                <div key={cm.id} className={`p-3 border rounded-md bg-muted/30 ${validationErrors[`contactMethod_${index}`] ? 'border-destructive' : 'border-input'}`} data-error={!!validationErrors[`contactMethod_${index}`] || undefined}>
                   <div className="flex items-end gap-2">
                     <div className="flex-1">
                       <Label className="text-xs mb-1 block">Tipo</Label>
@@ -234,6 +257,9 @@ export function ClientFormModal({ client, onClose, onSuccess }: ClientFormModalP
                           const newMethods = [...formData.contactMethods]
                           newMethods[index].type = value as any
                           setFormData(prev => ({ ...prev, contactMethods: newMethods }))
+                          if (validationErrors[`contactMethod_${index}`]) {
+                            setValidationErrors(prev => ({ ...prev, [`contactMethod_${index}`]: '' }))
+                          }
                         }}
                       >
                         <SelectTrigger className="h-9">
@@ -251,18 +277,28 @@ export function ClientFormModal({ client, onClose, onSuccess }: ClientFormModalP
                       </Select>
                     </div>
                     <div className="flex-1">
-                      <Label className="text-xs mb-1 block">Valor</Label>
-                      <Input
-                        type="text"
-                        value={cm.value}
-                        onChange={(e) => {
-                          const newMethods = [...formData.contactMethods]
-                          newMethods[index].value = e.target.value
-                          setFormData(prev => ({ ...prev, contactMethods: newMethods }))
-                        }}
-                        placeholder="Valor"
-                        className="h-9"
-                      />
+                      {(() => {
+                        const config = getContactFieldConfig(cm.type)
+                        return (
+                          <>
+                            <Label className="text-xs mb-1 block">{config.label}</Label>
+                            <Input
+                              type={config.inputType}
+                              value={cm.value}
+                              onChange={(e) => {
+                                const newMethods = [...formData.contactMethods]
+                                newMethods[index].value = config.mask ? config.mask(e.target.value) : e.target.value
+                                setFormData(prev => ({ ...prev, contactMethods: newMethods }))
+                                if (validationErrors[`contactMethod_${index}`]) {
+                                  setValidationErrors(prev => ({ ...prev, [`contactMethod_${index}`]: '' }))
+                                }
+                              }}
+                              placeholder={config.placeholder}
+                              className={`h-9 ${validationErrors[`contactMethod_${index}`] ? 'border-destructive' : ''}`}
+                            />
+                          </>
+                        )
+                      })()}
                     </div>
                     <label className="flex items-center gap-1 cursor-pointer text-sm mb-1 whitespace-nowrap">
                       <input
@@ -291,6 +327,9 @@ export function ClientFormModal({ client, onClose, onSuccess }: ClientFormModalP
                       </Button>
                     )}
                   </div>
+                  {validationErrors[`contactMethod_${index}`] && (
+                    <p className="text-sm text-destructive mt-1">{validationErrors[`contactMethod_${index}`]}</p>
+                  )}
                 </div>
               ))}
             </div>
@@ -316,6 +355,22 @@ export function ClientFormModal({ client, onClose, onSuccess }: ClientFormModalP
             </Button>
           </div>
 
+          {/* Addresses */}
+          <div>
+            <AddressesSection
+              addresses={formData.addresses}
+              onAdd={(addr) => setFormData(prev => ({ ...prev, addresses: [...prev.addresses, addr] }))}
+              onUpdate={(index, addr) => setFormData(prev => ({
+                ...prev,
+                addresses: prev.addresses.map((a, i) => i === index ? addr : a)
+              }))}
+              onRemove={(index) => setFormData(prev => ({
+                ...prev,
+                addresses: prev.addresses.filter((_, i) => i !== index)
+              }))}
+            />
+          </div>
+
           {/* Related Persons */}
           <div>
             <RelatedPersonsSection
@@ -324,20 +379,63 @@ export function ClientFormModal({ client, onClose, onSuccess }: ClientFormModalP
               onHideAddForm={() => setShowAddPersonForm(false)}
               relatedPersons={formData.relatedPersons}
               onAdd={(person) => {
-                setFormData(prev => ({ ...prev, relatedPersons: [...prev.relatedPersons, person] }))
+                setFormData(prev => {
+                  const newState = { ...prev, relatedPersons: [...prev.relatedPersons, person] }
+                  if (person.birthDate) {
+                    const birthdayDate: SpecialDate = {
+                      id: `birthday-${person.id}`,
+                      date: person.birthDate,
+                      type: 'birthday',
+                      description: `Aniversário de ${person.name}`,
+                      relatedPersonId: person.id,
+                      notes: ''
+                    }
+                    newState.specialDates = [...prev.specialDates, birthdayDate]
+                  }
+                  return newState
+                })
                 setShowAddPersonForm(false)
               }}
               onUpdate={(index, person) => {
-                setFormData(prev => ({
-                  ...prev,
-                  relatedPersons: prev.relatedPersons.map((p, i) => i === index ? person : p)
-                }))
+                setFormData(prev => {
+                  const newState = {
+                    ...prev,
+                    relatedPersons: prev.relatedPersons.map((p, i) => i === index ? person : p)
+                  }
+                  const existingBirthdayIdx = prev.specialDates.findIndex(
+                    d => d.relatedPersonId === person.id && d.type === 'birthday' && d.id.startsWith('birthday-')
+                  )
+                  if (person.birthDate) {
+                    const birthdayDate: SpecialDate = {
+                      id: `birthday-${person.id}`,
+                      date: person.birthDate,
+                      type: 'birthday',
+                      description: `Aniversário de ${person.name}`,
+                      relatedPersonId: person.id,
+                      notes: existingBirthdayIdx >= 0 ? prev.specialDates[existingBirthdayIdx].notes : ''
+                    }
+                    if (existingBirthdayIdx >= 0) {
+                      newState.specialDates = prev.specialDates.map((d, i) => i === existingBirthdayIdx ? birthdayDate : d)
+                    } else {
+                      newState.specialDates = [...prev.specialDates, birthdayDate]
+                    }
+                  } else if (existingBirthdayIdx >= 0) {
+                    newState.specialDates = prev.specialDates.filter((_, i) => i !== existingBirthdayIdx)
+                  }
+                  return newState
+                })
                 setShowAddPersonForm(false)
               }}
-              onRemove={(index) => setFormData(prev => ({
-                ...prev,
-                relatedPersons: prev.relatedPersons.filter((_, i) => i !== index)
-              }))}
+              onRemove={(index) => setFormData(prev => {
+                const removedPerson = prev.relatedPersons[index]
+                return {
+                  ...prev,
+                  relatedPersons: prev.relatedPersons.filter((_, i) => i !== index),
+                  specialDates: prev.specialDates.filter(
+                    d => !(d.relatedPersonId === removedPerson.id && d.type === 'birthday' && d.id.startsWith('birthday-'))
+                  )
+                }
+              })}
             />
           </div>
 

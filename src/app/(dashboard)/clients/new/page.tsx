@@ -2,10 +2,13 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, Loader2, X } from 'lucide-react'
-import { ClientType, RelatedPerson, SpecialDate } from '@/types/client'
+import { ArrowLeft, Loader2, X, AlertCircle } from 'lucide-react'
+import { ClientType, Address, RelatedPerson, SpecialDate } from '@/types/client'
+import { getContactFieldConfig } from '@/lib/masks'
+import { AddressesSection } from '@/components/clients/AddressesSection'
 import { RelatedPersonsSection } from '@/components/clients/RelatedPersonsSection'
 import { SpecialDatesSection } from '@/components/clients/SpecialDatesSection'
 import { TagsSection } from '@/components/clients/TagsSection'
@@ -30,15 +33,7 @@ export default function NewClientPage() {
         notes: ''
       }
     ],
-    address: {
-      cep: '',
-      estado: '',
-      cidade: '',
-      bairro: '',
-      endereco: '',
-      numero: '',
-      complemento: ''
-    },
+    addresses: [] as Address[],
     notes: '',
     tags: [] as string[],
     relatedPersons: [] as RelatedPerson[],
@@ -71,23 +66,21 @@ export default function NewClientPage() {
     }
   }
 
-  const handleAddressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target
-    setFormData(prev => ({
-      ...prev,
-      address: {
-        ...prev.address,
-        [name]: value
-      }
-    }))
-  }
-
   const handleContactMethodChange = (index: number, field: string, value: any) => {
     setFormData(prev => ({
       ...prev,
-      contactMethods: prev.contactMethods.map((cm, i) =>
-        i === index ? { ...cm, [field]: value } : cm
-      )
+      contactMethods: prev.contactMethods.map((cm, i) => {
+        if (i !== index) return cm
+        if (field === 'value') {
+          const config = getContactFieldConfig(cm.type)
+          return { ...cm, value: config.mask ? config.mask(value) : value }
+        }
+        if (field === 'type') {
+          const newConfig = getContactFieldConfig(value)
+          return { ...cm, type: value, value: newConfig.mask ? newConfig.mask(cm.value) : cm.value }
+        }
+        return { ...cm, [field]: value }
+      })
     }))
   }
 
@@ -147,6 +140,17 @@ export default function NewClientPage() {
 
     if (formData.contactMethods.length === 0) {
       errors.contactMethods = 'Pelo menos um método de contato é obrigatório'
+    } else {
+      formData.contactMethods.forEach((cm, index) => {
+        const cmType = cm.type as string
+        if (!cm.value.trim()) {
+          errors[`contactMethod_${index}`] = 'Preencha o valor do contato'
+        } else if ((cmType === 'phone' || cmType === 'whatsapp') && cm.value.replace(/\D/g, '').length < 10) {
+          errors[`contactMethod_${index}`] = 'Telefone deve ter pelo menos 10 dígitos'
+        } else if (cmType === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cm.value)) {
+          errors[`contactMethod_${index}`] = 'Email inválido'
+        }
+      })
     }
 
     if (clientType === 'business') {
@@ -168,6 +172,12 @@ export default function NewClientPage() {
     }
 
     setValidationErrors(errors)
+    if (Object.keys(errors).length > 0) {
+      toast.error('Corrija os erros no formulário')
+      setTimeout(() => {
+        document.querySelector('[data-error="true"]')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }, 100)
+    }
     return Object.keys(errors).length === 0
   }
 
@@ -188,7 +198,7 @@ export default function NewClientPage() {
             email: formData.email || undefined,
             cpfCnpj: formData.cpfCnpj || undefined,
             phone: formData.phone || undefined,
-            address: Object.values(formData.address).some(v => v) ? formData.address : undefined,
+            addresses: formData.addresses.length > 0 ? formData.addresses : undefined,
             contactMethods: formData.contactMethods,
             relatedPersons: formData.relatedPersons.length > 0 ? formData.relatedPersons : undefined,
             specialDates: formData.specialDates.length > 0 ? formData.specialDates : undefined,
@@ -201,7 +211,7 @@ export default function NewClientPage() {
             email: formData.email || undefined,
             cpfCnpj: formData.cpfCnpj || undefined,
             phone: formData.phone || undefined,
-            address: Object.values(formData.address).some(v => v) ? formData.address : undefined,
+            addresses: formData.addresses.length > 0 ? formData.addresses : undefined,
             contactMethods: formData.contactMethods,
             relatedPersons: formData.relatedPersons.length > 0 ? formData.relatedPersons : undefined,
             specialDates: formData.specialDates.length > 0 ? formData.specialDates : undefined,
@@ -239,6 +249,7 @@ export default function NewClientPage() {
         return
       }
 
+      toast.success('Cliente criado com sucesso!')
       router.push('/clients')
       router.refresh()
     } catch (error) {
@@ -266,8 +277,9 @@ export default function NewClientPage() {
       </div>
 
       {validationErrors.submit && (
-        <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive">
-          {validationErrors.submit}
+        <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive flex items-start gap-3">
+          <AlertCircle className="h-5 w-5 mt-0.5 flex-shrink-0" />
+          <span>{validationErrors.submit}</span>
         </div>
       )}
 
@@ -307,17 +319,18 @@ export default function NewClientPage() {
         <div className="space-y-4 p-6 border rounded-lg">
           <h2 className="text-lg font-semibold">Informações Básicas</h2>
 
-          <div>
+          <div data-error={!!validationErrors.name || undefined}>
             <label className="text-sm font-medium">
-              {clientType === 'person' ? 'Nome Completo' : 'Razão Social'} *
+              {clientType === 'person' ? 'Nome Completo' : 'Razão Social'} <span className="text-destructive">*</span>
             </label>
             <input
               type="text"
               name="name"
               value={formData.name}
               onChange={handleInputChange}
-              className="w-full mt-1 px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
+              className={`w-full mt-1 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-ring ${validationErrors.name ? 'border-destructive' : 'border-input'}`}
               placeholder={clientType === 'person' ? 'João da Silva' : 'Empresa LTDA'}
+              aria-required
             />
             <FieldError message={validationErrors.name} />
           </div>
@@ -362,7 +375,7 @@ export default function NewClientPage() {
         {/* Contact Methods */}
         <div className="space-y-4 p-6 border rounded-lg">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Métodos de Contato *</h2>
+            <h2 className="text-lg font-semibold">Métodos de Contato <span className="text-destructive">*</span></h2>
             <Button
               type="button"
               variant="outline"
@@ -379,13 +392,18 @@ export default function NewClientPage() {
 
           <div className="space-y-3">
             {formData.contactMethods.map((cm, index) => (
-              <div key={cm.id} className="p-4 border border-input rounded-md space-y-3 bg-muted/30">
+              <div key={cm.id} className={`p-4 border rounded-md space-y-3 bg-muted/30 ${validationErrors[`contactMethod_${index}`] ? 'border-destructive' : 'border-input'}`} data-error={!!validationErrors[`contactMethod_${index}`] || undefined}>
                 <div className="grid grid-cols-3 gap-3">
                   <div>
                     <label className="text-sm font-medium">Tipo</label>
                     <select
                       value={cm.type}
-                      onChange={(e) => handleContactMethodChange(index, 'type', e.target.value)}
+                      onChange={(e) => {
+                        handleContactMethodChange(index, 'type', e.target.value)
+                        if (validationErrors[`contactMethod_${index}`]) {
+                          setValidationErrors(prev => ({ ...prev, [`contactMethod_${index}`]: '' }))
+                        }
+                      }}
                       className="w-full mt-1 px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
                     >
                       <option value="phone">Telefone</option>
@@ -398,15 +416,26 @@ export default function NewClientPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="text-sm font-medium">Valor</label>
-                    <input
-                      type="text"
-                      value={cm.value}
-                      onChange={(e) => handleContactMethodChange(index, 'value', e.target.value)}
-                      className="w-full mt-1 px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
-                      placeholder="Ex: (11) 98765-4321"
-                      required
-                    />
+                    {(() => {
+                      const config = getContactFieldConfig(cm.type)
+                      return (
+                        <>
+                          <label className="text-sm font-medium">{config.label}</label>
+                          <input
+                            type={config.inputType}
+                            value={cm.value}
+                            onChange={(e) => {
+                              handleContactMethodChange(index, 'value', e.target.value)
+                              if (validationErrors[`contactMethod_${index}`]) {
+                                setValidationErrors(prev => ({ ...prev, [`contactMethod_${index}`]: '' }))
+                              }
+                            }}
+                            className={`w-full mt-1 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-ring ${validationErrors[`contactMethod_${index}`] ? 'border-destructive' : 'border-input'}`}
+                            placeholder={config.placeholder}
+                          />
+                        </>
+                      )
+                    })()}
                   </div>
                   <div className="flex items-end gap-2">
                     <label className="flex items-center gap-2 cursor-pointer flex-1">
@@ -429,98 +458,28 @@ export default function NewClientPage() {
                     )}
                   </div>
                 </div>
+                {validationErrors[`contactMethod_${index}`] && (
+                  <p className="text-sm text-destructive">{validationErrors[`contactMethod_${index}`]}</p>
+                )}
               </div>
             ))}
           </div>
         </div>
 
-        {/* Address */}
+        {/* Addresses */}
         <div className="space-y-4 p-6 border rounded-lg">
-          <h2 className="text-lg font-semibold">Endereço</h2>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="text-sm font-medium">CEP</label>
-              <input
-                type="text"
-                name="cep"
-                value={formData.address.cep}
-                onChange={handleAddressChange}
-                className="w-full mt-1 px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
-                placeholder="00000-000"
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium">Estado</label>
-              <input
-                type="text"
-                name="estado"
-                value={formData.address.estado}
-                onChange={handleAddressChange}
-                className="w-full mt-1 px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
-                placeholder="SP"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="text-sm font-medium">Cidade</label>
-              <input
-                type="text"
-                name="cidade"
-                value={formData.address.cidade}
-                onChange={handleAddressChange}
-                className="w-full mt-1 px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium">Bairro</label>
-              <input
-                type="text"
-                name="bairro"
-                value={formData.address.bairro}
-                onChange={handleAddressChange}
-                className="w-full mt-1 px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="text-sm font-medium">Endereço</label>
-            <input
-              type="text"
-              name="endereco"
-              value={formData.address.endereco}
-              onChange={handleAddressChange}
-              className="w-full mt-1 px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
-              placeholder="Rua, Avenida, etc"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="text-sm font-medium">Número</label>
-              <input
-                type="text"
-                name="numero"
-                value={formData.address.numero}
-                onChange={handleAddressChange}
-                className="w-full mt-1 px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium">Complemento</label>
-              <input
-                type="text"
-                name="complemento"
-                value={formData.address.complemento}
-                onChange={handleAddressChange}
-                className="w-full mt-1 px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
-                placeholder="Apto, sala, etc"
-              />
-            </div>
-          </div>
+          <AddressesSection
+            addresses={formData.addresses}
+            onAdd={(addr) => setFormData(prev => ({ ...prev, addresses: [...prev.addresses, addr] }))}
+            onUpdate={(index, addr) => setFormData(prev => ({
+              ...prev,
+              addresses: prev.addresses.map((a, i) => i === index ? addr : a)
+            }))}
+            onRemove={(index) => setFormData(prev => ({
+              ...prev,
+              addresses: prev.addresses.filter((_, i) => i !== index)
+            }))}
+          />
         </div>
 
         {/* Business Information */}
@@ -529,27 +488,29 @@ export default function NewClientPage() {
             <div className="space-y-4 p-6 border rounded-lg">
               <h2 className="text-lg font-semibold">Informações Empresariais</h2>
 
-              <div>
-                <label className="text-sm font-medium">CNPJ *</label>
+              <div data-error={!!validationErrors['companyInfo.cnpj'] || undefined}>
+                <label className="text-sm font-medium">CNPJ <span className="text-destructive">*</span></label>
                 <input
                   type="text"
                   name="cnpj"
                   value={formData.companyInfo.cnpj}
                   onChange={handleCompanyInfoChange}
-                  className="w-full mt-1 px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
+                  className={`w-full mt-1 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-ring ${validationErrors['companyInfo.cnpj'] ? 'border-destructive' : 'border-input'}`}
                   placeholder="00.000.000/0000-00"
+                  aria-required
                 />
                 <FieldError message={validationErrors['companyInfo.cnpj']} />
               </div>
 
-              <div>
-                <label className="text-sm font-medium">Nome da Empresa *</label>
+              <div data-error={!!validationErrors['companyInfo.companyName'] || undefined}>
+                <label className="text-sm font-medium">Nome da Empresa <span className="text-destructive">*</span></label>
                 <input
                   type="text"
                   name="companyName"
                   value={formData.companyInfo.companyName}
                   onChange={handleCompanyInfoChange}
-                  className="w-full mt-1 px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
+                  className={`w-full mt-1 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-ring ${validationErrors['companyInfo.companyName'] ? 'border-destructive' : 'border-input'}`}
+                  aria-required
                 />
                 <FieldError message={validationErrors['companyInfo.companyName']} />
               </div>
@@ -581,38 +542,41 @@ export default function NewClientPage() {
             <div className="space-y-4 p-6 border rounded-lg">
               <h2 className="text-lg font-semibold">Representante *</h2>
 
-              <div>
-                <label className="text-sm font-medium">Nome Completo *</label>
+              <div data-error={!!validationErrors['representative.name'] || undefined}>
+                <label className="text-sm font-medium">Nome Completo <span className="text-destructive">*</span></label>
                 <input
                   type="text"
                   name="name"
                   value={formData.representative.name}
                   onChange={handleRepresentativeChange}
-                  className="w-full mt-1 px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
+                  className={`w-full mt-1 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-ring ${validationErrors['representative.name'] ? 'border-destructive' : 'border-input'}`}
+                  aria-required
                 />
                 <FieldError message={validationErrors['representative.name']} />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium">Email *</label>
+                <div data-error={!!validationErrors['representative.email'] || undefined}>
+                  <label className="text-sm font-medium">Email <span className="text-destructive">*</span></label>
                   <input
                     type="email"
                     name="email"
                     value={formData.representative.email}
                     onChange={handleRepresentativeChange}
-                    className="w-full mt-1 px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
+                    className={`w-full mt-1 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-ring ${validationErrors['representative.email'] ? 'border-destructive' : 'border-input'}`}
+                    aria-required
                   />
                   <FieldError message={validationErrors['representative.email']} />
                 </div>
-                <div>
-                  <label className="text-sm font-medium">Telefone *</label>
+                <div data-error={!!validationErrors['representative.phone'] || undefined}>
+                  <label className="text-sm font-medium">Telefone <span className="text-destructive">*</span></label>
                   <input
                     type="tel"
                     name="phone"
                     value={formData.representative.phone}
                     onChange={handleRepresentativeChange}
-                    className="w-full mt-1 px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
+                    className={`w-full mt-1 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-ring ${validationErrors['representative.phone'] ? 'border-destructive' : 'border-input'}`}
+                    aria-required
                   />
                   <FieldError message={validationErrors['representative.phone']} />
                 </div>
@@ -656,18 +620,58 @@ export default function NewClientPage() {
         <div className="space-y-4 p-6 border rounded-lg">
           <RelatedPersonsSection
             relatedPersons={formData.relatedPersons}
-            onAdd={(person) => setFormData(prev => ({
-              ...prev,
-              relatedPersons: [...prev.relatedPersons, person]
-            }))}
-            onUpdate={(index, person) => setFormData(prev => ({
-              ...prev,
-              relatedPersons: prev.relatedPersons.map((p, i) => i === index ? person : p)
-            }))}
-            onRemove={(index) => setFormData(prev => ({
-              ...prev,
-              relatedPersons: prev.relatedPersons.filter((_, i) => i !== index)
-            }))}
+            onAdd={(person) => setFormData(prev => {
+              const newState = { ...prev, relatedPersons: [...prev.relatedPersons, person] }
+              if (person.birthDate) {
+                const birthdayDate: SpecialDate = {
+                  id: `birthday-${person.id}`,
+                  date: person.birthDate,
+                  type: 'birthday',
+                  description: `Aniversário de ${person.name}`,
+                  relatedPersonId: person.id,
+                  notes: ''
+                }
+                newState.specialDates = [...prev.specialDates, birthdayDate]
+              }
+              return newState
+            })}
+            onUpdate={(index, person) => setFormData(prev => {
+              const newState = {
+                ...prev,
+                relatedPersons: prev.relatedPersons.map((p, i) => i === index ? person : p)
+              }
+              const existingBirthdayIdx = prev.specialDates.findIndex(
+                d => d.relatedPersonId === person.id && d.type === 'birthday' && d.id.startsWith('birthday-')
+              )
+              if (person.birthDate) {
+                const birthdayDate: SpecialDate = {
+                  id: `birthday-${person.id}`,
+                  date: person.birthDate,
+                  type: 'birthday',
+                  description: `Aniversário de ${person.name}`,
+                  relatedPersonId: person.id,
+                  notes: existingBirthdayIdx >= 0 ? prev.specialDates[existingBirthdayIdx].notes : ''
+                }
+                if (existingBirthdayIdx >= 0) {
+                  newState.specialDates = prev.specialDates.map((d, i) => i === existingBirthdayIdx ? birthdayDate : d)
+                } else {
+                  newState.specialDates = [...prev.specialDates, birthdayDate]
+                }
+              } else if (existingBirthdayIdx >= 0) {
+                newState.specialDates = prev.specialDates.filter((_, i) => i !== existingBirthdayIdx)
+              }
+              return newState
+            })}
+            onRemove={(index) => setFormData(prev => {
+              const removedPerson = prev.relatedPersons[index]
+              return {
+                ...prev,
+                relatedPersons: prev.relatedPersons.filter((_, i) => i !== index),
+                specialDates: prev.specialDates.filter(
+                  d => !(d.relatedPersonId === removedPerson.id && d.type === 'birthday' && d.id.startsWith('birthday-'))
+                )
+              }
+            })}
           />
         </div>
 

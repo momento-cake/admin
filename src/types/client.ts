@@ -68,6 +68,8 @@ export interface SpecialDate {
  * Address interface
  */
 export interface Address {
+  id: string
+  label?: string // "Casa", "Trabalho", "Entrega", etc.
   cep?: string
   estado?: string
   cidade?: string
@@ -119,7 +121,7 @@ export interface PersonalClient {
   email?: string
   cpfCnpj?: string
   phone?: string
-  address?: Address
+  addresses?: Address[]
   contactMethods: ContactMethod[]
   relatedPersons?: RelatedPerson[]
   specialDates?: SpecialDate[]
@@ -143,7 +145,7 @@ export interface BusinessClient {
   email?: string
   cpfCnpj?: string
   phone?: string
-  address?: Address
+  addresses?: Address[]
   contactMethods: ContactMethod[]
   companyInfo: CompanyInfo
   representative: Representative
