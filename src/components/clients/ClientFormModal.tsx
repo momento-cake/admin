@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Client, ClientType, Address, RelatedPerson, SpecialDate } from '@/types/client'
+import { Client, BusinessClient, ClientType, Address, RelatedPerson, SpecialDate } from '@/types/client'
 import { getContactFieldConfig } from '@/lib/masks'
 import { toast } from 'sonner'
 import { AddressesSection } from './AddressesSection'
@@ -45,8 +45,8 @@ export function ClientFormModal({ client, onClose, onSuccess }: ClientFormModalP
     relatedPersons: client?.relatedPersons || [],
     specialDates: client?.specialDates || [],
     ...(client?.type === 'business' && {
-      companyInfo: (client as any).companyInfo || {},
-      representative: (client as any).representative || {}
+      companyInfo: (client as BusinessClient).companyInfo || {},
+      representative: (client as BusinessClient).representative || {}
     })
   })
 
@@ -123,9 +123,9 @@ export function ClientFormModal({ client, onClose, onSuccess }: ClientFormModalP
         relatedPersons: formData.relatedPersons.length > 0 ? formData.relatedPersons : undefined,
         specialDates: formData.specialDates.length > 0 ? formData.specialDates : undefined,
         notes: formData.notes || undefined,
-        ...(clientType === 'business' && {
-          companyInfo: (formData as any).companyInfo,
-          representative: (formData as any).representative
+        ...(clientType === 'business' && 'companyInfo' in formData && {
+          companyInfo: formData.companyInfo,
+          representative: formData.representative
         })
       }
 
@@ -220,7 +220,7 @@ export function ClientFormModal({ client, onClose, onSuccess }: ClientFormModalP
                 placeholder={clientType === 'person' ? 'João da Silva' : 'Empresa LTDA'}
                 className={validationErrors.name ? 'border-destructive' : ''}
                 data-error={!!validationErrors.name || undefined}
-                aria-required
+                aria-required="true"
               />
               {validationErrors.name && <p className="text-sm text-destructive mt-1">{validationErrors.name}</p>}
             </div>
@@ -338,7 +338,6 @@ export function ClientFormModal({ client, onClose, onSuccess }: ClientFormModalP
               variant="outline"
               size="sm"
               onClick={() => {
-                console.log('Adding new contact method')
                 setFormData(prev => ({
                   ...prev,
                   contactMethods: [...prev.contactMethods, {

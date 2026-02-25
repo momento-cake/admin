@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { Plus, Trash2, Edit2, Calendar } from 'lucide-react'
+import { Plus, Trash2, Edit2 } from 'lucide-react'
 import { SpecialDate, SpecialDateType, RelatedPerson } from '@/types/client'
 
 interface SpecialDatesSectionProps {
@@ -150,7 +150,6 @@ export function SpecialDatesSection({
             onClick={(e) => {
               e.preventDefault()
               e.stopPropagation()
-              console.log('SpecialDatesSection: Add button clicked')
               setIsAdding(true)
             }}
             className="flex items-center gap-2 relative z-10"

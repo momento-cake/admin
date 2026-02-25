@@ -94,7 +94,7 @@ export function ClientDetailsModal({ client, onClose, onEdit }: ClientDetailsMod
           {/* Addresses */}
           {client.addresses && client.addresses.length > 0 && (
             <div>
-              <h3 className="font-semibold text-foreground mb-3">Enderecos</h3>
+              <h3 className="font-semibold text-foreground mb-3">Endereços</h3>
               <div className="space-y-2">
                 {client.addresses.map(addr => {
                   const parts = []
@@ -115,7 +115,7 @@ export function ClientDetailsModal({ client, onClose, onEdit }: ClientDetailsMod
                           {addr.label}
                         </span>
                       )}
-                      <p className="text-foreground mt-1">{parts.join(', ') || 'Endereco incompleto'}</p>
+                      <p className="text-foreground mt-1">{parts.join(', ') || 'Endereço incompleto'}</p>
                     </div>
                   )
                 })}

@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Plus, Trash2, Edit2, Search, Loader2 } from 'lucide-react'
 import { Address } from '@/types/client'
+import { formatCEP } from '@/lib/masks'
 
 interface AddressesSectionProps {
   addresses: Address[]
@@ -14,11 +15,6 @@ interface AddressesSectionProps {
 }
 
 const LABEL_PRESETS = ['Casa', 'Trabalho', 'Entrega', 'Cobrança']
-
-const formatCEP = (v: string) => {
-  const n = v.replace(/\D/g, '')
-  return n.length <= 5 ? n : n.slice(0, 5) + '-' + n.slice(5, 8)
-}
 
 export function AddressesSection({
   addresses,
@@ -378,7 +374,7 @@ export function AddressesSection({
 
       {addresses.length === 0 && !isAdding && (
         <p className="text-sm text-gray-500 italic">
-          Nenhum endereco adicionado
+          Nenhum endereço adicionado
         </p>
       )}
     </div>

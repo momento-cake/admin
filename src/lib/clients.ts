@@ -9,10 +9,8 @@ import {
   query,
   where,
   orderBy,
-  limit,
   Timestamp,
-  DocumentSnapshot,
-  writeBatch
+  DocumentSnapshot
 } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import {
@@ -75,8 +73,6 @@ export async function fetchClients(
   filters?: ClientQueryFilters
 ): Promise<ClientListResponse> {
   try {
-    console.log('🔍 Fetching clients with filters:', filters)
-
     // Base query - active clients only
     const clientsQuery = query(
       collection(db, COLLECTION_NAME),
@@ -92,7 +88,7 @@ export async function fetchClients(
       // If there's a permission error, log it and return empty array
       // This allows the UI to render while we troubleshoot the security rules
       if (firestoreError instanceof Error && firestoreError.message.includes('permission')) {
-        console.warn('⚠️  Firestore permission denied. Returning empty client list.')
+        console.warn('Firestore permission denied. Returning empty client list.')
         return {
           success: true,
           clients: [],
@@ -159,8 +155,6 @@ export async function fetchClients(
     const endIndex = startIndex + limitParam
     const paginatedClients = clients.slice(startIndex, endIndex)
 
-    console.log(`✅ Retrieved ${paginatedClients.length} clients (page ${page})`)
-
     return {
       success: true,
       clients: paginatedClients,
@@ -170,7 +164,7 @@ export async function fetchClients(
       hasMore: endIndex < clients.length
     }
   } catch (error) {
-    console.error('❌ Error fetching clients:', error)
+    console.error('Error fetching clients:', error)
     throw new Error('Erro ao buscar clientes')
   }
 }
@@ -189,7 +183,7 @@ export async function fetchClient(id: string): Promise<Client> {
 
     return docToClient(docSnap)
   } catch (error) {
-    console.error('❌ Error fetching client:', error)
+    console.error('Error fetching client:', error)
     if (error instanceof Error && error.message === 'Cliente não encontrado') {
       throw error
     }
@@ -204,8 +198,6 @@ export async function createClient(
   data: Omit<PersonalClient | BusinessClient, 'id' | 'createdAt' | 'updatedAt' | 'isActive'>
 ): Promise<Client> {
   try {
-    console.log('➕ Creating new client:', data.name)
-
     // Validate required fields
     if (!data.name) {
       throw new Error('Nome do cliente é obrigatório')
@@ -247,10 +239,9 @@ export async function createClient(
       throw new Error('Erro ao criar cliente')
     }
 
-    console.log(`✅ Client created with ID: ${docRef.id}`)
     return docToClient(createdDoc)
   } catch (error) {
-    console.error('❌ Error creating client:', error)
+    console.error('Error creating client:', error)
     if (error instanceof Error) {
       throw error
     }
@@ -266,8 +257,6 @@ export async function updateClient(
   data: Partial<Omit<PersonalClient | BusinessClient, 'id' | 'createdAt' | 'isActive'>>
 ): Promise<Client> {
   try {
-    console.log('✏️ Updating client:', id)
-
     // Verify client exists
     const docRef = doc(db, COLLECTION_NAME, id)
     const docSnap = await getDoc(docRef)
@@ -313,10 +302,9 @@ export async function updateClient(
       throw new Error('Erro ao atualizar cliente')
     }
 
-    console.log(`✅ Client updated: ${id}`)
     return docToClient(updatedDoc)
   } catch (error) {
-    console.error('❌ Error updating client:', error)
+    console.error('Error updating client:', error)
     if (error instanceof Error) {
       throw error
     }
@@ -329,8 +317,6 @@ export async function updateClient(
  */
 export async function deleteClient(id: string): Promise<void> {
   try {
-    console.log('🗑️ Deleting client:', id)
-
     const docRef = doc(db, COLLECTION_NAME, id)
     const docSnap = await getDoc(docRef)
 
@@ -343,10 +329,8 @@ export async function deleteClient(id: string): Promise<void> {
       isActive: false,
       updatedAt: Timestamp.now()
     })
-
-    console.log(`✅ Client marked as inactive: ${id}`)
   } catch (error) {
-    console.error('❌ Error deleting client:', error)
+    console.error('Error deleting client:', error)
     if (error instanceof Error) {
       throw error
     }
@@ -359,8 +343,6 @@ export async function deleteClient(id: string): Promise<void> {
  */
 export async function restoreClient(id: string): Promise<Client> {
   try {
-    console.log('♻️ Restoring client:', id)
-
     const docRef = doc(db, COLLECTION_NAME, id)
     const docSnap = await getDoc(docRef)
 
@@ -381,10 +363,9 @@ export async function restoreClient(id: string): Promise<Client> {
       throw new Error('Erro ao restaurar cliente')
     }
 
-    console.log(`✅ Client restored: ${id}`)
     return docToClient(restoredDoc)
   } catch (error) {
-    console.error('❌ Error restoring client:', error)
+    console.error('Error restoring client:', error)
     if (error instanceof Error) {
       throw error
     }
@@ -399,8 +380,6 @@ export async function fetchInactiveClients(
   filters?: Omit<ClientQueryFilters, 'type'>
 ): Promise<ClientListResponse> {
   try {
-    console.log('🔍 Fetching inactive clients')
-
     // Query inactive clients
     const clientsQuery = query(
       collection(db, COLLECTION_NAME),
@@ -415,7 +394,7 @@ export async function fetchInactiveClients(
     } catch (firestoreError) {
       // If there's a permission error, log it and return empty array
       if (firestoreError instanceof Error && firestoreError.message.includes('permission')) {
-        console.warn('⚠️  Firestore permission denied. Returning empty inactive client list.')
+        console.warn('Firestore permission denied. Returning empty inactive client list.')
         return {
           success: true,
           clients: [],
@@ -445,8 +424,6 @@ export async function fetchInactiveClients(
     const endIndex = startIndex + limitParam
     const paginatedClients = clients.slice(startIndex, endIndex)
 
-    console.log(`✅ Retrieved ${paginatedClients.length} inactive clients`)
-
     return {
       success: true,
       clients: paginatedClients,
@@ -456,7 +433,7 @@ export async function fetchInactiveClients(
       hasMore: endIndex < clients.length
     }
   } catch (error) {
-    console.error('❌ Error fetching inactive clients:', error)
+    console.error('Error fetching inactive clients:', error)
     throw new Error('Erro ao buscar clientes deletados')
   }
 }
@@ -484,7 +461,7 @@ export async function checkCpfCnpjExists(
 
     return !snapshot.empty
   } catch (error) {
-    console.error('❌ Error checking CPF/CNPJ:', error)
+    console.error('Error checking CPF/CNPJ:', error)
     return false
   }
 }
@@ -496,8 +473,6 @@ export async function fetchClientsWithUpcomingDates(
   daysAhead: number = 30
 ): Promise<Client[]> {
   try {
-    console.log(`🔍 Fetching clients with special dates in the next ${daysAhead} days`)
-
     const clientsQuery = query(
       collection(db, COLLECTION_NAME),
       where('isActive', '==', true)
@@ -529,12 +504,9 @@ export async function fetchClientsWithUpcomingDates(
         })
       })
 
-    console.log(
-      `✅ Found ${clientsWithUpcomingDates.length} clients with upcoming special dates`
-    )
     return clientsWithUpcomingDates
   } catch (error) {
-    console.error('❌ Error fetching clients with upcoming dates:', error)
+    console.error('Error fetching clients with upcoming dates:', error)
     throw new Error('Erro ao buscar clientes com datas especiais')
   }
 }
@@ -570,8 +542,6 @@ export interface SpecialDateWithClient {
  */
 export async function fetchSpecialDatesForDashboard(): Promise<Client[]> {
   try {
-    console.log('🔍 Fetching clients for special dates dashboard')
-
     const clientsQuery = query(
       collection(db, COLLECTION_NAME),
       where('isActive', '==', true)
@@ -580,10 +550,9 @@ export async function fetchSpecialDatesForDashboard(): Promise<Client[]> {
     const snapshot = await getDocs(clientsQuery)
     const clients = snapshot.docs.map(docToClient)
 
-    console.log(`✅ Retrieved ${clients.length} clients for special dates dashboard`)
     return clients
   } catch (error) {
-    console.error('❌ Error fetching clients for special dates dashboard:', error)
+    console.error('Error fetching clients for special dates dashboard:', error)
     throw new Error('Erro ao buscar clientes para o dashboard de datas especiais')
   }
 }

@@ -121,7 +121,6 @@ export function RelatedPersonsSection({
             onClick={(e) => {
               e.preventDefault()
               e.stopPropagation()
-              console.log('RelatedPersonsSection: Add button clicked')
               setIsAdding(true)
             }}
             className="flex items-center gap-2 relative z-10"

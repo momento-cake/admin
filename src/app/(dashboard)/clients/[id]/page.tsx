@@ -154,7 +154,7 @@ export default function ClientDetailPage() {
 
         {client.addresses && client.addresses.length > 0 && (
           <div className="p-6 border rounded-lg">
-            <h2 className="text-lg font-semibold mb-4">Enderecos</h2>
+            <h2 className="text-lg font-semibold mb-4">Endereços</h2>
             <div className="space-y-4">
               {client.addresses.map(addr => (
                 <div key={addr.id} className="space-y-1 text-sm border-b border-border pb-3 last:border-0 last:pb-0">

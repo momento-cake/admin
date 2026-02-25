@@ -330,7 +330,7 @@ export default function NewClientPage() {
               onChange={handleInputChange}
               className={`w-full mt-1 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-ring ${validationErrors.name ? 'border-destructive' : 'border-input'}`}
               placeholder={clientType === 'person' ? 'João da Silva' : 'Empresa LTDA'}
-              aria-required
+              aria-required="true"
             />
             <FieldError message={validationErrors.name} />
           </div>
@@ -497,7 +497,7 @@ export default function NewClientPage() {
                   onChange={handleCompanyInfoChange}
                   className={`w-full mt-1 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-ring ${validationErrors['companyInfo.cnpj'] ? 'border-destructive' : 'border-input'}`}
                   placeholder="00.000.000/0000-00"
-                  aria-required
+                  aria-required="true"
                 />
                 <FieldError message={validationErrors['companyInfo.cnpj']} />
               </div>
@@ -510,7 +510,7 @@ export default function NewClientPage() {
                   value={formData.companyInfo.companyName}
                   onChange={handleCompanyInfoChange}
                   className={`w-full mt-1 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-ring ${validationErrors['companyInfo.companyName'] ? 'border-destructive' : 'border-input'}`}
-                  aria-required
+                  aria-required="true"
                 />
                 <FieldError message={validationErrors['companyInfo.companyName']} />
               </div>
@@ -550,7 +550,7 @@ export default function NewClientPage() {
                   value={formData.representative.name}
                   onChange={handleRepresentativeChange}
                   className={`w-full mt-1 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-ring ${validationErrors['representative.name'] ? 'border-destructive' : 'border-input'}`}
-                  aria-required
+                  aria-required="true"
                 />
                 <FieldError message={validationErrors['representative.name']} />
               </div>
@@ -564,7 +564,7 @@ export default function NewClientPage() {
                     value={formData.representative.email}
                     onChange={handleRepresentativeChange}
                     className={`w-full mt-1 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-ring ${validationErrors['representative.email'] ? 'border-destructive' : 'border-input'}`}
-                    aria-required
+                    aria-required="true"
                   />
                   <FieldError message={validationErrors['representative.email']} />
                 </div>
@@ -576,7 +576,7 @@ export default function NewClientPage() {
                     value={formData.representative.phone}
                     onChange={handleRepresentativeChange}
                     className={`w-full mt-1 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-ring ${validationErrors['representative.phone'] ? 'border-destructive' : 'border-input'}`}
-                    aria-required
+                    aria-required="true"
                   />
                   <FieldError message={validationErrors['representative.phone']} />
                 </div>
