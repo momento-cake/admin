@@ -1,13 +1,18 @@
 'use client'
+
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, Loader2, X } from 'lucide-react'
-import { Client, RelatedPerson, SpecialDate } from '@/types/client'
+import { ArrowLeft, Loader2, X, AlertCircle } from 'lucide-react'
+import { Client, ClientType, Address, ContactMethod, RelatedPerson, SpecialDate } from '@/types/client'
+import { getContactFieldConfig } from '@/lib/masks'
+import { AddressesSection } from '@/components/clients/AddressesSection'
 import { RelatedPersonsSection } from '@/components/clients/RelatedPersonsSection'
 import { SpecialDatesSection } from '@/components/clients/SpecialDatesSection'
 import { TagsSection } from '@/components/clients/TagsSection'
+import { usePermissions } from '@/hooks/usePermissions'
 
 export default function EditClientPage() {
   const params = useParams()
@@ -17,7 +22,53 @@ export default function EditClientPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [formData, setFormData] = useState<any>(null)
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
+  const [clientType, setClientType] = useState<ClientType>('person')
+  const [formData, setFormData] = useState({
+    type: 'person' as ClientType,
+    name: '',
+    email: '',
+    cpfCnpj: '',
+    phone: '',
+    contactMethods: [
+      {
+        id: '1',
+        type: 'phone',
+        value: '',
+        isPrimary: true,
+        notes: ''
+      }
+    ] as ContactMethod[],
+    addresses: [] as Address[],
+    notes: '',
+    tags: [] as string[],
+    relatedPersons: [] as RelatedPerson[],
+    specialDates: [] as SpecialDate[],
+    companyInfo: {
+      cnpj: '',
+      companyName: '',
+      businessType: '',
+      inscricaoEstadual: '',
+      companyPhone: '',
+      companyEmail: ''
+    },
+    representative: {
+      name: '',
+      email: '',
+      phone: '',
+      role: '',
+      cpf: ''
+    }
+  })
+  const { canPerformAction, loading: authLoading } = usePermissions()
+  const canUpdate = canPerformAction('clients', 'update')
+
+  // Redirect if user doesn't have update permission (wait for auth to load first)
+  useEffect(() => {
+    if (!authLoading && !canUpdate) {
+      router.replace(`/clients/${clientId}`)
+    }
+  }, [authLoading, canUpdate, clientId, router])
 
   useEffect(() => {
     fetchClient()
@@ -28,93 +79,238 @@ export default function EditClientPage() {
       setLoading(true)
       const response = await fetch(`/api/clients/${clientId}`)
       const data = await response.json()
-      if (!data.success) throw new Error(data.error || 'Erro')
-      setClient(data.data)
+      if (!data.success) throw new Error(data.error || 'Erro ao carregar cliente')
+      const c = data.data as Client
+      setClient(c)
+      setClientType(c.type)
       setFormData({
-        type: data.data.type,
-        name: data.data.name || '',
-        email: data.data.email || '',
-        cpfCnpj: data.data.cpfCnpj || '',
-        phone: data.data.phone || '',
-        contactMethods: data.data.contactMethods || [],
-        address: data.data.address || {},
-        notes: data.data.notes || '',
-        tags: data.data.tags || [],
-        relatedPersons: data.data.relatedPersons || [],
-        specialDates: data.data.specialDates || [],
-        ...(data.data.type === 'business' && {
-          companyInfo: data.data.companyInfo || {},
-          representative: data.data.representative || {}
-        })
+        type: c.type,
+        name: c.name || '',
+        email: c.email || '',
+        cpfCnpj: c.cpfCnpj || '',
+        phone: c.phone || '',
+        contactMethods: c.contactMethods?.length > 0
+          ? c.contactMethods
+          : [{ id: '1', type: 'phone', value: '', isPrimary: true, notes: '' }],
+        addresses: c.addresses || [],
+        notes: c.notes || '',
+        tags: c.tags || [],
+        relatedPersons: c.relatedPersons || [],
+        specialDates: c.specialDates || [],
+        companyInfo: c.type === 'business'
+          ? {
+              cnpj: c.companyInfo?.cnpj || '',
+              companyName: c.companyInfo?.companyName || '',
+              businessType: c.companyInfo?.businessType || '',
+              inscricaoEstadual: c.companyInfo?.inscricaoEstadual || '',
+              companyPhone: c.companyInfo?.companyPhone || '',
+              companyEmail: c.companyInfo?.companyEmail || ''
+            }
+          : { cnpj: '', companyName: '', businessType: '', inscricaoEstadual: '', companyPhone: '', companyEmail: '' },
+        representative: c.type === 'business'
+          ? {
+              name: c.representative?.name || '',
+              email: c.representative?.email || '',
+              phone: c.representative?.phone || '',
+              role: c.representative?.role || '',
+              cpf: c.representative?.cpf || ''
+            }
+          : { name: '', email: '', phone: '', role: '', cpf: '' }
       })
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro')
+      setError(err instanceof Error ? err.message : 'Erro ao carregar cliente')
     } finally {
       setLoading(false)
     }
   }
 
-  const handleInputChange = (e: any) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target
-    setFormData((prev: any) => ({ ...prev, [name]: value }))
+    setFormData(prev => ({ ...prev, [name]: value }))
+    if (validationErrors[name]) {
+      setValidationErrors(prev => ({ ...prev, [name]: '' }))
+    }
   }
 
-  const handleAddressChange = (e: any) => {
-    const { name, value } = e.target
-    setFormData((prev: any) => ({
+  const handleContactMethodChange = (index: number, field: string, value: string | boolean) => {
+    setFormData(prev => ({
       ...prev,
-      address: { ...prev.address, [name]: value }
+      contactMethods: prev.contactMethods.map((cm, i) => {
+        if (i !== index) return cm
+        if (field === 'value') {
+          const config = getContactFieldConfig(cm.type)
+          return { ...cm, value: config.mask ? config.mask(value as string) : value as string }
+        }
+        if (field === 'type') {
+          const newConfig = getContactFieldConfig(value as string)
+          return { ...cm, type: value as typeof cm.type, value: newConfig.mask ? newConfig.mask(cm.value) : cm.value }
+        }
+        return { ...cm, [field]: value }
+      })
     }))
   }
 
-  const handleContactMethodChange = (index: number, field: string, value: any) => {
-    setFormData((prev: any) => ({
+  const handleAddContactMethod = () => {
+    setFormData(prev => ({
       ...prev,
-      contactMethods: prev.contactMethods.map((cm: any, i: number) =>
-        i === index ? { ...cm, [field]: value } : cm
-      )
+      contactMethods: [
+        ...prev.contactMethods,
+        { id: Date.now().toString(), type: 'phone' as const, value: '', isPrimary: false, notes: '' }
+      ]
     }))
   }
 
   const handleRemoveContactMethod = (index: number) => {
     if (formData.contactMethods.length > 1) {
-      setFormData((prev: any) => ({
+      setFormData(prev => ({
         ...prev,
-        contactMethods: prev.contactMethods.filter((_: any, i: number) => i !== index)
+        contactMethods: prev.contactMethods.filter((_, i) => i !== index)
       }))
     }
   }
 
-  const handleAddContactMethod = () => {
-    setFormData((prev: any) => ({
+  const handleCompanyInfoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target
+    setFormData(prev => ({
       ...prev,
-      contactMethods: [
-        ...prev.contactMethods,
-        { id: Date.now().toString(), type: 'phone', value: '', isPrimary: false, notes: '' }
-      ]
+      companyInfo: { ...prev.companyInfo, [name]: value }
     }))
+  }
+
+  const handleRepresentativeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target
+    setFormData(prev => ({
+      ...prev,
+      representative: { ...prev.representative, [name]: value }
+    }))
+  }
+
+  const validateForm = () => {
+    const errors: Record<string, string> = {}
+
+    if (!formData.name.trim()) {
+      errors.name = 'Nome é obrigatório'
+    }
+
+    if (formData.contactMethods.length === 0) {
+      errors.contactMethods = 'Pelo menos um método de contato é obrigatório'
+    } else {
+      formData.contactMethods.forEach((cm, index) => {
+        const cmType = cm.type as string
+        if (!cm.value.trim()) {
+          errors[`contactMethod_${index}`] = 'Preencha o valor do contato'
+        } else if ((cmType === 'phone' || cmType === 'whatsapp') && cm.value.replace(/\D/g, '').length < 10) {
+          errors[`contactMethod_${index}`] = 'Telefone deve ter pelo menos 10 dígitos'
+        } else if (cmType === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cm.value)) {
+          errors[`contactMethod_${index}`] = 'Email inválido'
+        }
+      })
+    }
+
+    if (clientType === 'business') {
+      if (!formData.companyInfo.cnpj.trim()) {
+        errors['companyInfo.cnpj'] = 'CNPJ é obrigatório'
+      }
+      if (!formData.companyInfo.companyName.trim()) {
+        errors['companyInfo.companyName'] = 'Nome da empresa é obrigatório'
+      }
+      if (!formData.representative.name.trim()) {
+        errors['representative.name'] = 'Nome do representante é obrigatório'
+      }
+      if (!formData.representative.email.trim()) {
+        errors['representative.email'] = 'Email do representante é obrigatório'
+      }
+      if (!formData.representative.phone.trim()) {
+        errors['representative.phone'] = 'Telefone do representante é obrigatório'
+      }
+    }
+
+    setValidationErrors(errors)
+    if (Object.keys(errors).length > 0) {
+      toast.error('Corrija os erros no formulário')
+      setTimeout(() => {
+        document.querySelector('[data-error="true"]')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }, 100)
+    }
+    return Object.keys(errors).length === 0
   }
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+
+    if (!validateForm()) {
+      return
+    }
+
     try {
       setSaving(true)
       setError(null)
+
+      const submitData = clientType === 'person'
+        ? {
+            type: 'person',
+            name: formData.name,
+            email: formData.email || undefined,
+            cpfCnpj: formData.cpfCnpj || undefined,
+            phone: formData.phone || undefined,
+            addresses: formData.addresses.length > 0 ? formData.addresses : undefined,
+            contactMethods: formData.contactMethods,
+            relatedPersons: formData.relatedPersons.length > 0 ? formData.relatedPersons : undefined,
+            specialDates: formData.specialDates.length > 0 ? formData.specialDates : undefined,
+            tags: formData.tags.length > 0 ? formData.tags : undefined,
+            notes: formData.notes || undefined
+          }
+        : {
+            type: 'business',
+            name: formData.name,
+            email: formData.email || undefined,
+            cpfCnpj: formData.cpfCnpj || undefined,
+            phone: formData.phone || undefined,
+            addresses: formData.addresses.length > 0 ? formData.addresses : undefined,
+            contactMethods: formData.contactMethods,
+            relatedPersons: formData.relatedPersons.length > 0 ? formData.relatedPersons : undefined,
+            specialDates: formData.specialDates.length > 0 ? formData.specialDates : undefined,
+            tags: formData.tags.length > 0 ? formData.tags : undefined,
+            companyInfo: {
+              cnpj: formData.companyInfo.cnpj,
+              companyName: formData.companyInfo.companyName,
+              businessType: formData.companyInfo.businessType || undefined,
+              inscricaoEstadual: formData.companyInfo.inscricaoEstadual || undefined,
+              companyPhone: formData.companyInfo.companyPhone || undefined,
+              companyEmail: formData.companyInfo.companyEmail || undefined
+            },
+            representative: {
+              name: formData.representative.name,
+              email: formData.representative.email,
+              phone: formData.representative.phone,
+              role: formData.representative.role || undefined,
+              cpf: formData.representative.cpf || undefined
+            },
+            notes: formData.notes || undefined
+          }
+
       const response = await fetch(`/api/clients/${clientId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(submitData)
       })
       const result = await response.json()
-      if (!result.success) throw new Error(result.error || 'Erro')
+      if (!result.success) {
+        setValidationErrors({ submit: result.error || 'Erro ao atualizar cliente' })
+        return
+      }
+      toast.success('Cliente atualizado com sucesso!')
       router.push(`/clients/${clientId}`)
       router.refresh()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro')
+      setValidationErrors({ submit: err instanceof Error ? err.message : 'Erro ao atualizar cliente' })
     } finally {
       setSaving(false)
     }
   }
+
+  const FieldError = ({ message }: { message?: string }) =>
+    message ? <p className="text-sm text-destructive mt-1">{message}</p> : null
 
   if (loading) return <div className="p-12 text-center text-muted-foreground">Carregando...</div>
   if (error && !client) return (
@@ -134,32 +330,48 @@ export default function EditClientPage() {
           <Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button>
         </Link>
         <div>
-          <h1 className="text-3xl font-bold">Editar Cliente</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Editar Cliente</h1>
           <p className="text-muted-foreground">{client.name}</p>
         </div>
       </div>
 
-      {error && (
-        <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive">
-          {error}
+      {validationErrors.submit && (
+        <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive flex items-start gap-3">
+          <AlertCircle className="h-5 w-5 mt-0.5 flex-shrink-0" />
+          <span>{validationErrors.submit}</span>
         </div>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-8 max-w-3xl">
-        <div className="space-y-4 p-6 border rounded-lg">
+        {/* Client Type (read-only display) */}
+        <div className="space-y-3 p-4 sm:p-6 border rounded-lg">
+          <label className="text-sm font-semibold">Tipo de Cliente</label>
+          <p className="text-muted-foreground text-sm">
+            {clientType === 'person' ? 'Pessoa Física' : 'Pessoa Jurídica'}
+          </p>
+        </div>
+
+        {/* Basic Information */}
+        <div className="space-y-4 p-4 sm:p-6 border rounded-lg">
           <h2 className="text-lg font-semibold">Informações Básicas</h2>
-          <div>
-            <label className="text-sm font-medium">Nome</label>
+
+          <div data-error={!!validationErrors.name || undefined}>
+            <label className="text-sm font-medium">
+              {clientType === 'person' ? 'Nome Completo' : 'Razão Social'} <span className="text-destructive">*</span>
+            </label>
             <input
               type="text"
               name="name"
               value={formData.name}
               onChange={handleInputChange}
-              className="w-full mt-1 px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
-              required
+              className={`w-full mt-1 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-ring ${validationErrors.name ? 'border-destructive' : 'border-input'}`}
+              placeholder={clientType === 'person' ? 'João da Silva' : 'Empresa LTDA'}
+              aria-required="true"
             />
+            <FieldError message={validationErrors.name} />
           </div>
-          <div className="grid grid-cols-2 gap-4">
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="text-sm font-medium">Email</label>
               <input
@@ -171,7 +383,9 @@ export default function EditClientPage() {
               />
             </div>
             <div>
-              <label className="text-sm font-medium">CPF/CNPJ</label>
+              <label className="text-sm font-medium">
+                {clientType === 'person' ? 'CPF' : 'CNPJ'}
+              </label>
               <input
                 type="text"
                 name="cpfCnpj"
@@ -181,6 +395,7 @@ export default function EditClientPage() {
               />
             </div>
           </div>
+
           <div>
             <label className="text-sm font-medium">Telefone</label>
             <input
@@ -193,23 +408,34 @@ export default function EditClientPage() {
           </div>
         </div>
 
-        <div className="space-y-4 p-6 border rounded-lg">
-          <div className="flex items-center justify-between mb-2">
-            <h2 className="text-lg font-semibold">Métodos de Contato</h2>
+        {/* Contact Methods */}
+        <div className="space-y-4 p-4 sm:p-6 border rounded-lg">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold">Métodos de Contato <span className="text-destructive">*</span></h2>
             <Button type="button" variant="outline" size="sm" onClick={handleAddContactMethod}>
               + Adicionar
             </Button>
           </div>
+
+          {validationErrors.contactMethods && (
+            <FieldError message={validationErrors.contactMethods} />
+          )}
+
           <div className="space-y-3">
-            {formData.contactMethods?.map((cm: any, index: number) => (
-              <div key={cm.id} className="p-3 border border-input rounded-md bg-muted/30">
-                <div className="grid grid-cols-3 gap-3">
+            {formData.contactMethods.map((cm, index) => (
+              <div key={cm.id} className={`p-4 border rounded-md space-y-3 bg-muted/30 ${validationErrors[`contactMethod_${index}`] ? 'border-destructive' : 'border-input'}`} data-error={!!validationErrors[`contactMethod_${index}`] || undefined}>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
                     <label className="text-sm font-medium">Tipo</label>
                     <select
                       value={cm.type}
-                      onChange={(e) => handleContactMethodChange(index, 'type', e.target.value)}
-                      className="w-full mt-1 px-3 py-2 border border-input rounded-md text-sm"
+                      onChange={(e) => {
+                        handleContactMethodChange(index, 'type', e.target.value)
+                        if (validationErrors[`contactMethod_${index}`]) {
+                          setValidationErrors(prev => ({ ...prev, [`contactMethod_${index}`]: '' }))
+                        }
+                      }}
+                      className="w-full mt-1 px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
                     >
                       <option value="phone">Telefone</option>
                       <option value="email">Email</option>
@@ -221,14 +447,26 @@ export default function EditClientPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="text-sm font-medium">Valor</label>
-                    <input
-                      type="text"
-                      value={cm.value}
-                      onChange={(e) => handleContactMethodChange(index, 'value', e.target.value)}
-                      className="w-full mt-1 px-3 py-2 border border-input rounded-md text-sm"
-                      required
-                    />
+                    {(() => {
+                      const config = getContactFieldConfig(cm.type)
+                      return (
+                        <>
+                          <label className="text-sm font-medium">{config.label}</label>
+                          <input
+                            type={config.inputType}
+                            value={cm.value}
+                            onChange={(e) => {
+                              handleContactMethodChange(index, 'value', e.target.value)
+                              if (validationErrors[`contactMethod_${index}`]) {
+                                setValidationErrors(prev => ({ ...prev, [`contactMethod_${index}`]: '' }))
+                              }
+                            }}
+                            className={`w-full mt-1 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-ring ${validationErrors[`contactMethod_${index}`] ? 'border-destructive' : 'border-input'}`}
+                            placeholder={config.placeholder}
+                          />
+                        </>
+                      )
+                    })()}
                   </div>
                   <div className="flex items-end gap-2">
                     <label className="flex items-center gap-2 cursor-pointer flex-1">
@@ -251,124 +489,257 @@ export default function EditClientPage() {
                     )}
                   </div>
                 </div>
+                {validationErrors[`contactMethod_${index}`] && (
+                  <p className="text-sm text-destructive">{validationErrors[`contactMethod_${index}`]}</p>
+                )}
               </div>
             ))}
           </div>
         </div>
 
-        <div className="space-y-4 p-6 border rounded-lg">
-          <h2 className="text-lg font-semibold">Endereço</h2>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="text-sm font-medium">CEP</label>
-              <input
-                type="text"
-                name="cep"
-                value={formData.address?.cep || ''}
-                onChange={handleAddressChange}
-                className="w-full mt-1 px-3 py-2 border border-input rounded-md"
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium">Estado</label>
-              <input
-                type="text"
-                name="estado"
-                value={formData.address?.estado || ''}
-                onChange={handleAddressChange}
-                className="w-full mt-1 px-3 py-2 border border-input rounded-md"
-              />
-            </div>
-          </div>
-          <div>
-            <label className="text-sm font-medium">Endereço</label>
-            <input
-              type="text"
-              name="endereco"
-              value={formData.address?.endereco || ''}
-              onChange={handleAddressChange}
-              className="w-full mt-1 px-3 py-2 border border-input rounded-md"
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="text-sm font-medium">Número</label>
-              <input
-                type="text"
-                name="numero"
-                value={formData.address?.numero || ''}
-                onChange={handleAddressChange}
-                className="w-full mt-1 px-3 py-2 border border-input rounded-md"
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium">Complemento</label>
-              <input
-                type="text"
-                name="complemento"
-                value={formData.address?.complemento || ''}
-                onChange={handleAddressChange}
-                className="w-full mt-1 px-3 py-2 border border-input rounded-md"
-              />
-            </div>
-          </div>
+        {/* Addresses */}
+        <div className="space-y-4 p-4 sm:p-6 border rounded-lg">
+          <AddressesSection
+            addresses={formData.addresses}
+            onAdd={(addr) => setFormData(prev => ({ ...prev, addresses: [...prev.addresses, addr] }))}
+            onUpdate={(index, addr) => setFormData(prev => ({
+              ...prev,
+              addresses: prev.addresses.map((a, i) => i === index ? addr : a)
+            }))}
+            onRemove={(index) => setFormData(prev => ({
+              ...prev,
+              addresses: prev.addresses.filter((_, i) => i !== index)
+            }))}
+          />
         </div>
 
-        <div className="space-y-4 p-6 border rounded-lg">
+        {/* Business Information */}
+        {clientType === 'business' && (
+          <>
+            <div className="space-y-4 p-4 sm:p-6 border rounded-lg">
+              <h2 className="text-lg font-semibold">Informações Empresariais</h2>
+
+              <div data-error={!!validationErrors['companyInfo.cnpj'] || undefined}>
+                <label className="text-sm font-medium">CNPJ <span className="text-destructive">*</span></label>
+                <input
+                  type="text"
+                  name="cnpj"
+                  value={formData.companyInfo.cnpj}
+                  onChange={handleCompanyInfoChange}
+                  className={`w-full mt-1 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-ring ${validationErrors['companyInfo.cnpj'] ? 'border-destructive' : 'border-input'}`}
+                  placeholder="00.000.000/0000-00"
+                  aria-required="true"
+                />
+                <FieldError message={validationErrors['companyInfo.cnpj']} />
+              </div>
+
+              <div data-error={!!validationErrors['companyInfo.companyName'] || undefined}>
+                <label className="text-sm font-medium">Nome da Empresa <span className="text-destructive">*</span></label>
+                <input
+                  type="text"
+                  name="companyName"
+                  value={formData.companyInfo.companyName}
+                  onChange={handleCompanyInfoChange}
+                  className={`w-full mt-1 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-ring ${validationErrors['companyInfo.companyName'] ? 'border-destructive' : 'border-input'}`}
+                  aria-required="true"
+                />
+                <FieldError message={validationErrors['companyInfo.companyName']} />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium">Tipo de Negócio</label>
+                  <input
+                    type="text"
+                    name="businessType"
+                    value={formData.companyInfo.businessType}
+                    onChange={handleCompanyInfoChange}
+                    className="w-full mt-1 px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Inscrição Estadual</label>
+                  <input
+                    type="text"
+                    name="inscricaoEstadual"
+                    value={formData.companyInfo.inscricaoEstadual}
+                    onChange={handleCompanyInfoChange}
+                    className="w-full mt-1 px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4 p-4 sm:p-6 border rounded-lg">
+              <h2 className="text-lg font-semibold">Representante *</h2>
+
+              <div data-error={!!validationErrors['representative.name'] || undefined}>
+                <label className="text-sm font-medium">Nome Completo <span className="text-destructive">*</span></label>
+                <input
+                  type="text"
+                  name="name"
+                  value={formData.representative.name}
+                  onChange={handleRepresentativeChange}
+                  className={`w-full mt-1 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-ring ${validationErrors['representative.name'] ? 'border-destructive' : 'border-input'}`}
+                  aria-required="true"
+                />
+                <FieldError message={validationErrors['representative.name']} />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div data-error={!!validationErrors['representative.email'] || undefined}>
+                  <label className="text-sm font-medium">Email <span className="text-destructive">*</span></label>
+                  <input
+                    type="email"
+                    name="email"
+                    value={formData.representative.email}
+                    onChange={handleRepresentativeChange}
+                    className={`w-full mt-1 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-ring ${validationErrors['representative.email'] ? 'border-destructive' : 'border-input'}`}
+                    aria-required="true"
+                  />
+                  <FieldError message={validationErrors['representative.email']} />
+                </div>
+                <div data-error={!!validationErrors['representative.phone'] || undefined}>
+                  <label className="text-sm font-medium">Telefone <span className="text-destructive">*</span></label>
+                  <input
+                    type="tel"
+                    name="phone"
+                    value={formData.representative.phone}
+                    onChange={handleRepresentativeChange}
+                    className={`w-full mt-1 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-ring ${validationErrors['representative.phone'] ? 'border-destructive' : 'border-input'}`}
+                    aria-required="true"
+                  />
+                  <FieldError message={validationErrors['representative.phone']} />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium">Cargo</label>
+                  <input
+                    type="text"
+                    name="role"
+                    value={formData.representative.role}
+                    onChange={handleRepresentativeChange}
+                    className="w-full mt-1 px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">CPF</label>
+                  <input
+                    type="text"
+                    name="cpf"
+                    value={formData.representative.cpf}
+                    onChange={handleRepresentativeChange}
+                    className="w-full mt-1 px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
+                  />
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Tags */}
+        <div className="space-y-4 p-4 sm:p-6 border rounded-lg">
           <TagsSection
-            tags={formData.tags || []}
-            onTagsChange={(tags) => setFormData((prev: any) => ({ ...prev, tags }))}
+            tags={formData.tags}
+            onTagsChange={(tags) => setFormData(prev => ({ ...prev, tags }))}
           />
         </div>
 
-        <div className="space-y-4 p-6 border rounded-lg">
+        {/* Related Persons */}
+        <div className="space-y-4 p-4 sm:p-6 border rounded-lg">
           <RelatedPersonsSection
-            relatedPersons={formData.relatedPersons || []}
-            onAdd={(person) => setFormData((prev: any) => ({
-              ...prev,
-              relatedPersons: [...(prev.relatedPersons || []), person]
-            }))}
-            onUpdate={(index, person) => setFormData((prev: any) => ({
-              ...prev,
-              relatedPersons: (prev.relatedPersons || []).map((p: RelatedPerson, i: number) => i === index ? person : p)
-            }))}
-            onRemove={(index) => setFormData((prev: any) => ({
-              ...prev,
-              relatedPersons: (prev.relatedPersons || []).filter((_: RelatedPerson, i: number) => i !== index)
-            }))}
+            relatedPersons={formData.relatedPersons}
+            onAdd={(person) => setFormData(prev => {
+              const newState = { ...prev, relatedPersons: [...prev.relatedPersons, person] }
+              if (person.birthDate) {
+                const birthdayDate: SpecialDate = {
+                  id: `birthday-${person.id}`,
+                  date: person.birthDate,
+                  type: 'birthday',
+                  description: `Aniversário de ${person.name}`,
+                  relatedPersonId: person.id,
+                  notes: ''
+                }
+                newState.specialDates = [...prev.specialDates, birthdayDate]
+              }
+              return newState
+            })}
+            onUpdate={(index, person) => setFormData(prev => {
+              const newState = {
+                ...prev,
+                relatedPersons: prev.relatedPersons.map((p, i) => i === index ? person : p)
+              }
+              const existingBirthdayIdx = prev.specialDates.findIndex(
+                d => d.relatedPersonId === person.id && d.type === 'birthday' && d.id.startsWith('birthday-')
+              )
+              if (person.birthDate) {
+                const birthdayDate: SpecialDate = {
+                  id: `birthday-${person.id}`,
+                  date: person.birthDate,
+                  type: 'birthday',
+                  description: `Aniversário de ${person.name}`,
+                  relatedPersonId: person.id,
+                  notes: existingBirthdayIdx >= 0 ? prev.specialDates[existingBirthdayIdx].notes : ''
+                }
+                if (existingBirthdayIdx >= 0) {
+                  newState.specialDates = prev.specialDates.map((d, i) => i === existingBirthdayIdx ? birthdayDate : d)
+                } else {
+                  newState.specialDates = [...prev.specialDates, birthdayDate]
+                }
+              } else if (existingBirthdayIdx >= 0) {
+                newState.specialDates = prev.specialDates.filter((_, i) => i !== existingBirthdayIdx)
+              }
+              return newState
+            })}
+            onRemove={(index) => setFormData(prev => {
+              const removedPerson = prev.relatedPersons[index]
+              return {
+                ...prev,
+                relatedPersons: prev.relatedPersons.filter((_, i) => i !== index),
+                specialDates: prev.specialDates.filter(
+                  d => !(d.relatedPersonId === removedPerson.id && d.type === 'birthday' && d.id.startsWith('birthday-'))
+                )
+              }
+            })}
           />
         </div>
 
-        <div className="space-y-4 p-6 border rounded-lg">
+        {/* Special Dates */}
+        <div className="space-y-4 p-4 sm:p-6 border rounded-lg">
           <SpecialDatesSection
-            specialDates={formData.specialDates || []}
-            relatedPersons={formData.relatedPersons || []}
-            onAdd={(date) => setFormData((prev: any) => ({
+            specialDates={formData.specialDates}
+            relatedPersons={formData.relatedPersons}
+            onAdd={(date) => setFormData(prev => ({
               ...prev,
-              specialDates: [...(prev.specialDates || []), date]
+              specialDates: [...prev.specialDates, date]
             }))}
-            onUpdate={(index, date) => setFormData((prev: any) => ({
+            onUpdate={(index, date) => setFormData(prev => ({
               ...prev,
-              specialDates: (prev.specialDates || []).map((d: SpecialDate, i: number) => i === index ? date : d)
+              specialDates: prev.specialDates.map((d, i) => i === index ? date : d)
             }))}
-            onRemove={(index) => setFormData((prev: any) => ({
+            onRemove={(index) => setFormData(prev => ({
               ...prev,
-              specialDates: (prev.specialDates || []).filter((_: SpecialDate, i: number) => i !== index)
+              specialDates: prev.specialDates.filter((_, i) => i !== index)
             }))}
           />
         </div>
 
-        <div className="space-y-4 p-6 border rounded-lg">
-          <h2 className="text-lg font-semibold">Notas</h2>
+        {/* Notes */}
+        <div className="space-y-4 p-4 sm:p-6 border rounded-lg">
+          <h2 className="text-lg font-semibold">Notas Adicionais</h2>
           <textarea
             name="notes"
             value={formData.notes}
             onChange={handleInputChange}
             rows={4}
             className="w-full px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
+            placeholder="Informações adicionais sobre o cliente..."
           />
         </div>
 
+        {/* Actions */}
         <div className="flex gap-3 pt-6">
           <Link href={`/clients/${clientId}`} className="flex-1">
             <Button variant="outline" className="w-full">Cancelar</Button>

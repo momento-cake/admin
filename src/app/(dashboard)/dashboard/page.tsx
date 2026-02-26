@@ -58,13 +58,13 @@ export default function DashboardPage() {
     return (
       <div className="space-y-6">
         <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-48 mb-2"></div>
-          <div className="h-4 bg-gray-200 rounded w-64"></div>
+          <div className="h-8 bg-muted rounded w-48 mb-2"></div>
+          <div className="h-4 bg-muted rounded w-64"></div>
         </div>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {[...Array(4)].map((_, i) => (
             <div key={i} className="animate-pulse">
-              <div className="h-32 bg-gray-200 rounded"></div>
+              <div className="h-32 bg-muted rounded"></div>
             </div>
           ))}
         </div>
@@ -76,7 +76,7 @@ export default function DashboardPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-foreground">Dashboard</h1>
         <p className="text-muted-foreground">
           Bem-vindo, {userModel.displayName || userModel.email}
         </p>
@@ -128,9 +128,9 @@ export default function DashboardPage() {
               {activities.map((activity) => (
                 <div key={activity.id} className="flex items-center space-x-3">
                   <div className={`w-2 h-2 rounded-full ${
-                    activity.status === 'success' ? 'bg-green-500' : 
-                    activity.status === 'info' ? 'bg-blue-500' :
-                    activity.status === 'warning' ? 'bg-yellow-500' : 'bg-red-500'
+                    activity.status === 'success' ? 'bg-success' :
+                    activity.status === 'info' ? 'bg-info' :
+                    activity.status === 'warning' ? 'bg-warning' : 'bg-destructive'
                   }`} />
                   <div className="flex-1">
                     <p className="text-sm text-foreground">{activity.message}</p>

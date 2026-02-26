@@ -136,8 +136,8 @@ export function SupplierForm({
             onClick={() => setValue('rating', star)}
             className={`p-1 rounded transition-colors ${
               star <= watchedRating
-                ? 'text-yellow-500 hover:text-yellow-600'
-                : 'text-gray-300 hover:text-gray-400'
+                ? 'text-warning hover:text-warning/80'
+                : 'text-muted-foreground/50 hover:text-muted-foreground'
             }`}
           >
             <Star className="h-5 w-5 fill-current" />
@@ -158,7 +158,7 @@ export function SupplierForm({
       <CardContent>
         <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
           {error && (
-            <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">
+            <div className="p-3 text-sm text-destructive bg-destructive/10 border border-destructive/30 rounded-md">
               {error}
             </div>
           )}
@@ -170,10 +170,10 @@ export function SupplierForm({
                 id="name"
                 {...register('name')}
                 placeholder="Ex: Distribuidora ABC"
-                className={errors.name ? 'border-red-500 focus:border-red-500' : ''}
+                className={errors.name ? 'border-destructive focus:border-destructive' : ''}
               />
               {errors.name && (
-                <p className="text-sm text-red-600">{errors.name.message}</p>
+                <p className="text-sm text-destructive">{errors.name.message}</p>
               )}
             </div>
 
@@ -185,7 +185,7 @@ export function SupplierForm({
                 placeholder="Ex: João Silva"
               />
               {errors.contactPerson && (
-                <p className="text-sm text-red-600">{errors.contactPerson.message}</p>
+                <p className="text-sm text-destructive">{errors.contactPerson.message}</p>
               )}
             </div>
 
@@ -195,10 +195,10 @@ export function SupplierForm({
                 id="phone"
                 {...register('phone')}
                 placeholder="Ex: (11) 99999-9999"
-                className={errors.phone ? 'border-red-500 focus:border-red-500' : ''}
+                className={errors.phone ? 'border-destructive focus:border-destructive' : ''}
               />
               {errors.phone && (
-                <p className="text-sm text-red-600">{errors.phone.message}</p>
+                <p className="text-sm text-destructive">{errors.phone.message}</p>
               )}
             </div>
 
@@ -209,10 +209,10 @@ export function SupplierForm({
                 type="email"
                 {...register('email')}
                 placeholder="Ex: contato@fornecedor.com"
-                className={errors.email ? 'border-red-500 focus:border-red-500' : ''}
+                className={errors.email ? 'border-destructive focus:border-destructive' : ''}
               />
               {errors.email && (
-                <p className="text-sm text-red-600">{errors.email.message}</p>
+                <p className="text-sm text-destructive">{errors.email.message}</p>
               )}
             </div>
           </div>
@@ -227,14 +227,14 @@ export function SupplierForm({
                   id="cpfCnpj"
                   {...register('cpfCnpj')}
                   placeholder="Ex: 123.456.789-00 ou 12.345.678/0001-00"
-                  className={errors.cpfCnpj ? 'border-red-500 focus:border-red-500' : ''}
+                  className={errors.cpfCnpj ? 'border-destructive focus:border-destructive' : ''}
                   onChange={(e) => {
                     const formatted = formatCPFOrCNPJ(e.target.value);
                     setValue('cpfCnpj', formatted);
                   }}
                 />
                 {errors.cpfCnpj && (
-                  <p className="text-sm text-red-600">{errors.cpfCnpj.message}</p>
+                  <p className="text-sm text-destructive">{errors.cpfCnpj.message}</p>
                 )}
               </div>
 
@@ -246,7 +246,7 @@ export function SupplierForm({
                   placeholder="Ex: 123.456.789.123"
                 />
                 {errors.inscricaoEstadual && (
-                  <p className="text-sm text-red-600">{errors.inscricaoEstadual.message}</p>
+                  <p className="text-sm text-destructive">{errors.inscricaoEstadual.message}</p>
                 )}
               </div>
             </div>
@@ -262,14 +262,14 @@ export function SupplierForm({
                   id="cep"
                   {...register('cep')}
                   placeholder="12345-678"
-                  className={errors.cep ? 'border-red-500 focus:border-red-500' : ''}
+                  className={errors.cep ? 'border-destructive focus:border-destructive' : ''}
                   onChange={(e) => {
                     const formatted = formatCEP(e.target.value);
                     setValue('cep', formatted);
                   }}
                 />
                 {errors.cep && (
-                  <p className="text-sm text-red-600">{errors.cep.message}</p>
+                  <p className="text-sm text-destructive">{errors.cep.message}</p>
                 )}
               </div>
 
@@ -281,7 +281,7 @@ export function SupplierForm({
                   placeholder="Ex: SP"
                 />
                 {errors.estado && (
-                  <p className="text-sm text-red-600">{errors.estado.message}</p>
+                  <p className="text-sm text-destructive">{errors.estado.message}</p>
                 )}
               </div>
 
@@ -293,7 +293,7 @@ export function SupplierForm({
                   placeholder="Ex: São Paulo"
                 />
                 {errors.cidade && (
-                  <p className="text-sm text-red-600">{errors.cidade.message}</p>
+                  <p className="text-sm text-destructive">{errors.cidade.message}</p>
                 )}
               </div>
             </div>
@@ -307,7 +307,7 @@ export function SupplierForm({
                   placeholder="Ex: Centro"
                 />
                 {errors.bairro && (
-                  <p className="text-sm text-red-600">{errors.bairro.message}</p>
+                  <p className="text-sm text-destructive">{errors.bairro.message}</p>
                 )}
               </div>
 
@@ -319,7 +319,7 @@ export function SupplierForm({
                   placeholder="Ex: Rua das Flores"
                 />
                 {errors.endereco && (
-                  <p className="text-sm text-red-600">{errors.endereco.message}</p>
+                  <p className="text-sm text-destructive">{errors.endereco.message}</p>
                 )}
               </div>
             </div>
@@ -333,7 +333,7 @@ export function SupplierForm({
                   placeholder="Ex: 123"
                 />
                 {errors.numero && (
-                  <p className="text-sm text-red-600">{errors.numero.message}</p>
+                  <p className="text-sm text-destructive">{errors.numero.message}</p>
                 )}
               </div>
 
@@ -345,7 +345,7 @@ export function SupplierForm({
                   placeholder="Ex: Apto 45, Bloco B"
                 />
                 {errors.complemento && (
-                  <p className="text-sm text-red-600">{errors.complemento.message}</p>
+                  <p className="text-sm text-destructive">{errors.complemento.message}</p>
                 )}
               </div>
             </div>
@@ -360,7 +360,7 @@ export function SupplierForm({
                 rows={2}
               />
               {errors.address && (
-                <p className="text-sm text-red-600">{errors.address.message}</p>
+                <p className="text-sm text-destructive">{errors.address.message}</p>
               )}
               <p className="text-xs text-muted-foreground">
                 Use este campo se preferir inserir o endereço em formato livre ao invés dos campos estruturados acima.
@@ -372,11 +372,11 @@ export function SupplierForm({
             <Label>Avaliação *</Label>
             {renderStarRating()}
             {errors.rating && (
-              <p className="text-sm text-red-600">{errors.rating.message}</p>
+              <p className="text-sm text-destructive">{errors.rating.message}</p>
             )}
           </div>
 
-          <div className={`space-y-4 p-4 rounded-md ${errors.categories ? 'border-2 border-red-500 bg-red-50' : 'border border-gray-200 bg-gray-50'}`}>
+          <div className={`space-y-4 p-4 rounded-md ${errors.categories ? 'border-2 border-destructive bg-destructive/10' : 'border border-border bg-muted'}`}>
             <Label>Categorias de Produtos *</Label>
             
             {/* Selected Categories */}
@@ -447,7 +447,7 @@ export function SupplierForm({
             </div>
 
             {errors.categories && (
-              <p className="text-sm text-red-600">{errors.categories.message}</p>
+              <p className="text-sm text-destructive">{errors.categories.message}</p>
             )}
           </div>
 

@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
     console.log('➕ POST /api/folders - Creating folder')
 
     const body = await request.json()
-    console.log('Request body:', body)
+    // Request body log removed to avoid logging potentially sensitive data
 
     // Validate the folder data
     const validationResult = createFolderSchema.safeParse(body)

@@ -1,11 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { fetchClient, updateClient, deleteClient } from '@/lib/clients'
 import { updateClientSchema } from '@/lib/validators/client'
+import { getAuthFromRequest, canPerformActionFromRequest, unauthorizedResponse, forbiddenResponse } from '@/lib/api-auth'
 
 // GET /api/clients/[id] - Get single client
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   try {
+    const auth = await getAuthFromRequest(request)
+    if (!auth) {
+      return unauthorizedResponse()
+    }
+
+    if (!canPerformActionFromRequest(auth, 'clients', 'view')) {
+      return forbiddenResponse('Sem permissão para visualizar clientes')
+    }
+
     console.log(`🔍 GET /api/clients/${id} - Fetching client`)
 
     if (!id) {
@@ -17,7 +27,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     const client = await fetchClient(id)
 
-    console.log(`✅ Successfully fetched client: ${client.name} (${client.id})`)
+    console.log(`✅ Successfully fetched client: ${client.id}`)
 
     return NextResponse.json({
       success: true,
@@ -47,6 +57,15 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   try {
+    const auth = await getAuthFromRequest(request)
+    if (!auth) {
+      return unauthorizedResponse()
+    }
+
+    if (!canPerformActionFromRequest(auth, 'clients', 'update')) {
+      return forbiddenResponse('Sem permissão para editar clientes')
+    }
+
     console.log(`🔄 PUT /api/clients/${id} - Updating client`)
 
     if (!id) {
@@ -57,7 +76,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     const body = await request.json()
-    console.log('Update request body:', body)
+    // Request body log removed to avoid logging PII (name, CPF, phone, email)
 
     // Add the ID to the body for validation
     const dataWithId = { ...body, id }
@@ -83,7 +102,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
     const client = await updateClient(id, updateData as any)
 
-    console.log(`✅ Successfully updated client: ${client.name} (${client.id})`)
+    console.log(`✅ Successfully updated client: ${client.id}`)
 
     return NextResponse.json({
       success: true,
@@ -114,6 +133,15 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   try {
+    const auth = await getAuthFromRequest(request)
+    if (!auth) {
+      return unauthorizedResponse()
+    }
+
+    if (!canPerformActionFromRequest(auth, 'clients', 'delete')) {
+      return forbiddenResponse('Sem permissão para excluir clientes')
+    }
+
     console.log(`🗑️ DELETE /api/clients/${id} - Deleting client`)
 
     if (!id) {

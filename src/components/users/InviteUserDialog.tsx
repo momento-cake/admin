@@ -174,7 +174,7 @@ export function InviteUserDialog({ open, onClose }: InviteUserDialogProps) {
               disabled={isLoading}
             />
             {form.formState.errors.email && (
-              <p className="text-sm text-red-600">{form.formState.errors.email.message}</p>
+              <p className="text-sm text-destructive">{form.formState.errors.email.message}</p>
             )}
           </div>
 
@@ -187,7 +187,7 @@ export function InviteUserDialog({ open, onClose }: InviteUserDialogProps) {
               disabled={isLoading}
             />
             {form.formState.errors.name && (
-              <p className="text-sm text-red-600">{form.formState.errors.name.message}</p>
+              <p className="text-sm text-destructive">{form.formState.errors.name.message}</p>
             )}
           </div>
 
@@ -203,7 +203,7 @@ export function InviteUserDialog({ open, onClose }: InviteUserDialogProps) {
               </SelectContent>
             </Select>
             {form.formState.errors.role && (
-              <p className="text-sm text-red-600">{form.formState.errors.role.message}</p>
+              <p className="text-sm text-destructive">{form.formState.errors.role.message}</p>
             )}
           </div>
 

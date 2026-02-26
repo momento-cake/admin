@@ -59,9 +59,9 @@ export function UsersList() {
 
   const getRoleIcon = (role: string) => {
     return role === 'admin' ? (
-      <Shield className="h-4 w-4 text-blue-500" />
+      <Shield className="h-4 w-4 text-primary" />
     ) : (
-      <UserCog className="h-4 w-4 text-gray-500" />
+      <UserCog className="h-4 w-4 text-muted-foreground" />
     )
   }
 
@@ -175,12 +175,12 @@ export function UsersList() {
                   <div className="flex items-center space-x-2">
                     {user.isActive ? (
                       <>
-                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <CheckCircle className="h-4 w-4 text-success" />
                         <Badge variant="secondary">Ativo</Badge>
                       </>
                     ) : (
                       <>
-                        <XCircle className="h-4 w-4 text-red-500" />
+                        <XCircle className="h-4 w-4 text-destructive" />
                         <Badge variant="destructive">Inativo</Badge>
                       </>
                     )}

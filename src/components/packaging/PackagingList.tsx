@@ -228,7 +228,7 @@ export function PackagingList({
     return (
       <div className="flex items-center justify-center py-12">
         <div className="text-center">
-          <p className="text-red-600 mb-4">{error}</p>
+          <p className="text-destructive mb-4">{error}</p>
           <Button onClick={onRefresh}>Tentar Novamente</Button>
         </div>
       </div>
@@ -339,7 +339,7 @@ export function PackagingList({
           } : undefined}
         />
       ) : (
-        <div className="bg-white rounded-lg border p-6 space-y-4">
+        <div className="bg-card rounded-lg border p-6 space-y-4">
           <div className="flex justify-between items-center">
             <p className="text-sm text-muted-foreground">
               {filteredAndSortedPackagings.length} embalagem{filteredAndSortedPackagings.length !== 1 ? 's' : ''} encontrada{filteredAndSortedPackagings.length !== 1 ? 's' : ''}
@@ -421,7 +421,7 @@ export function PackagingList({
                             onClick={() => handleDelete(packaging)}
                             title="Deletar"
                           >
-                            <Trash2 className="h-4 w-4 text-red-500" />
+                            <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>
                         )}
                       </div>

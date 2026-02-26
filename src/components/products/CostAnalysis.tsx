@@ -55,11 +55,11 @@ export function CostAnalysis({ product, className }: CostAnalysisProps) {
   const getMarginColor = (viability: 'good' | 'warning' | 'poor') => {
     switch (viability) {
       case 'good':
-        return 'text-green-600';
+        return 'text-success';
       case 'warning':
-        return 'text-yellow-600';
+        return 'text-warning';
       case 'poor':
-        return 'text-red-600';
+        return 'text-destructive';
     }
   };
 
@@ -144,7 +144,7 @@ export function CostAnalysis({ product, className }: CostAnalysisProps) {
         <div className="space-y-3 bg-muted/50 p-4 rounded-lg">
           <h3 className="font-semibold text-sm">Análise de Precificação</h3>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <p className="text-xs text-muted-foreground mb-1">Preço Atual</p>
               <p className="text-lg font-semibold font-mono">
@@ -154,7 +154,7 @@ export function CostAnalysis({ product, className }: CostAnalysisProps) {
 
             <div>
               <p className="text-xs text-muted-foreground mb-1">Preço Sugerido</p>
-              <p className="text-lg font-semibold font-mono text-blue-600">
+              <p className="text-lg font-semibold font-mono text-primary">
                 {formatPrice(product.suggestedPrice || 0)}
               </p>
             </div>
@@ -168,7 +168,7 @@ export function CostAnalysis({ product, className }: CostAnalysisProps) {
 
             <div>
               <p className="text-xs text-muted-foreground mb-1">Lucro</p>
-              <p className="text-lg font-semibold font-mono text-green-600">
+              <p className="text-lg font-semibold font-mono text-success">
                 {formatPrice((product.price || 0) - totalCost)}
               </p>
             </div>
@@ -195,17 +195,17 @@ export function CostAnalysis({ product, className }: CostAnalysisProps) {
 
             {/* Margin Guidance */}
             {marginViability === 'poor' && (
-              <p className="text-xs text-red-600">
+              <p className="text-xs text-destructive">
                 Margem muito baixa. Considere aumentar o preço ou reduzir custos.
               </p>
             )}
             {marginViability === 'warning' && (
-              <p className="text-xs text-yellow-600">
+              <p className="text-xs text-warning">
                 Margem abaixo do ideal (10-20%). Considere revisar a precificação.
               </p>
             )}
             {marginViability === 'good' && (
-              <p className="text-xs text-green-600">
+              <p className="text-xs text-success">
                 Margem saudável. Ótimo para sustentabilidade do negócio.
               </p>
             )}
@@ -214,9 +214,9 @@ export function CostAnalysis({ product, className }: CostAnalysisProps) {
 
         {/* Price Recommendation */}
         {product.price && product.suggestedPrice && product.price < product.suggestedPrice && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-            <p className="text-xs font-medium text-blue-900 mb-1">Recomendação de Preço</p>
-            <p className="text-sm text-blue-800">
+          <div className="bg-primary/5 border border-primary rounded-lg p-3">
+            <p className="text-xs font-medium text-primary mb-1">Recomendação de Preço</p>
+            <p className="text-sm text-primary">
               O preço sugerido ({formatPrice(product.suggestedPrice)}) é superior ao preço atual.
               Isso garantiria uma margem de lucro saudável.
             </p>

@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import type { UserRole } from '@/types'
 
 // Protected routes that require authentication
 const protectedRoutes = [
@@ -30,66 +29,6 @@ const publicRoutes = [
   '/api/public'
 ]
 
-/**
- * Default feature permissions map (duplicated from permissions.ts for edge runtime compatibility)
- *
- * NOTE: This is the MINIMUM permissions check. Custom permissions are stored in Firestore
- * and enforced at the component/API level, not in middleware.
- *
- * - Admin: ALL features
- * - Atendente: Only dashboard and clients by default
- *   (additional permissions are granted via customPermissions in Firestore)
- */
-const DEFAULT_FEATURE_PERMISSIONS: Record<string, UserRole[]> = {
-  dashboard: ['admin', 'atendente'],
-  clients: ['admin', 'atendente'],
-  users: ['admin'],
-  ingredients: ['admin'],
-  recipes: ['admin'],
-  products: ['admin'],
-  packaging: ['admin'],
-  orders: ['admin'],
-  reports: ['admin'],
-  settings: ['admin'],
-  images: ['admin'],
-}
-
-// Path to feature mapping
-const PATH_TO_FEATURE: Record<string, string> = {
-  '/dashboard': 'dashboard',
-  '/users': 'users',
-  '/clients': 'clients',
-  '/ingredients': 'ingredients',
-  '/recipes': 'recipes',
-  '/products': 'products',
-  '/packaging': 'packaging',
-  '/orders': 'orders',
-  '/reports': 'reports',
-  '/settings': 'settings',
-  '/images': 'images',
-}
-
-function canAccessPath(role: UserRole, path: string): boolean {
-  const normalizedPath = path.replace(/\/$/, '')
-
-  // Find feature for path
-  for (const [pathPrefix, feature] of Object.entries(PATH_TO_FEATURE)) {
-    if (normalizedPath === pathPrefix || normalizedPath.startsWith(pathPrefix + '/')) {
-      return DEFAULT_FEATURE_PERMISSIONS[feature]?.includes(role) ?? false
-    }
-  }
-
-  // Default to allowed for routes not in the map
-  return true
-}
-
-function getDefaultRedirectPath(role: UserRole): string {
-  if (role === 'atendente') {
-    return '/clients'
-  }
-  return '/dashboard'
-}
-
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
@@ -117,9 +56,11 @@ export function middleware(request: NextRequest) {
     pathname.startsWith(route)
   )
 
-  // Get authentication status from cookies
+  // The auth-token cookie contains a real Firebase ID token that is verified
+  // server-side in api-auth.ts using Firebase Admin SDK. Middleware only checks
+  // for its presence to gate navigation; role-based permission enforcement
+  // happens server-side in API routes and client-side in page components.
   const authToken = request.cookies.get('auth-token')?.value
-  const userRole = request.cookies.get('user-role')?.value as UserRole | undefined
 
   if (isProtectedRoute) {
     // If no auth token, redirect to login
@@ -127,14 +68,6 @@ export function middleware(request: NextRequest) {
       const loginUrl = new URL('/login', request.url)
       loginUrl.searchParams.set('redirect', pathname)
       return NextResponse.redirect(loginUrl)
-    }
-
-    // Check feature access based on role
-    if (userRole && !canAccessPath(userRole, pathname)) {
-      const redirectPath = getDefaultRedirectPath(userRole)
-      const redirectUrl = new URL(redirectPath, request.url)
-      redirectUrl.searchParams.set('access_denied', 'true')
-      return NextResponse.redirect(redirectUrl)
     }
   }
 

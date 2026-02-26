@@ -34,7 +34,7 @@ export function Header() {
   }
 
   return (
-    <header className="bg-background border-b border-border sticky top-0 z-40">
+    <header className="backdrop-blur-md bg-background/80 border-b border-border shadow-sm sticky top-0 z-40">
       <div className="flex h-16 items-center gap-4 px-4">
         {/* Mobile menu */}
         <Sheet>
@@ -76,7 +76,7 @@ export function Header() {
               <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                 <Avatar className="h-8 w-8">
                   <AvatarImage src={user.photoURL || ''} alt={user.displayName || ''} />
-                  <AvatarFallback>
+                  <AvatarFallback className="bg-primary/20 text-primary">
                     {getInitials(user.displayName || undefined, user.email || undefined)}
                   </AvatarFallback>
                 </Avatar>

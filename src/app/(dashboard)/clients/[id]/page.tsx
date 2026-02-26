@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft, Loader2, Trash2 } from 'lucide-react'
 import { Client } from '@/types/client'
+import { usePermissions } from '@/hooks/usePermissions'
 
 export default function ClientDetailPage() {
   const params = useParams()
@@ -15,6 +16,9 @@ export default function ClientDetailPage() {
   const [error, setError] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const { canPerformAction } = usePermissions()
+  const canUpdate = canPerformAction('clients', 'update')
+  const canDelete = canPerformAction('clients', 'delete')
 
   useEffect(() => {
     fetchClient()
@@ -70,26 +74,30 @@ export default function ClientDetailPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex items-center gap-3 min-w-0">
           <Link href="/clients">
             <Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button>
           </Link>
-          <div>
-            <h1 className="text-3xl font-bold">{client.name}</h1>
+          <div className="min-w-0">
+            <h1 className="text-2xl sm:text-3xl font-bold truncate">{client.name}</h1>
             <p className="text-muted-foreground">{client.type === 'person' ? 'Pessoa Física' : 'Pessoa Jurídica'}</p>
           </div>
         </div>
         <div className="flex gap-2">
-          <Link href={`/clients/${clientId}/edit`}><Button>Editar</Button></Link>
-          <Button variant="destructive" size="icon" onClick={() => setShowDeleteConfirm(true)}>
-            <Trash2 className="h-4 w-4" />
-          </Button>
+          {canUpdate && (
+            <Link href={`/clients/${clientId}/edit`}><Button>Editar</Button></Link>
+          )}
+          {canDelete && (
+            <Button variant="destructive" size="icon" onClick={() => setShowDeleteConfirm(true)}>
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       </div>
 
       {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-background p-6 rounded-lg max-w-sm w-full mx-4">
             <h2 className="text-xl font-semibold mb-2">Remover Cliente?</h2>
             <p className="text-muted-foreground mb-6">Tem certeza? Esta ação pode ser desfeita.</p>
@@ -159,7 +167,7 @@ export default function ClientDetailPage() {
               {client.addresses.map(addr => (
                 <div key={addr.id} className="space-y-1 text-sm border-b border-border pb-3 last:border-0 last:pb-0">
                   {addr.label && (
-                    <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+                    <span className="px-2 py-0.5 bg-primary/10 text-primary rounded-full text-xs font-medium">
                       {addr.label}
                     </span>
                   )}
@@ -230,7 +238,7 @@ export default function ClientDetailPage() {
           <h2 className="text-lg font-semibold mb-4">Tags</h2>
           <div className="flex flex-wrap gap-2">
             {client.tags.map((tag, idx) => (
-              <span key={idx} className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
+              <span key={idx} className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm font-medium">
                 {tag}
               </span>
             ))}

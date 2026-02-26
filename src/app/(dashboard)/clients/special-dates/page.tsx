@@ -38,44 +38,44 @@ export default function SpecialDatesPage() {
   }, [])
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-muted">
       {/* Page Container */}
       <div className="max-w-4xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8">
           {/* Breadcrumb */}
-          <nav className="flex items-center gap-2 text-sm text-gray-600 mb-4">
-            <Link href="/clients" className="hover:text-gray-900">
+          <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
+            <Link href="/clients" className="hover:text-foreground">
               Clientes
             </Link>
             <span>/</span>
-            <span className="text-gray-900 font-medium">Datas Especiais</span>
+            <span className="text-foreground font-medium">Datas Especiais</span>
           </nav>
 
           {/* Title and Description */}
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Datas Especiais</h1>
-            <p className="text-gray-600 mt-2">
+            <h1 className="text-3xl font-bold text-foreground">Datas Especiais</h1>
+            <p className="text-muted-foreground mt-2">
               Aniversários e datas importantes dos seus clientes
             </p>
           </div>
         </div>
 
         {/* Content Area */}
-        <div className="bg-white rounded-lg shadow">
+        <div className="bg-card rounded-lg shadow">
           <div className="p-6">
             {/* Error State */}
             {error && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-                <p className="text-red-800 font-medium">Erro</p>
-                <p className="text-red-700 text-sm mt-1">{error}</p>
+              <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-4 mb-6">
+                <p className="text-destructive font-medium">Erro</p>
+                <p className="text-destructive text-sm mt-1">{error}</p>
               </div>
             )}
 
             {/* Status Info */}
             {!error && (
-              <div className="mb-6 pb-6 border-b border-gray-200">
-                <p className="text-sm text-gray-600">
+              <div className="mb-6 pb-6 border-b border-border">
+                <p className="text-sm text-muted-foreground">
                   {isLoading
                     ? 'Carregando datas especiais...'
                     : `Mostrando ${clients.length} cliente${clients.length === 1 ? '' : 's'} com datas especiais`}

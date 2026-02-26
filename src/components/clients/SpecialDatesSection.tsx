@@ -141,7 +141,7 @@ export function SpecialDatesSection({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between relative z-0">
-        <h3 className="text-lg font-semibold text-gray-900">Datas Especiais</h3>
+        <h3 className="text-lg font-semibold text-foreground">Datas Especiais</h3>
         {!isAdding && (
           <Button
             type="button"
@@ -169,22 +169,22 @@ export function SpecialDatesSection({
             const actualIndex = specialDates.findIndex(d => d.id === date.id)
 
             return (
-              <Card key={date.id} className="p-3 flex items-start justify-between gap-4 hover:bg-gray-50 transition">
+              <Card key={date.id} className="p-3 flex items-start justify-between gap-4 hover:bg-muted transition">
                 <div className="flex gap-3 flex-1 min-w-0">
                   <div className="text-xl flex-shrink-0">
                     {getDateTypeIcon(date.type)}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-baseline gap-2 flex-wrap">
-                      <p className="font-medium text-gray-900">{date.description}</p>
-                      <p className="text-sm text-gray-600">
+                      <p className="font-medium text-foreground">{date.description}</p>
+                      <p className="text-sm text-muted-foreground">
                         {formatDate(date.date)}
                       </p>
-                      {daysUntil === 0 && <span className="text-red-600 font-semibold text-xs">Hoje! 🎉</span>}
-                      {daysUntil === 1 && <span className="text-orange-600 text-xs">Amanhã!</span>}
-                      {daysUntil > 1 && daysUntil <= 30 && <span className="text-blue-600 text-xs">Em {daysUntil} dias</span>}
+                      {daysUntil === 0 && <span className="text-destructive font-semibold text-xs">Hoje! 🎉</span>}
+                      {daysUntil === 1 && <span className="text-warning text-xs">Amanhã!</span>}
+                      {daysUntil > 1 && daysUntil <= 30 && <span className="text-primary text-xs">Em {daysUntil} dias</span>}
                     </div>
-                    <div className="text-sm text-gray-500 flex items-center gap-2 flex-wrap mt-0.5">
+                    <div className="text-sm text-muted-foreground flex items-center gap-2 flex-wrap mt-0.5">
                       <span>{getDateTypeLabel(date.type)}</span>
                       {relatedPerson && <span>→ {relatedPerson}</span>}
                       {date.notes && <span className="italic truncate">({date.notes})</span>}
@@ -197,7 +197,7 @@ export function SpecialDatesSection({
                     variant="ghost"
                     size="sm"
                     onClick={() => handleEdit(actualIndex)}
-                    className="text-blue-600 hover:text-blue-700"
+                    className="text-primary hover:text-primary/80"
                   >
                     <Edit2 className="w-4 h-4" />
                   </Button>
@@ -206,7 +206,7 @@ export function SpecialDatesSection({
                     variant="ghost"
                     size="sm"
                     onClick={() => onRemove(actualIndex)}
-                    className="text-red-600 hover:text-red-700"
+                    className="text-destructive hover:text-destructive/80"
                   >
                     <Trash2 className="w-4 h-4" />
                   </Button>
@@ -219,29 +219,29 @@ export function SpecialDatesSection({
 
       {/* Form for Adding/Editing */}
       {isAdding && (
-        <Card className="p-4 bg-gray-50">
+        <Card className="p-4 bg-muted">
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Data *
                 </label>
                 <input
                   type="date"
                   value={formData.date}
                   onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Tipo de Data *
                 </label>
                 <select
                   value={formData.type}
                   onChange={(e) => setFormData({ ...formData, type: e.target.value as SpecialDateType })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring"
                 >
                   {SPECIAL_DATE_TYPES.map(type => (
                     <option key={type.value} value={type.value}>
@@ -252,27 +252,27 @@ export function SpecialDatesSection({
               </div>
 
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Descrição *
                 </label>
                 <input
                   type="text"
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring"
                   placeholder="Ex: Aniversário do João, Aniversário de Casamento"
                 />
               </div>
 
               {relatedPersons.length > 0 && (
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-foreground mb-1">
                     Pessoa Relacionada (Opcional)
                   </label>
                   <select
                     value={formData.relatedPersonId || ''}
                     onChange={(e) => setFormData({ ...formData, relatedPersonId: e.target.value || undefined })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring"
                   >
                     <option value="">Nenhuma</option>
                     {relatedPersons.map(person => (
@@ -285,13 +285,13 @@ export function SpecialDatesSection({
               )}
 
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Observações
                 </label>
                 <textarea
                   value={formData.notes || ''}
                   onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring"
                   placeholder="Observações ou detalhes adicionais"
                   rows={2}
                 />
@@ -312,7 +312,7 @@ export function SpecialDatesSection({
               </Button>
               <Button
                 type="button"
-                className="bg-blue-600 hover:bg-blue-700 text-white"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground"
                 onClick={(e) => {
                   e.preventDefault()
                   e.stopPropagation()
@@ -327,7 +327,7 @@ export function SpecialDatesSection({
       )}
 
       {specialDates.length === 0 && !isAdding && (
-        <p className="text-sm text-gray-500 italic">
+        <p className="text-sm text-muted-foreground italic">
           Nenhuma data especial adicionada
         </p>
       )}

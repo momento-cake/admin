@@ -45,13 +45,13 @@ const getUnitDisplayName = (unit: IngredientUnit): string => {
 const getDifficultyColor = (difficulty: string) => {
   switch (difficulty) {
     case 'easy':
-      return 'bg-green-100 text-green-800';
+      return 'bg-success/10 text-success';
     case 'medium':
-      return 'bg-yellow-100 text-yellow-800';
+      return 'bg-warning/10 text-warning';
     case 'hard':
-      return 'bg-red-100 text-red-800';
+      return 'bg-destructive/10 text-destructive';
     default:
-      return 'bg-gray-100 text-gray-800';
+      return 'bg-muted text-muted-foreground';
   }
 };
 
@@ -109,8 +109,8 @@ export function RecipeDetailView({ recipe, onClose, onEdit }: RecipeDetailViewPr
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Clock className="h-5 w-5 text-blue-600" />
+              <div className="p-2 bg-primary/10 rounded-lg">
+                <Clock className="h-5 w-5 text-primary" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Tempo de Preparo</p>
@@ -123,8 +123,8 @@ export function RecipeDetailView({ recipe, onClose, onEdit }: RecipeDetailViewPr
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <Users className="h-5 w-5 text-green-600" />
+              <div className="p-2 bg-success/10 rounded-lg">
+                <Users className="h-5 w-5 text-success" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Porções</p>
@@ -137,8 +137,8 @@ export function RecipeDetailView({ recipe, onClose, onEdit }: RecipeDetailViewPr
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <Scale className="h-5 w-5 text-purple-600" />
+              <div className="p-2 bg-accent/20 rounded-lg">
+                <Scale className="h-5 w-5 text-accent-foreground" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Rendimento</p>
@@ -153,8 +153,8 @@ export function RecipeDetailView({ recipe, onClose, onEdit }: RecipeDetailViewPr
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-orange-100 rounded-lg">
-                <DollarSign className="h-5 w-5 text-orange-600" />
+              <div className="p-2 bg-warning/10 rounded-lg">
+                <DollarSign className="h-5 w-5 text-warning" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Custo por Porção</p>
@@ -184,7 +184,7 @@ export function RecipeDetailView({ recipe, onClose, onEdit }: RecipeDetailViewPr
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <span className="text-sm text-muted-foreground">Categoria:</span>
                 <p className="font-medium">{getCategoryDisplayName(recipe.category)}</p>
@@ -234,7 +234,7 @@ export function RecipeDetailView({ recipe, onClose, onEdit }: RecipeDetailViewPr
           </CardHeader>
           <CardContent className="space-y-3">
             {error && (
-              <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 p-2 rounded">
+              <div className="flex items-center gap-2 text-sm text-destructive bg-destructive/10 p-2 rounded">
                 <AlertCircle className="h-4 w-4" />
                 {error}
               </div>
@@ -267,7 +267,7 @@ export function RecipeDetailView({ recipe, onClose, onEdit }: RecipeDetailViewPr
             </div>
             <div className="flex justify-between border-t pt-2">
               <span className="text-sm text-muted-foreground">Preço Sugerido:</span>
-              <span className="font-semibold text-green-600">{formatPrice(displayCosts.suggestedPrice)}</span>
+              <span className="font-semibold text-success">{formatPrice(displayCosts.suggestedPrice)}</span>
             </div>
             
             {costBreakdown && (
@@ -305,11 +305,11 @@ export function RecipeDetailView({ recipe, onClose, onEdit }: RecipeDetailViewPr
                   return (
                     <div key={item.id || index} className="flex items-center justify-between p-3 border rounded-lg">
                       <div className="flex items-center gap-3">
-                        <div className="p-2 bg-gray-100 rounded-lg">
+                        <div className="p-2 bg-muted rounded-lg">
                           {item.type === 'ingredient' ? (
-                            <Package className="h-4 w-4 text-gray-600" />
+                            <Package className="h-4 w-4 text-muted-foreground" />
                           ) : (
-                            <ChefHat className="h-4 w-4 text-gray-600" />
+                            <ChefHat className="h-4 w-4 text-muted-foreground" />
                           )}
                         </div>
                         <div>

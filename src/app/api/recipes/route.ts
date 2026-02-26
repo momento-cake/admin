@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
     console.log('📡 API: POST /api/recipes');
     
     const body = await request.json();
-    console.log('📦 Recipe data received:', body);
+    // Request body log removed to avoid logging potentially sensitive data
     
     // Validate required fields
     if (!body.name || !body.category || !body.difficulty) {

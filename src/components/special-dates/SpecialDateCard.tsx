@@ -30,27 +30,27 @@ export function SpecialDateCard({ entry }: SpecialDateCardProps) {
             {/* Client name (clickable) */}
             <Link
               href={`/clients/${entry.clientId}`}
-              className="text-base font-semibold text-blue-600 hover:text-blue-800 hover:underline block truncate"
+              className="text-base font-semibold text-primary hover:text-primary/80 hover:underline block truncate"
             >
               {entry.clientName}
             </Link>
 
             {/* Date type and relative date */}
             <div className="flex items-center gap-2 mt-1 flex-wrap">
-              <span className="text-sm font-medium text-gray-700">{typeLabel}</span>
+              <span className="text-sm font-medium text-foreground">{typeLabel}</span>
               {entry.relatedPersonName && (
-                <span className="text-sm text-gray-600">{relatedPersonLabel}</span>
+                <span className="text-sm text-muted-foreground">{relatedPersonLabel}</span>
               )}
-              <span className="text-sm text-gray-500">•</span>
-              <span className="text-sm font-medium text-orange-600">{entry.relativeDate}</span>
+              <span className="text-sm text-muted-foreground">•</span>
+              <span className="text-sm font-medium text-warning">{entry.relativeDate}</span>
             </div>
 
             {/* Formatted date */}
-            <div className="text-sm text-gray-500 mt-1">{entry.displayDate}</div>
+            <div className="text-sm text-muted-foreground mt-1">{entry.displayDate}</div>
 
             {/* Notes if present */}
             {entry.notes && (
-              <div className="text-sm text-gray-600 mt-2 italic">
+              <div className="text-sm text-muted-foreground mt-2 italic">
                 Notas: {entry.notes}
               </div>
             )}
@@ -60,7 +60,7 @@ export function SpecialDateCard({ entry }: SpecialDateCardProps) {
         {/* Right side: Navigation arrow */}
         <Link
           href={`/clients/${entry.clientId}`}
-          className="flex-shrink-0 text-gray-400 hover:text-gray-600 transition-colors text-xl"
+          className="flex-shrink-0 text-muted-foreground/70 hover:text-muted-foreground transition-colors text-xl"
           aria-label="Ir para detalhes do cliente"
         >
           →

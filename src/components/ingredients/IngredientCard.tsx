@@ -56,8 +56,8 @@ export function IngredientCard({
       fruits: 'bg-red-100 text-red-800',
       chocolate: 'bg-amber-100 text-amber-800',
       spices: 'bg-emerald-100 text-emerald-800',
-      preservatives: 'bg-gray-100 text-gray-800',
-      other: 'bg-slate-100 text-slate-800'
+      preservatives: 'bg-muted text-muted-foreground',
+      other: 'bg-muted text-muted-foreground'
     };
     
     return colors[category as keyof typeof colors] || colors.other;
@@ -121,7 +121,7 @@ export function IngredientCard({
                 <Edit className="h-4 w-4 mr-2" />
                 Editar
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleDelete} className="text-red-600">
+              <DropdownMenuItem onClick={handleDelete} className="text-destructive">
                 <Trash2 className="h-4 w-4 mr-2" />
                 Remover
               </DropdownMenuItem>
@@ -246,7 +246,7 @@ export function IngredientCardCompact({
                     e.stopPropagation();
                     onDelete?.(ingredient);
                   }} 
-                  className="text-red-600"
+                  className="text-destructive"
                 >
                   <Trash2 className="h-4 w-4 mr-2" />
                   Remover

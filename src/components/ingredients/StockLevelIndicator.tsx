@@ -66,10 +66,10 @@ export function StockLevelDot({
   const status = getStockStatus(currentStock, minStock);
   
   const dotColors = {
-    good: 'bg-green-500',
-    low: 'bg-yellow-500',
-    critical: 'bg-red-500',
-    out: 'bg-gray-400'
+    good: 'bg-success',
+    low: 'bg-warning',
+    critical: 'bg-destructive',
+    out: 'bg-muted-foreground/50'
   };
   
   return (
@@ -98,10 +98,10 @@ export function StockLevelProgress({
   const percentage = minStock > 0 ? Math.min((currentStock / minStock) * 100, 100) : 0;
   
   const progressColors = {
-    good: 'bg-green-500',
-    low: 'bg-yellow-500',
-    critical: 'bg-red-500',
-    out: 'bg-gray-400'
+    good: 'bg-success',
+    low: 'bg-warning',
+    critical: 'bg-destructive',
+    out: 'bg-muted-foreground/50'
   };
   
   return (
@@ -110,7 +110,7 @@ export function StockLevelProgress({
         <span>{getStockStatusText(status)}</span>
         <span>{percentage.toFixed(0)}%</span>
       </div>
-      <div className="w-full bg-gray-200 rounded-full h-2">
+      <div className="w-full bg-muted rounded-full h-2">
         <div 
           className={cn(
             'h-2 rounded-full transition-all duration-300',

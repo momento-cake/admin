@@ -60,8 +60,8 @@ export function TagsSection({
   return (
     <div className="space-y-4">
       <div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-3">Tags de Categorização</h3>
-        <p className="text-sm text-gray-600 mb-3">
+        <h3 className="text-lg font-semibold text-foreground mb-3">Tags de Categorização</h3>
+        <p className="text-sm text-muted-foreground mb-3">
           Adicione tags para organizar e categorizar clientes
         </p>
       </div>
@@ -72,13 +72,13 @@ export function TagsSection({
           {tags.map(tag => (
             <span
               key={tag}
-              className="inline-flex items-center gap-2 px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium"
+              className="inline-flex items-center gap-2 px-3 py-1 bg-primary/10 text-primary rounded-full text-sm font-medium"
             >
               {tag}
               <button
                 type="button"
                 onClick={() => handleRemoveTag(tag)}
-                className="hover:text-blue-900 transition"
+                className="hover:text-primary/80 transition"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -96,7 +96,7 @@ export function TagsSection({
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleCustomTag}
             placeholder="Digite uma tag customizada e pressione Enter"
-            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+            className="flex-1 px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring text-sm"
           />
           <Button
             type="button"
@@ -117,7 +117,7 @@ export function TagsSection({
           <button
             type="button"
             onClick={() => setIsExpanded(!isExpanded)}
-            className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1"
+            className="text-sm text-primary hover:text-primary/80 font-medium flex items-center gap-1"
           >
             {isExpanded ? '▼' : '▶'} Tags sugeridas ({availableTags.length})
           </button>
@@ -130,7 +130,7 @@ export function TagsSection({
                     key={tag}
                     type="button"
                     onClick={() => handleAddTag(tag)}
-                    className="px-3 py-1 bg-gray-200 text-gray-700 rounded-full hover:bg-gray-300 transition text-sm font-medium"
+                    className="px-3 py-1 bg-muted text-foreground rounded-full hover:bg-muted/80 transition text-sm font-medium"
                   >
                     + {tag}
                   </button>
@@ -143,7 +143,7 @@ export function TagsSection({
 
       {/* Info */}
       {tags.length === 0 && (
-        <p className="text-sm text-gray-500 italic">
+        <p className="text-sm text-muted-foreground italic">
           Nenhuma tag adicionada. Use tags para organizar clientes por categoria.
         </p>
       )}

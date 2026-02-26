@@ -93,7 +93,7 @@ export function ImageCard({
           <div
             className={cn(
               'h-5 w-5 rounded border-2 bg-white/80 backdrop-blur-sm transition-colors flex items-center justify-center',
-              selected ? 'border-primary bg-primary' : 'border-gray-400'
+              selected ? 'border-primary bg-primary' : 'border-muted-foreground'
             )}
           >
             {selected && (
@@ -127,7 +127,7 @@ export function ImageCard({
         {/* External badge */}
         {image.isExternal && (
           <div className="absolute bottom-2 left-2 z-10">
-            <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-blue-500/90 text-white text-xs font-medium backdrop-blur-sm">
+            <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-primary/90 text-primary-foreground text-xs font-medium backdrop-blur-sm">
               <Globe className="h-3 w-3" />
               Referência
             </div>

@@ -31,11 +31,11 @@ interface StockUpdateData {
 }
 
 const stockTypes = [
-  { value: 'purchase', label: 'Compra', icon: TrendingUp, color: 'text-green-600' },
-  { value: 'adjustment', label: 'Ajuste', icon: Package, color: 'text-blue-600' },
-  { value: 'usage', label: 'Uso/Produção', icon: TrendingDown, color: 'text-orange-600' },
-  { value: 'waste', label: 'Descarte', icon: AlertTriangle, color: 'text-red-600' },
-  { value: 'correction', label: 'Correção', icon: CheckCircle, color: 'text-purple-600' }
+  { value: 'purchase', label: 'Compra', icon: TrendingUp, color: 'text-success' },
+  { value: 'adjustment', label: 'Ajuste', icon: Package, color: 'text-primary' },
+  { value: 'usage', label: 'Uso/Produção', icon: TrendingDown, color: 'text-warning' },
+  { value: 'waste', label: 'Descarte', icon: AlertTriangle, color: 'text-destructive' },
+  { value: 'correction', label: 'Correção', icon: CheckCircle, color: 'text-accent-foreground' }
 ];
 
 export function StockManagementModal({
@@ -145,7 +145,7 @@ export function StockManagementModal({
                 {getStockStatusText(stockStatus)}
               </Badge>
             </div>
-            <div className="grid grid-cols-2 gap-4 text-sm">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
               <div>
                 <span className="text-muted-foreground">Estoque atual:</span>
                 <p className="font-medium">{formatStock(ingredient.currentStock)}</p>

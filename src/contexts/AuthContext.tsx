@@ -1,7 +1,7 @@
 'use client'
 
 import { createContext, useContext, ReactNode, useEffect, useState } from 'react'
-import { User, onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'firebase/auth'
+import { User, onAuthStateChanged, onIdTokenChanged, signInWithEmailAndPassword, signOut } from 'firebase/auth'
 import { doc, getDoc } from 'firebase/firestore'
 import { auth, db } from '@/lib/firebase'
 import { UserModel } from '@/types'
@@ -30,19 +30,21 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Set up auth cookies for middleware
-  const setAuthCookies = (user: User | null, userModel: UserModel | null) => {
-    if (typeof document !== 'undefined') {
-      if (user && userModel) {
-        // Set auth token cookie (simplified - in production use proper JWT)
-        document.cookie = `auth-token=${user.uid}; path=/; max-age=86400; SameSite=Lax`
-        document.cookie = `user-role=${userModel.role.type}; path=/; max-age=86400; SameSite=Lax`
-      } else {
-        // Clear cookies
-        document.cookie = 'auth-token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT'
-        document.cookie = 'user-role=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT'
-      }
+  // Set auth cookie with the real Firebase ID token for server-side verification.
+  // Role and permissions are read from Firestore server-side, not from cookies.
+  const setAuthCookie = async (firebaseUser: User | null) => {
+    if (typeof document === 'undefined') return
+
+    if (firebaseUser) {
+      const idToken = await firebaseUser.getIdToken()
+      document.cookie = `auth-token=${idToken}; path=/; max-age=3600; SameSite=Lax`
+    } else {
+      document.cookie = 'auth-token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT'
     }
+
+    // Clean up legacy cookies that are no longer used
+    document.cookie = 'user-role=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT'
+    document.cookie = 'user-custom-permissions=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT'
   }
 
   useEffect(() => {
@@ -62,7 +64,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
               await signOut(auth)
               setError('Esta conta foi desativada. Entre em contato com o administrador.')
               setUserModel(null)
-              setAuthCookies(null, null)
+              await setAuthCookie(null)
             } else {
               const userModelData: UserModel = {
                 uid: firebaseUser.uid,
@@ -71,13 +73,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
                 photoURL: firebaseUser.photoURL || undefined,
                 emailVerified: firebaseUser.emailVerified,
                 role: userData.role || { type: 'atendente' },
+                customPermissions: userData.customPermissions || undefined,
+                permissionsModifiedBy: userData.permissionsModifiedBy || undefined,
+                permissionsModifiedAt: userData.permissionsModifiedAt?.toDate() || undefined,
                 createdAt: userData.createdAt?.toDate(),
                 lastSignInAt: userData.lastSignInAt?.toDate(),
                 isActive: userData.isActive,
                 metadata: userData.metadata || {}
               }
               setUserModel(userModelData)
-              setAuthCookies(firebaseUser, userModelData)
+              await setAuthCookie(firebaseUser)
             }
           } else {
             // User exists in Auth but not in Firestore
@@ -92,22 +97,33 @@ export function AuthProvider({ children }: AuthProviderProps) {
               metadata: {}
             }
             setUserModel(userModelData)
-            setAuthCookies(firebaseUser, userModelData)
+            await setAuthCookie(firebaseUser)
           }
         } catch (error) {
           console.error('Error fetching user data:', error)
           setError('Erro ao carregar dados do usuário')
           setUserModel(null)
-          setAuthCookies(null, null)
+          await setAuthCookie(null)
         }
       } else {
         setUserModel(null)
-        setAuthCookies(null, null)
+        await setAuthCookie(null)
       }
-      
+
       setLoading(false)
     })
 
+    return () => unsubscribe()
+  }, [])
+
+  // Refresh the auth cookie when the Firebase ID token is refreshed
+  // (tokens expire after 1 hour and the SDK auto-refreshes them)
+  useEffect(() => {
+    const unsubscribe = onIdTokenChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        await setAuthCookie(firebaseUser)
+      }
+    })
     return () => unsubscribe()
   }, [])
 
@@ -126,7 +142,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       await signOut(auth)
       setUserModel(null)
-      setAuthCookies(null, null)
+      await setAuthCookie(null)
     } catch {
       setError('Erro ao fazer logout')
     }

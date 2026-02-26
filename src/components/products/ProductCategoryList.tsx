@@ -215,7 +215,7 @@ export function ProductCategoryList({
           )}
         </div>
 
-        <div className="border rounded-md bg-white">
+        <div className="border rounded-md bg-card">
           <div className="space-y-0">
             {filteredCategories.map((category) => {
               const isExpanded = expandedCategories.has(category.id);

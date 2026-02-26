@@ -173,7 +173,7 @@ export function PackageSelector({
           {!loading && filteredPackages.length > 0 && (
             <div className="space-y-3 max-h-96 overflow-y-auto">
               {filteredPackages.map(pkg => (
-                <Card key={pkg.id} className={selectedPackageIds.has(pkg.id) ? 'border-blue-500' : ''}>
+                <Card key={pkg.id} className={selectedPackageIds.has(pkg.id) ? 'border-primary' : ''}>
                   <CardContent className="pt-4">
                     <div className="flex items-start justify-between">
                       <div className="flex items-start gap-3 flex-1">
@@ -252,12 +252,12 @@ export function PackageSelector({
 
           {/* Cost Summary */}
           {selectedPackageIds.size > 0 && (
-            <Card className="bg-green-50">
+            <Card className="bg-success/10">
               <CardHeader>
                 <CardTitle className="text-base">Custo Total de Embalagens</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-2xl font-bold text-green-600">
+                <p className="text-2xl font-bold text-success">
                   {formatPrice(totalCost)}
                 </p>
               </CardContent>

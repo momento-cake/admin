@@ -1,7 +1,7 @@
 'use client';
 
 import { useAuthContext } from '@/contexts/AuthContext';
-import { UserModel } from '@/types';
+import { UserModel, UserRole } from '@/types';
 import {
   canAccessFeature,
   canAccessPath,
@@ -15,10 +15,33 @@ import {
 } from '@/lib/permissions';
 
 export function usePermissions() {
-  const { userModel } = useAuthContext();
-  const role = userModel?.role?.type ?? 'atendente';
+  const { userModel, loading } = useAuthContext();
+
+  // When userModel is null (loading or unauthenticated), return a safe
+  // "no permissions" state. This prevents isAtendente from being true during
+  // loading, which could cause UI flicker.
+  if (!userModel) {
+    return {
+      loading,
+      role: null as unknown as UserRole,
+      user: null,
+      canAccess: () => false,
+      canPerformAction: () => false,
+      canAccessPath: () => false,
+      accessibleFeatures: [] as FeatureKey[],
+      effectivePermissions: {} as CustomPermissions,
+      isAdmin: false,
+      isAtendente: false,
+      canModifyPermissions: () => false,
+    };
+  }
+
+  const role = userModel.role?.type ?? 'atendente';
 
   return {
+    /** Whether auth state is still loading */
+    loading,
+
     /** Current user's role */
     role,
 

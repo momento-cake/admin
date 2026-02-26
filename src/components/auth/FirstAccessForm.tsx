@@ -281,7 +281,7 @@ export function FirstAccessForm({ onBack }: FirstAccessFormProps) {
         </CardDescription>
         
         {invitation && (
-          <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 p-2 rounded">
+          <div className="flex items-center gap-2 text-sm text-success bg-success/10 p-2 rounded">
             <CheckCircle className="h-4 w-4" />
             Convite válido para: {invitation.email}
           </div>
@@ -296,7 +296,7 @@ export function FirstAccessForm({ onBack }: FirstAccessFormProps) {
               </Alert>
             )}
             
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <FormField
                 control={registrationForm.control}
                 name="firstName"

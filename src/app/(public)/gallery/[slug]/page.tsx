@@ -46,10 +46,10 @@ export default function PublicGalleryPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin text-pink-500 mx-auto mb-4" />
-          <p className="text-gray-500">Carregando galeria...</p>
+          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
+          <p className="text-muted-foreground">Carregando galeria...</p>
         </div>
       </div>
     )
@@ -57,12 +57,12 @@ export default function PublicGalleryPage() {
 
   if (error || !folder) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
-          <h1 className="text-2xl font-serif text-gray-900 mb-2">
+          <h1 className="text-2xl font-serif text-foreground mb-2">
             {error || 'Galeria não encontrada'}
           </h1>
-          <p className="text-gray-500">
+          <p className="text-muted-foreground">
             A galeria que você está procurando não existe ou não está mais disponível.
           </p>
         </div>

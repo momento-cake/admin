@@ -363,15 +363,15 @@ export function getStockStatus(currentStock: number, minStock: number): StockSta
 export function getStockStatusColor(status: StockStatus): string {
   switch (status) {
     case 'good':
-      return 'text-green-600 bg-green-50 border-green-200';
+      return 'text-success bg-success/10 border-success/30';
     case 'low':
-      return 'text-yellow-600 bg-yellow-50 border-yellow-200';
+      return 'text-warning bg-warning/10 border-warning/30';
     case 'critical':
-      return 'text-red-600 bg-red-50 border-red-200';
+      return 'text-destructive bg-destructive/10 border-destructive/30';
     case 'out':
-      return 'text-gray-600 bg-gray-50 border-gray-200';
+      return 'text-muted-foreground bg-muted border-border';
     default:
-      return 'text-gray-600 bg-gray-50 border-gray-200';
+      return 'text-muted-foreground bg-muted border-border';
   }
 }
 

@@ -85,20 +85,20 @@ export function InvitationsList() {
 
   const getStatusIcon = (status: string, expiresAt: Date) => {
     if (status === 'pending' && isInvitationExpired(expiresAt)) {
-      return <XCircle className="h-4 w-4 text-red-500" />
+      return <XCircle className="h-4 w-4 text-destructive" />
     }
 
     switch (status) {
       case 'pending':
-        return <Clock className="h-4 w-4 text-yellow-500" />
+        return <Clock className="h-4 w-4 text-warning" />
       case 'accepted':
-        return <CheckCircle className="h-4 w-4 text-green-500" />
+        return <CheckCircle className="h-4 w-4 text-success" />
       case 'expired':
-        return <XCircle className="h-4 w-4 text-red-500" />
+        return <XCircle className="h-4 w-4 text-destructive" />
       case 'cancelled':
-        return <X className="h-4 w-4 text-gray-500" />
+        return <X className="h-4 w-4 text-muted-foreground" />
       default:
-        return <Clock className="h-4 w-4 text-gray-500" />
+        return <Clock className="h-4 w-4 text-muted-foreground" />
     }
   }
 
@@ -215,7 +215,7 @@ export function InvitationsList() {
                   {format(invitation.invitedAt, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                 </TableCell>
                 <TableCell>
-                  <span className={`${isInvitationExpired(invitation.expiresAt) ? 'text-red-600' : 'text-muted-foreground'}`}>
+                  <span className={`${isInvitationExpired(invitation.expiresAt) ? 'text-destructive' : 'text-muted-foreground'}`}>
                     {format(invitation.expiresAt, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                   </span>
                 </TableCell>

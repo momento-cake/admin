@@ -129,11 +129,11 @@ export function StockManager({ ingredient, onStockUpdated, suppliers = [] }: Sto
   const getTypeIcon = (type: string) => {
     switch (type) {
       case 'receive':
-        return <Plus className="h-4 w-4 text-green-600" />;
+        return <Plus className="h-4 w-4 text-success" />;
       case 'consume':
-        return <Minus className="h-4 w-4 text-red-600" />;
+        return <Minus className="h-4 w-4 text-destructive" />;
       case 'adjust':
-        return <Package className="h-4 w-4 text-blue-600" />;
+        return <Package className="h-4 w-4 text-primary" />;
       default:
         return <Package className="h-4 w-4" />;
     }
@@ -207,7 +207,7 @@ export function StockManager({ ingredient, onStockUpdated, suppliers = [] }: Sto
               <form onSubmit={handleSubmit(handleStockUpdate)} className="space-y-4">
                 {error && (
                   <Alert>
-                    <AlertDescription className="text-red-600">
+                    <AlertDescription className="text-destructive">
                       {error}
                     </AlertDescription>
                   </Alert>
@@ -225,7 +225,7 @@ export function StockManager({ ingredient, onStockUpdated, suppliers = [] }: Sto
                     <SelectContent>
                       <SelectItem value="receive">
                         <div className="flex items-center gap-2">
-                          <Plus className="h-4 w-4 text-green-600" />
+                          <Plus className="h-4 w-4 text-success" />
                           <div>
                             <p>Receber Estoque</p>
                             <p className="text-xs text-muted-foreground">Adicionar produtos recebidos</p>
@@ -234,7 +234,7 @@ export function StockManager({ ingredient, onStockUpdated, suppliers = [] }: Sto
                       </SelectItem>
                       <SelectItem value="consume">
                         <div className="flex items-center gap-2">
-                          <Minus className="h-4 w-4 text-red-600" />
+                          <Minus className="h-4 w-4 text-destructive" />
                           <div>
                             <p>Consumir Estoque</p>
                             <p className="text-xs text-muted-foreground">Remover produtos utilizados</p>
@@ -243,7 +243,7 @@ export function StockManager({ ingredient, onStockUpdated, suppliers = [] }: Sto
                       </SelectItem>
                       <SelectItem value="adjust">
                         <div className="flex items-center gap-2">
-                          <Package className="h-4 w-4 text-blue-600" />
+                          <Package className="h-4 w-4 text-primary" />
                           <div>
                             <p>Ajustar Estoque</p>
                             <p className="text-xs text-muted-foreground">Corrigir quantidade atual</p>
@@ -253,7 +253,7 @@ export function StockManager({ ingredient, onStockUpdated, suppliers = [] }: Sto
                     </SelectContent>
                   </Select>
                   {errors.type && (
-                    <p className="text-sm text-red-600">{errors.type.message}</p>
+                    <p className="text-sm text-destructive">{errors.type.message}</p>
                   )}
                 </div>
 
@@ -269,7 +269,7 @@ export function StockManager({ ingredient, onStockUpdated, suppliers = [] }: Sto
                     {...register('quantity', { valueAsNumber: true })}
                   />
                   {errors.quantity && (
-                    <p className="text-sm text-red-600">{errors.quantity.message}</p>
+                    <p className="text-sm text-destructive">{errors.quantity.message}</p>
                   )}
                 </div>
 
@@ -280,11 +280,11 @@ export function StockManager({ ingredient, onStockUpdated, suppliers = [] }: Sto
                       <span className="text-sm font-medium">Previsão:</span>
                       <div className="flex items-center gap-2">
                         {newStock > ingredient.currentStock ? (
-                          <TrendingUp className="h-4 w-4 text-green-600" />
+                          <TrendingUp className="h-4 w-4 text-success" />
                         ) : newStock < ingredient.currentStock ? (
-                          <TrendingDown className="h-4 w-4 text-red-600" />
+                          <TrendingDown className="h-4 w-4 text-destructive" />
                         ) : (
-                          <Package className="h-4 w-4 text-blue-600" />
+                          <Package className="h-4 w-4 text-primary" />
                         )}
                       </div>
                     </div>

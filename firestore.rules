@@ -14,9 +14,16 @@ service cloud.firestore {
     }
     
     function isViewer() {
-      return isAuthenticated() && 
+      return isAuthenticated() &&
              exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.type in ['admin', 'viewer'] &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.type in ['admin', 'viewer', 'atendente'] &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isActive == true;
+    }
+
+    function isAdminOrAtendente() {
+      return isAuthenticated() &&
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.type in ['admin', 'atendente'] &&
              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isActive == true;
     }
     
@@ -135,9 +142,21 @@ service cloud.firestore {
     }
 
     // Top-level clients collection - for clients management
+    //
+    // NOTE ON PERMISSION GRANULARITY: Firestore rules only enforce base-level
+    // role checks (admin vs atendente). They cannot enforce the custom
+    // per-user permission granularity defined in the app layer (e.g., revoking
+    // 'create' from a specific atendente while allowing 'view' and 'update').
+    // Granular permission enforcement happens in the API routes via
+    // canPerformActionFromRequest() (see src/lib/api-auth.ts) and in the UI
+    // via canPerformAction() (see src/lib/permissions.ts).
     match /clients/{clientId} {
-      // Allow all reads and writes (testing only - will be restricted later)
-      allow read, write: if true;
+      // Admin and atendente can read clients
+      allow read: if isAdminOrAtendente();
+      // Admin and atendente can create and update clients
+      allow create, update: if isAdminOrAtendente();
+      // Only admin can delete clients
+      allow delete: if isAdmin();
     }
 
     // Packaging collection - for packaging item management

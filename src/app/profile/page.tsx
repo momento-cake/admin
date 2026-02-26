@@ -193,9 +193,9 @@ export default function ProfilePage() {
 
   const getRoleIcon = (role?: string) => {
     return role === 'admin' ? (
-      <Shield className="h-4 w-4 text-blue-500" />
+      <Shield className="h-4 w-4 text-primary" />
     ) : (
-      <Eye className="h-4 w-4 text-gray-500" />
+      <Eye className="h-4 w-4 text-muted-foreground" />
     )
   }
 
@@ -284,7 +284,7 @@ export default function ProfilePage() {
                 disabled={isLoadingProfile}
               />
               {profileForm.formState.errors.displayName && (
-                <p className="text-sm text-red-600">{profileForm.formState.errors.displayName.message}</p>
+                <p className="text-sm text-destructive">{profileForm.formState.errors.displayName.message}</p>
               )}
             </div>
 
@@ -319,7 +319,7 @@ export default function ProfilePage() {
                 disabled={isLoadingProfile}
               />
               {profileForm.formState.errors.bio && (
-                <p className="text-sm text-red-600">{profileForm.formState.errors.bio.message}</p>
+                <p className="text-sm text-destructive">{profileForm.formState.errors.bio.message}</p>
               )}
             </div>
 
@@ -374,7 +374,7 @@ export default function ProfilePage() {
                 disabled={isLoadingPassword}
               />
               {passwordForm.formState.errors.currentPassword && (
-                <p className="text-sm text-red-600">{passwordForm.formState.errors.currentPassword.message}</p>
+                <p className="text-sm text-destructive">{passwordForm.formState.errors.currentPassword.message}</p>
               )}
             </div>
 
@@ -388,7 +388,7 @@ export default function ProfilePage() {
                 disabled={isLoadingPassword}
               />
               {passwordForm.formState.errors.newPassword && (
-                <p className="text-sm text-red-600">{passwordForm.formState.errors.newPassword.message}</p>
+                <p className="text-sm text-destructive">{passwordForm.formState.errors.newPassword.message}</p>
               )}
             </div>
 
@@ -402,7 +402,7 @@ export default function ProfilePage() {
                 disabled={isLoadingPassword}
               />
               {passwordForm.formState.errors.confirmPassword && (
-                <p className="text-sm text-red-600">{passwordForm.formState.errors.confirmPassword.message}</p>
+                <p className="text-sm text-destructive">{passwordForm.formState.errors.confirmPassword.message}</p>
               )}
             </div>
 

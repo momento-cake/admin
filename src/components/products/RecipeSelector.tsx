@@ -189,7 +189,7 @@ export function RecipeSelector({
           {!loading && filteredRecipes.length > 0 && (
             <div className="space-y-3 max-h-96 overflow-y-auto">
               {filteredRecipes.map(recipe => (
-                <Card key={recipe.id} className={selectedRecipeIds.has(recipe.id) ? 'border-blue-500' : ''}>
+                <Card key={recipe.id} className={selectedRecipeIds.has(recipe.id) ? 'border-primary' : ''}>
                   <CardContent className="pt-4">
                     <div className="flex items-start justify-between">
                       <div className="flex items-start gap-3 flex-1">
@@ -261,12 +261,12 @@ export function RecipeSelector({
 
           {/* Cost Summary */}
           {selectedRecipeIds.size > 0 && (
-            <Card className="bg-blue-50">
+            <Card className="bg-primary/5">
               <CardHeader>
                 <CardTitle className="text-base">Custo Total das Receitas</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-2xl font-bold text-blue-600">
+                <p className="text-2xl font-bold text-primary">
                   {formatPrice(totalCost)}
                 </p>
               </CardContent>

@@ -87,6 +87,11 @@ export const ACTION_LABELS: Record<ActionKey, string> = {
 /**
  * Default permissions for atendente role
  * Admin role always has ALL permissions - no defaults needed
+ *
+ * This is the single source of truth for role permissions.
+ * Middleware (src/middleware.ts) only checks for token presence,
+ * not role-based access. Role enforcement happens server-side
+ * in api-auth.ts and client-side via usePermissions hook.
  */
 export const DEFAULT_ATENDENTE_PERMISSIONS: CustomPermissions = {
   dashboard: { enabled: true, actions: ['view'] },
@@ -109,6 +114,9 @@ export const ALL_FEATURES: FeatureKey[] = [
 
 /**
  * Maps URL paths to feature keys
+ *
+ * Used by the usePermissions hook and api-auth.ts for permission checks.
+ * Middleware does not use path-to-feature mapping; it only checks token presence.
  */
 export const PATH_TO_FEATURE: Record<string, FeatureKey> = {
   '/dashboard': 'dashboard',

@@ -65,19 +65,19 @@ export function PublicGalleryView({ folder }: PublicGalleryViewProps) {
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="py-8 px-4 text-center border-b bg-gradient-to-b from-gray-50 to-white">
+      <header className="py-8 px-4 text-center border-b bg-gradient-to-b from-muted to-background">
         <div className="max-w-4xl mx-auto">
-          <h1 className="text-3xl md:text-4xl font-serif text-gray-900 mb-2">
+          <h1 className="text-3xl md:text-4xl font-serif text-foreground mb-2">
             {folder.name}
           </h1>
           {folder.description && (
-            <p className="text-gray-600 max-w-2xl mx-auto mb-4">
+            <p className="text-muted-foreground max-w-2xl mx-auto mb-4">
               {folder.description}
             </p>
           )}
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-muted-foreground">
             {folder.imageCount} {folder.imageCount === 1 ? 'foto' : 'fotos'}
           </p>
         </div>
@@ -86,7 +86,7 @@ export function PublicGalleryView({ folder }: PublicGalleryViewProps) {
       {/* Gallery Grid */}
       <main className="max-w-7xl mx-auto px-4 py-8">
         {folder.images.length === 0 ? (
-          <div className="text-center py-12 text-gray-500">
+          <div className="text-center py-12 text-muted-foreground">
             Esta galeria não contém imagens.
           </div>
         ) : (
@@ -95,7 +95,7 @@ export function PublicGalleryView({ folder }: PublicGalleryViewProps) {
               <button
                 key={image.id}
                 onClick={() => openLightbox(image, index)}
-                className="aspect-square relative overflow-hidden rounded-lg group focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-offset-2"
+                className="aspect-square relative overflow-hidden rounded-lg group focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
               >
                 <img
                   src={image.thumbnailUrl || image.url}
@@ -108,7 +108,7 @@ export function PublicGalleryView({ folder }: PublicGalleryViewProps) {
 
                 {/* External badge */}
                 {image.isExternal && (
-                  <div className="absolute bottom-2 left-2 flex items-center gap-1 px-2 py-1 rounded-full bg-blue-500/90 text-white text-xs font-medium">
+                  <div className="absolute bottom-2 left-2 flex items-center gap-1 px-2 py-1 rounded-full bg-primary/90 text-primary-foreground text-xs font-medium">
                     <Globe className="h-3 w-3" />
                     Referência
                   </div>
@@ -120,9 +120,9 @@ export function PublicGalleryView({ folder }: PublicGalleryViewProps) {
       </main>
 
       {/* Footer */}
-      <footer className="py-6 text-center text-sm text-gray-500 border-t">
+      <footer className="py-6 text-center text-sm text-muted-foreground border-t">
         <p className="flex items-center justify-center gap-2">
-          <span className="text-pink-500 font-medium">Momento Cake</span>
+          <span className="text-primary font-medium">Momento Cake</span>
           <span>•</span>
           <span>Galeria de Fotos</span>
         </p>

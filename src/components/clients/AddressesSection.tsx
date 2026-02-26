@@ -131,7 +131,7 @@ export function AddressesSection({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between relative z-0">
-        <h3 className="text-lg font-semibold text-gray-900">Endereços</h3>
+        <h3 className="text-lg font-semibold text-foreground">Endereços</h3>
         {!isAdding && (
           <Button
             type="button"
@@ -158,12 +158,12 @@ export function AddressesSection({
               <div className="flex-1 min-w-0">
                 <div className="flex items-baseline gap-2 flex-wrap">
                   {addr.label && (
-                    <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+                    <span className="px-2 py-0.5 bg-primary/10 text-primary rounded-full text-xs font-medium">
                       {addr.label}
                     </span>
                   )}
                 </div>
-                <p className="text-sm text-gray-700 mt-1">
+                <p className="text-sm text-foreground mt-1">
                   {formatAddressDisplay(addr) || 'Endereço incompleto'}
                 </p>
               </div>
@@ -173,7 +173,7 @@ export function AddressesSection({
                   variant="ghost"
                   size="sm"
                   onClick={() => handleEdit(index)}
-                  className="text-blue-600 hover:text-blue-700"
+                  className="text-primary hover:text-primary/80"
                 >
                   <Edit2 className="w-4 h-4" />
                 </Button>
@@ -182,7 +182,7 @@ export function AddressesSection({
                   variant="ghost"
                   size="sm"
                   onClick={() => onRemove(index)}
-                  className="text-red-600 hover:text-red-700"
+                  className="text-destructive hover:text-destructive/80"
                 >
                   <Trash2 className="w-4 h-4" />
                 </Button>
@@ -194,11 +194,11 @@ export function AddressesSection({
 
       {/* Form for Adding/Editing */}
       {isAdding && (
-        <Card className="p-4 bg-gray-50">
+        <Card className="p-4 bg-muted">
           <div className="space-y-4">
             {/* Label */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-foreground mb-1">
                 Tipo de Endereço
               </label>
               <div className="flex gap-2 flex-wrap mb-2">
@@ -209,8 +209,8 @@ export function AddressesSection({
                     onClick={() => setFormData(prev => ({ ...prev, label: preset }))}
                     className={`px-3 py-1 rounded-full text-sm border transition-colors ${
                       formData.label === preset
-                        ? 'bg-blue-600 text-white border-blue-600'
-                        : 'bg-white text-gray-700 border-gray-300 hover:border-blue-400'
+                        ? 'bg-primary text-primary-foreground border-primary'
+                        : 'bg-background text-foreground border-border hover:border-primary/60'
                     }`}
                   >
                     {preset}
@@ -221,14 +221,14 @@ export function AddressesSection({
                 type="text"
                 value={formData.label || ''}
                 onChange={(e) => setFormData(prev => ({ ...prev, label: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring"
                 placeholder="Ou digite um tipo personalizado..."
               />
             </div>
 
             {/* CEP with search */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-foreground mb-1">
                 CEP
               </label>
               <div className="flex gap-2">
@@ -239,7 +239,7 @@ export function AddressesSection({
                     setCepError('')
                     setFormData(prev => ({ ...prev, cep: formatCEP(e.target.value) }))
                   }}
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="flex-1 px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring"
                   placeholder="00000-000"
                   maxLength={9}
                 />
@@ -259,60 +259,60 @@ export function AddressesSection({
                 </Button>
               </div>
               {cepError && (
-                <p className="text-sm text-red-600 mt-1">{cepError}</p>
+                <p className="text-sm text-destructive mt-1">{cepError}</p>
               )}
             </div>
 
             {/* Estado / Cidade */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Estado
                 </label>
                 <input
                   type="text"
                   value={formData.estado || ''}
                   onChange={(e) => setFormData(prev => ({ ...prev, estado: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring"
                   placeholder="SP"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Cidade
                 </label>
                 <input
                   type="text"
                   value={formData.cidade || ''}
                   onChange={(e) => setFormData(prev => ({ ...prev, cidade: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring"
                 />
               </div>
             </div>
 
             {/* Bairro */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-foreground mb-1">
                 Bairro
               </label>
               <input
                 type="text"
                 value={formData.bairro || ''}
                 onChange={(e) => setFormData(prev => ({ ...prev, bairro: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring"
               />
             </div>
 
             {/* Endereço */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-foreground mb-1">
                 Endereço
               </label>
               <input
                 type="text"
                 value={formData.endereco || ''}
                 onChange={(e) => setFormData(prev => ({ ...prev, endereco: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring"
                 placeholder="Rua, Avenida, etc"
               />
             </div>
@@ -320,25 +320,25 @@ export function AddressesSection({
             {/* Número / Complemento */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Número
                 </label>
                 <input
                   type="text"
                   value={formData.numero || ''}
                   onChange={(e) => setFormData(prev => ({ ...prev, numero: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Complemento
                 </label>
                 <input
                   type="text"
                   value={formData.complemento || ''}
                   onChange={(e) => setFormData(prev => ({ ...prev, complemento: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring"
                   placeholder="Apto, sala, etc"
                 />
               </div>
@@ -358,7 +358,7 @@ export function AddressesSection({
               </Button>
               <Button
                 type="button"
-                className="bg-blue-600 hover:bg-blue-700 text-white"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground"
                 onClick={(e) => {
                   e.preventDefault()
                   e.stopPropagation()
@@ -373,7 +373,7 @@ export function AddressesSection({
       )}
 
       {addresses.length === 0 && !isAdding && (
-        <p className="text-sm text-gray-500 italic">
+        <p className="text-sm text-muted-foreground italic">
           Nenhum endereço adicionado
         </p>
       )}

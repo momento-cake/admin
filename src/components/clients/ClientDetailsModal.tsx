@@ -7,15 +7,15 @@ import { X, Edit2 } from 'lucide-react'
 interface ClientDetailsModalProps {
   client: Client
   onClose: () => void
-  onEdit: (client: Client) => void
+  onEdit?: (client: Client) => void
 }
 
 export function ClientDetailsModal({ client, onClose, onEdit }: ClientDetailsModalProps) {
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-background rounded-lg max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
+      <div className="bg-background rounded-lg max-w-2xl w-full mx-2 sm:mx-4 max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-border sticky top-0 bg-background">
+        <div className="flex items-center justify-between p-4 sm:p-6 border-b border-border sticky top-0 bg-background">
           <h2 className="text-xl font-semibold text-foreground">Detalhes do Cliente</h2>
           <button
             onClick={onClose}
@@ -26,9 +26,9 @@ export function ClientDetailsModal({ client, onClose, onEdit }: ClientDetailsMod
         </div>
 
         {/* Content */}
-        <div className="p-6 space-y-6">
+        <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
           {/* Basic Info */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="text-sm text-muted-foreground">Nome</label>
               <p className="font-medium text-foreground">{client.name}</p>
@@ -83,7 +83,7 @@ export function ClientDetailsModal({ client, onClose, onEdit }: ClientDetailsMod
               <h3 className="font-semibold text-foreground mb-3">Tags</h3>
               <div className="flex flex-wrap gap-2">
                 {client.tags.map((tag, idx) => (
-                  <span key={idx} className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
+                  <span key={idx} className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm font-medium">
                     {tag}
                   </span>
                 ))}
@@ -111,7 +111,7 @@ export function ClientDetailsModal({ client, onClose, onEdit }: ClientDetailsMod
                   return (
                     <div key={addr.id} className="text-sm p-3 border border-border rounded">
                       {addr.label && (
-                        <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+                        <span className="px-2 py-0.5 bg-primary/10 text-primary rounded-full text-xs font-medium">
                           {addr.label}
                         </span>
                       )}
@@ -148,14 +148,16 @@ export function ClientDetailsModal({ client, onClose, onEdit }: ClientDetailsMod
         </div>
 
         {/* Footer */}
-        <div className="flex gap-3 p-6 border-t border-border sticky bottom-0 bg-background">
+        <div className="flex gap-3 p-4 sm:p-6 border-t border-border sticky bottom-0 bg-background">
           <Button variant="outline" className="flex-1" onClick={onClose}>
             Fechar
           </Button>
-          <Button className="flex-1" onClick={() => onEdit(client)}>
-            <Edit2 className="h-4 w-4 mr-2" />
-            Editar
-          </Button>
+          {onEdit && (
+            <Button className="flex-1" onClick={() => onEdit(client)}>
+              <Edit2 className="h-4 w-4 mr-2" />
+              Editar
+            </Button>
+          )}
         </div>
       </div>
     </div>

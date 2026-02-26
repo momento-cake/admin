@@ -13,10 +13,10 @@ interface StockLevelIndicatorProps {
 }
 
 const STATUS_COLORS: Record<StockStatus, string> = {
-  good: 'bg-green-50 text-green-700 border-green-200',
-  low: 'bg-yellow-50 text-yellow-700 border-yellow-200',
-  critical: 'bg-orange-50 text-orange-700 border-orange-200',
-  out: 'bg-red-50 text-red-700 border-red-200'
+  good: 'bg-success/10 text-success border-success/30',
+  low: 'bg-warning/10 text-warning border-warning/30',
+  critical: 'bg-warning/20 text-warning border-warning/50',
+  out: 'bg-destructive/10 text-destructive border-destructive/30'
 };
 
 const STATUS_LABELS: Record<StockStatus, string> = {
@@ -27,10 +27,10 @@ const STATUS_LABELS: Record<StockStatus, string> = {
 };
 
 const STATUS_DOTS: Record<StockStatus, string> = {
-  good: 'bg-green-500',
-  low: 'bg-yellow-500',
-  critical: 'bg-orange-500',
-  out: 'bg-red-500'
+  good: 'bg-success',
+  low: 'bg-warning',
+  critical: 'bg-warning',
+  out: 'bg-destructive'
 };
 
 function getStockStatus(currentStock: number, minStock: number): StockStatus {
@@ -110,16 +110,14 @@ export function StockLevelProgress({
         <span>{STATUS_LABELS[status]}</span>
         <span>{percentage.toFixed(0)}%</span>
       </div>
-      <div className="w-full bg-gray-200 rounded-full h-2">
+      <div className="w-full bg-muted rounded-full h-2">
         <div
           className={cn(
             'h-2 rounded-full transition-all duration-300',
-            {
-              'bg-green-500': status === 'good',
-              'bg-yellow-500': status === 'low',
-              'bg-orange-500': status === 'critical',
-              'bg-red-500': status === 'out'
-            }
+            status === 'good' && 'bg-success',
+            status === 'low' && 'bg-warning',
+            status === 'critical' && 'bg-warning',
+            status === 'out' && 'bg-destructive'
           )}
           style={{ width: `${percentage}%` }}
         />

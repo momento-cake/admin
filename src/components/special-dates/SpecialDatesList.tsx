@@ -73,10 +73,10 @@ export function SpecialDatesList({ clients, isLoading = false }: SpecialDatesLis
   if (specialDates.length === 0) {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-500 text-lg">
+        <p className="text-muted-foreground text-lg">
           Nenhuma data especial encontrada neste período.
         </p>
-        <p className="text-gray-400 text-sm mt-2">
+        <p className="text-muted-foreground/70 text-sm mt-2">
           Tente expandir o período ou adicionar datas especiais aos clientes.
         </p>
       </div>

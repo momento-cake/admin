@@ -157,7 +157,7 @@ export function RegistrationForm() {
     return (
       <div className="text-center py-8">
         <Loader2 className="h-8 w-8 animate-spin mx-auto" />
-        <p className="mt-2 text-sm text-gray-600">Verificando convite...</p>
+        <p className="mt-2 text-sm text-muted-foreground">Verificando convite...</p>
       </div>
     )
   }
@@ -165,9 +165,9 @@ export function RegistrationForm() {
   if (error && !invitation) {
     return (
       <div className="text-center py-8">
-        <XCircle className="h-12 w-12 text-red-500 mx-auto" />
-        <h3 className="mt-2 text-lg font-medium text-gray-900">Convite Inválido</h3>
-        <p className="mt-2 text-sm text-gray-600">{error}</p>
+        <XCircle className="h-12 w-12 text-destructive mx-auto" />
+        <h3 className="mt-2 text-lg font-medium text-foreground">Convite Inválido</h3>
+        <p className="mt-2 text-sm text-muted-foreground">{error}</p>
         <Button 
           className="mt-4" 
           onClick={() => router.push('/login')}
@@ -182,10 +182,10 @@ export function RegistrationForm() {
   if (success) {
     return (
       <div className="text-center py-8">
-        <CheckCircle className="h-12 w-12 text-green-500 mx-auto" />
-        <h3 className="mt-2 text-lg font-medium text-gray-900">Conta Criada!</h3>
-        <p className="mt-2 text-sm text-gray-600">{success}</p>
-        <p className="mt-2 text-xs text-gray-500">
+        <CheckCircle className="h-12 w-12 text-success mx-auto" />
+        <h3 className="mt-2 text-lg font-medium text-foreground">Conta Criada!</h3>
+        <p className="mt-2 text-sm text-muted-foreground">{success}</p>
+        <p className="mt-2 text-xs text-muted-foreground">
           Redirecionando para o login em alguns segundos...
         </p>
       </div>
@@ -196,10 +196,10 @@ export function RegistrationForm() {
     <div className="space-y-6">
       {invitation && (
         <div className="text-center">
-          <h3 className="text-lg font-medium text-gray-900">
+          <h3 className="text-lg font-medium text-foreground">
             Olá, {invitation.name}!
           </h3>
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-muted-foreground">
             Você foi convidado como <strong>{invitation.role === 'admin' ? 'Administrador' : 'Visualizador'}</strong>
           </p>
         </div>
@@ -212,7 +212,7 @@ export function RegistrationForm() {
           </Alert>
         )}
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="firstName">Nome *</Label>
             <Input
@@ -222,7 +222,7 @@ export function RegistrationForm() {
               disabled={isLoading}
             />
             {form.formState.errors.firstName && (
-              <p className="text-sm text-red-600">{form.formState.errors.firstName.message}</p>
+              <p className="text-sm text-destructive">{form.formState.errors.firstName.message}</p>
             )}
           </div>
 
@@ -235,7 +235,7 @@ export function RegistrationForm() {
               disabled={isLoading}
             />
             {form.formState.errors.lastName && (
-              <p className="text-sm text-red-600">{form.formState.errors.lastName.message}</p>
+              <p className="text-sm text-destructive">{form.formState.errors.lastName.message}</p>
             )}
           </div>
         </div>
@@ -247,9 +247,9 @@ export function RegistrationForm() {
             type="email"
             {...form.register('email')}
             disabled={true} // Email should not be editable as it comes from invitation
-            className="bg-gray-50"
+            className="bg-muted"
           />
-          <p className="text-xs text-gray-500">Este email foi fornecido no convite e não pode ser alterado</p>
+          <p className="text-xs text-muted-foreground">Este email foi fornecido no convite e não pode ser alterado</p>
         </div>
 
         <div className="space-y-2">
@@ -262,7 +262,7 @@ export function RegistrationForm() {
             disabled={isLoading}
           />
           {form.formState.errors.password && (
-            <p className="text-sm text-red-600">{form.formState.errors.password.message}</p>
+            <p className="text-sm text-destructive">{form.formState.errors.password.message}</p>
           )}
         </div>
 
@@ -276,7 +276,7 @@ export function RegistrationForm() {
             disabled={isLoading}
           />
           {form.formState.errors.confirmPassword && (
-            <p className="text-sm text-red-600">{form.formState.errors.confirmPassword.message}</p>
+            <p className="text-sm text-destructive">{form.formState.errors.confirmPassword.message}</p>
           )}
         </div>
 
@@ -309,12 +309,12 @@ export function RegistrationForm() {
             disabled={isLoading}
           />
           <Label htmlFor="acceptsTerms" className="text-sm">
-            Eu aceito os <a href="#" className="text-blue-600 underline">termos de uso</a> e 
-            <a href="#" className="text-blue-600 underline ml-1">política de privacidade</a> *
+            Eu aceito os <a href="#" className="text-primary underline">termos de uso</a> e
+            <a href="#" className="text-primary underline ml-1">política de privacidade</a> *
           </Label>
         </div>
         {form.formState.errors.acceptsTerms && (
-          <p className="text-sm text-red-600">{form.formState.errors.acceptsTerms.message}</p>
+          <p className="text-sm text-destructive">{form.formState.errors.acceptsTerms.message}</p>
         )}
 
         <Button type="submit" disabled={isLoading} className="w-full">

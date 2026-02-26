@@ -294,10 +294,10 @@ export function formatRating(rating: number): string {
 }
 
 export function getRatingColor(rating: number): string {
-  if (rating >= 4) return 'text-green-500';
-  if (rating >= 3) return 'text-yellow-500';
-  if (rating >= 2) return 'text-orange-500';
-  return 'text-red-500';
+  if (rating >= 4) return 'text-success';
+  if (rating >= 3) return 'text-warning';
+  if (rating >= 2) return 'text-warning';
+  return 'text-destructive';
 }
 
 export function formatPhone(phone: string): string {

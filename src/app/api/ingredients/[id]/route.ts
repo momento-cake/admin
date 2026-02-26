@@ -58,7 +58,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     const body = await request.json()
-    console.log('Update request body:', body)
+    // Request body log removed to avoid logging potentially sensitive data
 
     // Add the ID to the body for validation
     const dataWithId = { ...body, id }

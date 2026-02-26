@@ -12,7 +12,7 @@ export default function PublicLayout({
 }) {
   return (
     <html lang="pt-BR">
-      <body className="min-h-screen bg-white antialiased">
+      <body className="min-h-screen bg-background antialiased">
         {children}
       </body>
     </html>

@@ -145,10 +145,10 @@ export function IngredientDetailScreen({
 
   const getStockMovementIcon = (type: string) => {
     switch (type) {
-      case 'purchase': return <TrendingUp className="h-4 w-4 text-green-600" />;
-      case 'usage': return <Package className="h-4 w-4 text-orange-600" />;
-      case 'waste': return <AlertTriangle className="h-4 w-4 text-red-600" />;
-      default: return <Package className="h-4 w-4 text-blue-600" />;
+      case 'purchase': return <TrendingUp className="h-4 w-4 text-success" />;
+      case 'usage': return <Package className="h-4 w-4 text-warning" />;
+      case 'waste': return <AlertTriangle className="h-4 w-4 text-destructive" />;
+      default: return <Package className="h-4 w-4 text-primary" />;
     }
   };
 
@@ -167,9 +167,9 @@ export function IngredientDetailScreen({
     if (!previousPrice) return <Clock className="h-4 w-4 text-muted-foreground" />;
     
     if (currentPrice > previousPrice) {
-      return <TrendingUp className="h-4 w-4 text-red-600" />;
+      return <TrendingUp className="h-4 w-4 text-destructive" />;
     } else if (currentPrice < previousPrice) {
-      return <TrendingDown className="h-4 w-4 text-green-600" />;
+      return <TrendingDown className="h-4 w-4 text-success" />;
     }
     
     return <Clock className="h-4 w-4 text-muted-foreground" />;
@@ -253,8 +253,8 @@ export function IngredientDetailScreen({
                 <div className="flex items-center gap-1">
                   {getPriceTrendIcon(priceHistory[0]?.price || ingredient.currentPrice, priceHistory[1]?.price)}
                   <span className={cn("text-xs font-medium",
-                    priceHistory[0] && priceHistory[1] && priceHistory[0].price > priceHistory[1].price ? "text-red-600" :
-                    priceHistory[0] && priceHistory[1] && priceHistory[0].price < priceHistory[1].price ? "text-green-600" :
+                    priceHistory[0] && priceHistory[1] && priceHistory[0].price > priceHistory[1].price ? "text-destructive" :
+                    priceHistory[0] && priceHistory[1] && priceHistory[0].price < priceHistory[1].price ? "text-success" :
                     "text-muted-foreground"
                   )}>
                     {priceHistory[0] && priceHistory[1] && getPriceTrendText(priceHistory[0].price, priceHistory[1].price)}
@@ -431,7 +431,7 @@ export function IngredientDetailScreen({
                         <p className="text-sm text-muted-foreground mt-1">
                           {formatStock(item.previousStock)} → {formatStock(item.newStock)}
                           <span className={cn("ml-2 font-medium", 
-                            item.quantity > 0 ? "text-green-600" : "text-red-600"
+                            item.quantity > 0 ? "text-success" : "text-destructive"
                           )}>
                             ({item.quantity > 0 ? '+' : ''}{formatStock(Math.abs(item.quantity))})
                           </span>
@@ -505,8 +505,8 @@ export function IngredientDetailScreen({
                             </p>
                             <p className="text-sm text-muted-foreground mt-1">
                               Variação: <span className={cn("font-medium", 
-                                previousPrice && entry.price > previousPrice ? "text-red-600" :
-                                previousPrice && entry.price < previousPrice ? "text-green-600" :
+                                previousPrice && entry.price > previousPrice ? "text-destructive" :
+                                previousPrice && entry.price < previousPrice ? "text-success" :
                                 "text-muted-foreground"
                               )}>
                                 {getPriceTrendText(entry.price, previousPrice)}

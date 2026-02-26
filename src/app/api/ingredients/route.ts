@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
     console.log('➕ POST /api/ingredients - Creating ingredient')
     
     const body = await request.json()
-    console.log('Request body:', body)
+    // Request body log removed to avoid logging potentially sensitive data
 
     // Validate the ingredient data
     const validationResult = ingredientValidation.safeParse(body)

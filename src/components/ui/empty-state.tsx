@@ -21,7 +21,10 @@ export function EmptyState({ icon: Icon, title, description, action, className }
   return (
     <Card className={className}>
       <CardContent className="flex flex-col items-center justify-center p-12 text-center">
-        <Icon className="h-12 w-12 text-muted-foreground mb-4" />
+        <div className="rounded-full bg-primary/10 p-4">
+          <Icon className="h-12 w-12 text-muted-foreground" />
+        </div>
+        <div className="mb-4" />
         <CardTitle className="text-lg mb-2">{title}</CardTitle>
         <CardDescription className="mb-6 max-w-sm">{description}</CardDescription>
         {action && (
@@ -49,8 +52,8 @@ interface StatCardProps {
 export function StatCard({ title, value, icon: Icon, description, href }: StatCardProps) {
   if (href) {
     return (
-      <Link href={href} className="block transition-colors hover:bg-accent/50">
-        <Card>
+      <Link href={href} className="block">
+        <Card className="hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">{title}</CardTitle>
             <Icon className="h-4 w-4 text-muted-foreground" />
@@ -65,7 +68,7 @@ export function StatCard({ title, value, icon: Icon, description, href }: StatCa
   }
   
   return (
-    <Card>
+    <Card className="hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium">{title}</CardTitle>
         <Icon className="h-4 w-4 text-muted-foreground" />

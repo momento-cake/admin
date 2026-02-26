@@ -45,7 +45,7 @@ export async function PUT(
     console.log(`📡 API: PUT /api/recipes/${id}`);
 
     const body = await request.json();
-    console.log('📦 Recipe update data received:', body);
+    // Request body log removed to avoid logging potentially sensitive data
 
     // Create update data
     const updateData: UpdateRecipeData = {

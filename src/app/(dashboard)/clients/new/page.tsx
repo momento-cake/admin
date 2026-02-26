@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import Link from 'next/link'
@@ -12,9 +12,19 @@ import { AddressesSection } from '@/components/clients/AddressesSection'
 import { RelatedPersonsSection } from '@/components/clients/RelatedPersonsSection'
 import { SpecialDatesSection } from '@/components/clients/SpecialDatesSection'
 import { TagsSection } from '@/components/clients/TagsSection'
+import { usePermissions } from '@/hooks/usePermissions'
 
 export default function NewClientPage() {
   const router = useRouter()
+  const { canPerformAction, loading: authLoading } = usePermissions()
+  const canCreate = canPerformAction('clients', 'create')
+
+  // Redirect if user doesn't have create permission (wait for auth to load first)
+  useEffect(() => {
+    if (!authLoading && !canCreate) {
+      router.replace('/clients')
+    }
+  }, [authLoading, canCreate, router])
   const [clientType, setClientType] = useState<ClientType>('person')
   const [loading, setLoading] = useState(false)
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
@@ -271,7 +281,7 @@ export default function NewClientPage() {
           </Button>
         </Link>
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Novo Cliente</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Novo Cliente</h1>
           <p className="text-muted-foreground">Adicione um novo cliente ao sistema</p>
         </div>
       </div>
@@ -285,7 +295,7 @@ export default function NewClientPage() {
 
       <form onSubmit={handleSubmit} className="space-y-8 max-w-3xl">
         {/* Client Type Selection */}
-        <div className="space-y-3 p-6 border rounded-lg">
+        <div className="space-y-3 p-4 sm:p-6 border rounded-lg">
           <label className="text-sm font-semibold">Tipo de Cliente</label>
           <div className="flex gap-4">
             <label className="flex items-center gap-2 cursor-pointer">
@@ -316,7 +326,7 @@ export default function NewClientPage() {
         </div>
 
         {/* Basic Information */}
-        <div className="space-y-4 p-6 border rounded-lg">
+        <div className="space-y-4 p-4 sm:p-6 border rounded-lg">
           <h2 className="text-lg font-semibold">Informações Básicas</h2>
 
           <div data-error={!!validationErrors.name || undefined}>
@@ -335,7 +345,7 @@ export default function NewClientPage() {
             <FieldError message={validationErrors.name} />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="text-sm font-medium">Email</label>
               <input
@@ -373,7 +383,7 @@ export default function NewClientPage() {
         </div>
 
         {/* Contact Methods */}
-        <div className="space-y-4 p-6 border rounded-lg">
+        <div className="space-y-4 p-4 sm:p-6 border rounded-lg">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold">Métodos de Contato <span className="text-destructive">*</span></h2>
             <Button
@@ -393,7 +403,7 @@ export default function NewClientPage() {
           <div className="space-y-3">
             {formData.contactMethods.map((cm, index) => (
               <div key={cm.id} className={`p-4 border rounded-md space-y-3 bg-muted/30 ${validationErrors[`contactMethod_${index}`] ? 'border-destructive' : 'border-input'}`} data-error={!!validationErrors[`contactMethod_${index}`] || undefined}>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
                     <label className="text-sm font-medium">Tipo</label>
                     <select
@@ -467,7 +477,7 @@ export default function NewClientPage() {
         </div>
 
         {/* Addresses */}
-        <div className="space-y-4 p-6 border rounded-lg">
+        <div className="space-y-4 p-4 sm:p-6 border rounded-lg">
           <AddressesSection
             addresses={formData.addresses}
             onAdd={(addr) => setFormData(prev => ({ ...prev, addresses: [...prev.addresses, addr] }))}
@@ -485,7 +495,7 @@ export default function NewClientPage() {
         {/* Business Information */}
         {clientType === 'business' && (
           <>
-            <div className="space-y-4 p-6 border rounded-lg">
+            <div className="space-y-4 p-4 sm:p-6 border rounded-lg">
               <h2 className="text-lg font-semibold">Informações Empresariais</h2>
 
               <div data-error={!!validationErrors['companyInfo.cnpj'] || undefined}>
@@ -515,7 +525,7 @@ export default function NewClientPage() {
                 <FieldError message={validationErrors['companyInfo.companyName']} />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm font-medium">Tipo de Negócio</label>
                   <input
@@ -539,7 +549,7 @@ export default function NewClientPage() {
               </div>
             </div>
 
-            <div className="space-y-4 p-6 border rounded-lg">
+            <div className="space-y-4 p-4 sm:p-6 border rounded-lg">
               <h2 className="text-lg font-semibold">Representante *</h2>
 
               <div data-error={!!validationErrors['representative.name'] || undefined}>
@@ -555,7 +565,7 @@ export default function NewClientPage() {
                 <FieldError message={validationErrors['representative.name']} />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div data-error={!!validationErrors['representative.email'] || undefined}>
                   <label className="text-sm font-medium">Email <span className="text-destructive">*</span></label>
                   <input
@@ -582,7 +592,7 @@ export default function NewClientPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm font-medium">Cargo</label>
                   <input
@@ -609,7 +619,7 @@ export default function NewClientPage() {
         )}
 
         {/* Tags */}
-        <div className="space-y-4 p-6 border rounded-lg">
+        <div className="space-y-4 p-4 sm:p-6 border rounded-lg">
           <TagsSection
             tags={formData.tags}
             onTagsChange={(tags) => setFormData(prev => ({ ...prev, tags }))}
@@ -617,7 +627,7 @@ export default function NewClientPage() {
         </div>
 
         {/* Related Persons */}
-        <div className="space-y-4 p-6 border rounded-lg">
+        <div className="space-y-4 p-4 sm:p-6 border rounded-lg">
           <RelatedPersonsSection
             relatedPersons={formData.relatedPersons}
             onAdd={(person) => setFormData(prev => {
@@ -676,7 +686,7 @@ export default function NewClientPage() {
         </div>
 
         {/* Special Dates */}
-        <div className="space-y-4 p-6 border rounded-lg">
+        <div className="space-y-4 p-4 sm:p-6 border rounded-lg">
           <SpecialDatesSection
             specialDates={formData.specialDates}
             relatedPersons={formData.relatedPersons}
@@ -696,7 +706,7 @@ export default function NewClientPage() {
         </div>
 
         {/* Notes */}
-        <div className="space-y-4 p-6 border rounded-lg">
+        <div className="space-y-4 p-4 sm:p-6 border rounded-lg">
           <h2 className="text-lg font-semibold">Notas Adicionais</h2>
           <textarea
             name="notes"

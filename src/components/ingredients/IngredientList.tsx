@@ -392,8 +392,8 @@ export function IngredientList({
                               variant={stockStatus === 'good' ? 'default' : stockStatus === 'out' ? 'destructive' : 'secondary'}
                               className={cn(
                                 'text-xs',
-                                stockStatus === 'low' && 'bg-yellow-100 text-yellow-800 hover:bg-yellow-100',
-                                stockStatus === 'critical' && 'bg-orange-100 text-orange-800 hover:bg-orange-100'
+                                stockStatus === 'low' && 'bg-warning/10 text-warning hover:bg-warning/10',
+                                stockStatus === 'critical' && 'bg-warning/20 text-warning hover:bg-warning/20'
                               )}
                             >
                               {getStockStatusText(stockStatus)}

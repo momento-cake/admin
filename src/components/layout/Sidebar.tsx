@@ -34,6 +34,7 @@ interface NavSubmenuItem {
   name: string;
   href: string;
   icon: React.ComponentType<{ className?: string }>;
+  feature?: FeatureKey;
   hasSubmenu?: boolean;
   submenu?: NavSubmenuItem[];
 }
@@ -86,7 +87,8 @@ const navigation: NavItem[] = [
       {
         name: 'Receitas',
         href: '/recipes',
-        icon: ChefHat
+        icon: ChefHat,
+        feature: 'recipes'
       },
       {
         name: 'Categorias de Produtos',
@@ -96,22 +98,26 @@ const navigation: NavItem[] = [
       {
         name: 'Ingredientes',
         href: '/ingredients/inventory',
-        icon: Package
+        icon: Package,
+        feature: 'ingredients'
       },
       {
         name: 'Fornecedores',
         href: '/ingredients/suppliers',
-        icon: Truck
+        icon: Truck,
+        feature: 'ingredients'
       },
       {
         name: 'Embalagens',
         href: '/packaging/inventory',
-        icon: Package
+        icon: Package,
+        feature: 'packaging'
       },
       {
         name: 'Análise de Custos',
         href: '/recipes/costs',
-        icon: DollarSign
+        icon: DollarSign,
+        feature: 'recipes'
       }
     ]
   },
@@ -159,7 +165,9 @@ const navigation: NavItem[] = [
 ]
 
 export function Sidebar() {
-  const pathname = usePathname()
+  const rawPathname = usePathname()
+  // Normalize: strip trailing slash for consistent comparison with href values
+  const pathname = rawPathname.replace(/\/$/, '') || '/'
   const { userModel, logout } = useAuth()
   const { canAccess, role } = usePermissions()
   const [expandedItems, setExpandedItems] = useState<string[]>([])
@@ -167,15 +175,15 @@ export function Sidebar() {
   if (!userModel) return null
 
   const toggleExpanded = (itemName: string) => {
-    setExpandedItems(prev => 
-      prev.includes(itemName) 
+    setExpandedItems(prev =>
+      prev.includes(itemName)
         ? prev.filter(name => name !== itemName)
         : [...prev, itemName]
     )
   }
 
   const isExpanded = (itemName: string) => expandedItems.includes(itemName)
-  
+
   const isActiveSubmenu = (item: any) => {
     if (!item.submenu) return false
     return item.submenu.some((subItem: any) => {
@@ -190,11 +198,12 @@ export function Sidebar() {
   }
 
   return (
-    <div className="flex w-full md:w-64 md:flex-col">
-      <div className="flex flex-col flex-grow pt-5 overflow-y-auto bg-sidebar border-r border-sidebar-border">
+    <div className="flex w-64 flex-col h-full">
+      <div className="flex flex-col flex-1 pt-5 overflow-y-auto bg-sidebar border-r border-sidebar-border">
         <div className="flex items-center flex-shrink-0 px-4">
-          <h1 className="text-xl font-bold text-sidebar-foreground">
-            Momento Cake Admin
+          <h1 className="text-xl text-sidebar-foreground">
+            <span className="text-sidebar-primary font-bold">Momento Cake</span>{' '}
+            <span className="text-sidebar-foreground/50 font-normal">Admin</span>
           </h1>
         </div>
 
@@ -202,10 +211,23 @@ export function Sidebar() {
           <nav className="flex-1 px-2 pb-4 space-y-1">
             {navigation.map((item) => {
               const Icon = item.icon
-              const isActive = item.href ? pathname === item.href : isActiveSubmenu(item)
               const hasSubmenu = item.hasSubmenu && item.submenu
               const expanded = isExpanded(item.name)
               const hasAccess = canAccess(item.feature)
+
+              // Filter submenu items by feature access
+              const accessibleSubmenu = hasSubmenu
+                ? item.submenu!.filter((subItem) =>
+                    subItem.feature ? canAccess(subItem.feature) : true
+                  )
+                : undefined
+
+              // Hide parent if it has a submenu but no accessible children
+              if (hasSubmenu && accessibleSubmenu!.length === 0) {
+                return null
+              }
+
+              const isActive = item.href ? pathname === item.href : isActiveSubmenu(item)
 
               // Render disabled menu item with title tooltip
               if (!hasAccess) {
@@ -265,9 +287,9 @@ export function Sidebar() {
                   )}
                   
                   {/* Submenu */}
-                  {hasSubmenu && expanded && (
+                  {hasSubmenu && expanded && accessibleSubmenu && (
                     <div className="ml-6 mt-1 space-y-1">
-                      {item.submenu!.map((subItem) => {
+                      {accessibleSubmenu.map((subItem) => {
                         const SubIcon = subItem.icon
                         const isSubActive = pathname === subItem.href
                         const hasNestedSubmenu = subItem.hasSubmenu && subItem.submenu
@@ -302,7 +324,7 @@ export function Sidebar() {
                                 className={cn(
                                   'group flex items-center px-2 py-1.5 text-xs font-medium rounded-md transition-colors',
                                   isSubActive
-                                    ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                                    ? 'bg-sidebar-accent text-sidebar-accent-foreground shadow-[inset_3px_0_0_0_var(--sidebar-primary)] pl-1.5'
                                     : 'text-sidebar-foreground/80 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground'
                                 )}
                               >
@@ -364,23 +386,25 @@ export function Sidebar() {
           
           <div className="px-2 pb-4">
             <div className="border-t border-sidebar-border pt-4">
-              <div className="px-2 py-2 text-xs text-sidebar-foreground/60">
-                {userModel.displayName || userModel.email}
-                <br />
-                <span className="font-medium">
-                  {ROLE_LABELS[role] || role}
-                  {userModel.metadata?.isInitialAdmin && ' (Master)'}
-                </span>
+              <div className="rounded-lg bg-sidebar-accent/50 p-3">
+                <div className="text-xs text-sidebar-foreground/60">
+                  {userModel.displayName || userModel.email}
+                  <br />
+                  <span className="text-sidebar-primary text-xs font-medium">
+                    {ROLE_LABELS[role] || role}
+                    {userModel.metadata?.isInitialAdmin && ' (Master)'}
+                  </span>
+                </div>
+                <Button
+                  onClick={logout}
+                  variant="ghost"
+                  size="sm"
+                  className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent mt-2"
+                >
+                  <LogOut className="mr-3 h-4 w-4" />
+                  Sair
+                </Button>
               </div>
-              <Button
-                onClick={logout}
-                variant="ghost"
-                size="sm"
-                className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent"
-              >
-                <LogOut className="mr-3 h-4 w-4" />
-                Sair
-              </Button>
             </div>
           </div>
         </div>

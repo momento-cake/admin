@@ -112,7 +112,7 @@ export function RelatedPersonsSection({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between relative z-0">
-        <h3 className="text-lg font-semibold text-gray-900">Pessoas Relacionadas</h3>
+        <h3 className="text-lg font-semibold text-foreground">Pessoas Relacionadas</h3>
         {!isAdding && (
           <Button
             type="button"
@@ -138,24 +138,24 @@ export function RelatedPersonsSection({
             <Card key={person.id} className="p-3 flex items-start justify-between gap-4">
               <div className="flex-1 min-w-0">
                 <div className="flex items-baseline gap-2 flex-wrap">
-                  <p className="font-medium text-gray-900">{person.name}</p>
-                  <p className="text-sm text-gray-500">
+                  <p className="font-medium text-foreground">{person.name}</p>
+                  <p className="text-sm text-muted-foreground">
                     {getRelationshipLabel(person.relationship)}
                   </p>
                   {person.birthDate && (
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-muted-foreground">
                       Nasc: {formatDate(person.birthDate)}
                     </p>
                   )}
                 </div>
                 {(person.email || person.phone) && (
-                  <div className="text-sm text-gray-600 mt-1 flex items-center gap-2 flex-wrap">
+                  <div className="text-sm text-muted-foreground mt-1 flex items-center gap-2 flex-wrap">
                     {person.email && <span>{person.email}</span>}
                     {person.phone && <span>{person.phone}</span>}
                   </div>
                 )}
                 {person.notes && (
-                  <p className="text-sm text-gray-600 mt-1 italic truncate">{person.notes}</p>
+                  <p className="text-sm text-muted-foreground mt-1 italic truncate">{person.notes}</p>
                 )}
               </div>
               <div className="flex gap-2 flex-shrink-0 mt-0">
@@ -164,7 +164,7 @@ export function RelatedPersonsSection({
                   variant="ghost"
                   size="sm"
                   onClick={() => handleEdit(index)}
-                  className="text-blue-600 hover:text-blue-700"
+                  className="text-primary hover:text-primary/80"
                 >
                   <Edit2 className="w-4 h-4" />
                 </Button>
@@ -173,7 +173,7 @@ export function RelatedPersonsSection({
                   variant="ghost"
                   size="sm"
                   onClick={() => onRemove(index)}
-                  className="text-red-600 hover:text-red-700"
+                  className="text-destructive hover:text-destructive/80"
                 >
                   <Trash2 className="w-4 h-4" />
                 </Button>
@@ -185,30 +185,30 @@ export function RelatedPersonsSection({
 
       {/* Form for Adding/Editing */}
       {isAdding && (
-        <Card className="p-4 bg-gray-50">
+        <Card className="p-4 bg-muted">
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Nome *
                 </label>
                 <input
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring"
                   placeholder="Nome completo"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Relacionamento *
                 </label>
                 <select
                   value={formData.relationship}
                   onChange={(e) => setFormData({ ...formData, relationship: e.target.value as RelationshipType })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring"
                 >
                   {RELATIONSHIP_TYPES.map(type => (
                     <option key={type.value} value={type.value}>
@@ -219,51 +219,51 @@ export function RelatedPersonsSection({
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Email
                 </label>
                 <input
                   type="email"
                   value={formData.email || ''}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring"
                   placeholder="email@example.com"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Telefone
                 </label>
                 <input
                   type="tel"
                   value={formData.phone || ''}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring"
                   placeholder="(11) 99999-9999"
                 />
               </div>
 
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Data de Nascimento
                 </label>
                 <input
                   type="date"
                   value={formData.birthDate || ''}
                   onChange={(e) => setFormData({ ...formData, birthDate: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring"
                 />
               </div>
 
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Observações
                 </label>
                 <textarea
                   value={formData.notes || ''}
                   onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring"
                   placeholder="Observações adicionais"
                   rows={2}
                 />
@@ -284,7 +284,7 @@ export function RelatedPersonsSection({
               </Button>
               <Button
                 type="button"
-                className="bg-blue-600 hover:bg-blue-700 text-white"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground"
                 onClick={(e) => {
                   e.preventDefault()
                   e.stopPropagation()
@@ -299,7 +299,7 @@ export function RelatedPersonsSection({
       )}
 
       {relatedPersons.length === 0 && !isAdding && (
-        <p className="text-sm text-gray-500 italic">
+        <p className="text-sm text-muted-foreground italic">
           Nenhuma pessoa relacionada adicionada
         </p>
       )}

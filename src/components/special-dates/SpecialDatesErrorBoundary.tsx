@@ -32,9 +32,9 @@ export class SpecialDatesErrorBoundary extends React.Component<
   render() {
     if (this.state.hasError) {
       return (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <p className="text-red-800 font-medium">Erro ao carregar datas especiais</p>
-          <p className="text-red-700 text-sm mt-1">
+        <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-4">
+          <p className="text-destructive font-medium">Erro ao carregar datas especiais</p>
+          <p className="text-destructive text-sm mt-1">
             {this.state.error?.message || 'Um erro inesperado ocorreu'}
           </p>
         </div>

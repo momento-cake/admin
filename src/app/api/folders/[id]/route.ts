@@ -69,7 +69,7 @@ export async function PUT(
     }
 
     const body = await request.json()
-    console.log('Update request body:', body)
+    // Request body log removed to avoid logging potentially sensitive data
 
     // Validate the folder data
     const validationResult = updateFolderSchema.safeParse(body)

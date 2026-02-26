@@ -27,7 +27,7 @@ export interface FeaturePermissionConfig {
  */
 export type UserCustomPermissions = Partial<Record<
   'dashboard' | 'users' | 'clients' | 'ingredients' | 'recipes' |
-  'products' | 'packaging' | 'orders' | 'reports' | 'settings',
+  'products' | 'packaging' | 'images' | 'orders' | 'reports' | 'settings',
   FeaturePermissionConfig
 >>;
 
@@ -240,47 +240,9 @@ export interface UserRegistrationData {
 }
 
 
-// Client Types
-export type ClientType = 'person' | 'business'
-export type DocumentType = 'cpf' | 'cnpj'
-export type ContactType = 'email' | 'phone' | 'whatsapp'
-
-export interface ClientAddress {
-  id: string
-  street: string
-  number: string
-  complement: string
-  neighborhood: string
-  city: string
-  state: string
-  cep: string
-  reference: string
-  isPreferred: boolean
-}
-
-export interface ClientContact {
-  id: string
-  type: ContactType
-  value: string
-  isPreferred: boolean
-}
-
-export interface Client {
-  id: string
-  name: string
-  lastName: string
-  description: string
-  documentNumber: string
-  documentType: DocumentType
-  clientType: ClientType
-  addresses: ClientAddress[]
-  contacts: ClientContact[]
-  relatedPersons: unknown[]
-  specialDates: unknown[]
-  isActive: boolean
-  createdAt: Date
-  updatedAt?: Date
-}
+// Client types — canonical definitions live in @/types/client.ts
+// Re-export for backwards compatibility
+export type { Client, ClientType } from './client'
 
 // Ingredient Types
 export type PackageUnit = 'kilogram' | 'gram' | 'liter' | 'milliliter' | 'unit'

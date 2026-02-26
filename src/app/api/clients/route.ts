@@ -7,16 +7,29 @@ import {
 } from '@/lib/clients'
 import { createClientSchema, clientQuerySchema } from '@/lib/validators/client'
 import { ClientQueryFilters } from '@/types/client'
+import { getAuthFromRequest, canPerformActionFromRequest, unauthorizedResponse, forbiddenResponse } from '@/lib/api-auth'
 
 // GET /api/clients - Get all clients with filters
 export async function GET(request: NextRequest) {
   try {
+    const auth = await getAuthFromRequest(request)
+    if (!auth) {
+      return unauthorizedResponse()
+    }
+
+    if (!canPerformActionFromRequest(auth, 'clients', 'view')) {
+      return forbiddenResponse('Sem permissão para visualizar clientes')
+    }
+
     console.log('🔍 GET /api/clients - Fetching clients')
 
     const searchParams = request.nextUrl.searchParams
 
     // Check if user is requesting inactive clients (admin only)
     const includeInactive = searchParams.get('includeInactive') === 'true'
+    if (includeInactive && auth.role !== 'admin') {
+      return forbiddenResponse('Apenas administradores podem ver clientes inativos')
+    }
 
     const filters: ClientQueryFilters = {
       searchQuery: searchParams.get('searchQuery') || undefined,
@@ -67,10 +80,19 @@ export async function GET(request: NextRequest) {
 // POST /api/clients - Create new client
 export async function POST(request: NextRequest) {
   try {
+    const auth = await getAuthFromRequest(request)
+    if (!auth) {
+      return unauthorizedResponse()
+    }
+
+    if (!canPerformActionFromRequest(auth, 'clients', 'create')) {
+      return forbiddenResponse('Sem permissão para criar clientes')
+    }
+
     console.log('➕ POST /api/clients - Creating client')
 
     const body = await request.json()
-    console.log('Request body:', body)
+    // Request body log removed to avoid logging PII (name, CPF, phone, email)
 
     // Validate the client data
     const validationResult = createClientSchema.safeParse(body)
@@ -93,7 +115,7 @@ export async function POST(request: NextRequest) {
 
     const client = await createClient(clientData as any)
 
-    console.log(`✅ Successfully created client: ${client.name} (${client.id})`)
+    console.log(`✅ Successfully created client: ${client.id}`)
 
     return NextResponse.json(
       {

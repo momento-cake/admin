@@ -193,7 +193,7 @@ export default function RecipesListPage() {
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold text-momento-text">Todas as Receitas</h1>
-          <p className="text-red-500">{error}</p>
+          <p className="text-destructive">{error}</p>
         </div>
         <Button onClick={() => setRefreshTrigger(prev => prev + 1)}>
           Tentar Novamente
@@ -353,7 +353,7 @@ export default function RecipesListPage() {
                       {recipe.suggestedPrice > 0 && (
                         <div className="flex justify-between text-sm">
                           <span className="text-muted-foreground">Preço sugerido:</span>
-                          <span className="font-medium text-green-600">
+                          <span className="font-medium text-success">
                             {formatPrice(recipe.suggestedPrice)}
                           </span>
                         </div>
@@ -388,7 +388,7 @@ export default function RecipesListPage() {
                         size="sm"
                         variant="outline"
                         onClick={() => handleDeleteRecipe(recipe)}
-                        className="text-red-600 hover:text-red-700"
+                        className="text-destructive hover:text-destructive/80"
                       >
                         <Trash2 className="h-3 w-3" />
                       </Button>

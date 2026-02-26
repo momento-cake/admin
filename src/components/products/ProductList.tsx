@@ -147,9 +147,9 @@ export function ProductList({
 
   // Calculate profit margin color
   const getMarginColor = (margin: number) => {
-    if (margin > 0.2) return 'text-green-600';
-    if (margin > 0.1) return 'text-yellow-600';
-    return 'text-red-600';
+    if (margin > 0.2) return 'text-success';
+    if (margin > 0.1) return 'text-warning';
+    return 'text-destructive';
   };
 
   // Get margin viability status

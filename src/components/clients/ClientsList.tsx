@@ -144,7 +144,7 @@ export function ClientsList({
   }
 
   const getClientTypeColor = (type: ClientType) => {
-    return type === 'person' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
+    return type === 'person' ? 'bg-primary/10 text-primary' : 'bg-accent text-accent-foreground'
   }
 
   const startIndex = (page - 1) * limit + 1
@@ -242,9 +242,9 @@ export function ClientsList({
                 <TableRow>
                   <TableHead>Cliente</TableHead>
                   <TableHead>Tipo</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>CPF/CNPJ</TableHead>
-                  <TableHead>Telefone</TableHead>
+                  <TableHead className="hidden md:table-cell">Email</TableHead>
+                  <TableHead className="hidden lg:table-cell">CPF/CNPJ</TableHead>
+                  <TableHead className="hidden sm:table-cell">Telefone</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
@@ -259,7 +259,7 @@ export function ClientsList({
                         {getClientTypeLabel(client.type)}
                       </Badge>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden md:table-cell">
                       {client.email ? (
                         <span className="text-sm text-muted-foreground truncate max-w-[200px] block">
                           {client.email}
@@ -268,14 +268,14 @@ export function ClientsList({
                         <span className="text-sm text-muted-foreground">-</span>
                       )}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden lg:table-cell">
                       {client.cpfCnpj ? (
                         <span className="text-sm">{client.cpfCnpj}</span>
                       ) : (
                         <span className="text-sm text-muted-foreground">-</span>
                       )}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden sm:table-cell">
                       {client.phone ? (
                         <span className="text-sm">{client.phone}</span>
                       ) : (
@@ -343,7 +343,7 @@ export function ClientsList({
           </div>
 
           {/* Pagination */}
-          <div className="flex items-center justify-between pt-4 border-t">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-2 pt-4 border-t">
             <div className="text-sm text-muted-foreground">
               Exibindo <span className="font-semibold">{startIndex}-{endIndex}</span> de <span className="font-semibold">{total}</span> clientes
             </div>

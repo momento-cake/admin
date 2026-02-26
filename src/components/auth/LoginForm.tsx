@@ -72,19 +72,20 @@ export function LoginForm() {
   // Show first access form if requested
   if (showFirstAccess) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background px-4">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5 px-4">
         <FirstAccessForm onBack={handleBackToLogin} />
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
-      <Card className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5 px-4">
+      <Card className="w-full max-w-md shadow-xl border-0">
         <CardHeader className="space-y-1 text-center">
           <div className="mb-4">
-            <h1 className="text-2xl font-bold text-primary">Momento Cake</h1>
+            <h1 className="text-3xl font-bold text-primary">Momento Cake</h1>
             <p className="text-sm text-muted-foreground">Sistema de Administração</p>
+            <div className="mx-auto mt-1 h-0.5 w-12 rounded-full bg-accent" />
           </div>
           <CardTitle className="text-xl">Fazer Login</CardTitle>
           <CardDescription>
@@ -95,7 +96,7 @@ export function LoginForm() {
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               {successMessage && (
-                <Alert className="border-green-200 bg-green-50 text-green-800">
+                <Alert variant="success">
                   <AlertDescription>{successMessage}</AlertDescription>
                 </Alert>
               )}

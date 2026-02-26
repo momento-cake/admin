@@ -115,8 +115,8 @@ export function StockManager({
   return (
     <div className="space-y-6">
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-md p-4">
-          <p className="text-red-800 text-sm">{error}</p>
+        <div className="bg-destructive/10 border border-destructive/30 rounded-md p-4">
+          <p className="text-destructive text-sm">{error}</p>
         </div>
       )}
 
@@ -125,27 +125,27 @@ export function StockManager({
           {/* Current Stock Info */}
           <Card className="bg-muted/50">
             <CardContent className="pt-6">
-              <div className="grid grid-cols-3 gap-4 text-center">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
                 <div>
                   <p className="text-sm text-muted-foreground">Estoque Atual</p>
                   <p className="text-2xl font-bold">{packaging.currentStock}</p>
                 </div>
                 <div className="flex items-center justify-center">
                   {selectedType === 'usage' || selectedType === 'waste' ? (
-                    <ArrowDown className="h-6 w-6 text-red-500" />
+                    <ArrowDown className="h-6 w-6 text-destructive" />
                   ) : (
-                    <ArrowUp className="h-6 w-6 text-green-500" />
+                    <ArrowUp className="h-6 w-6 text-success" />
                   )}
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Novo Estoque</p>
-                  <p className={`text-2xl font-bold ${newStock < 0 ? 'text-red-600' : ''}`}>
+                  <p className={`text-2xl font-bold ${newStock < 0 ? 'text-destructive' : ''}`}>
                     {Math.max(0, newStock)}
                   </p>
                 </div>
               </div>
               {newStock < 0 && (
-                <p className="text-xs text-red-600 mt-3 text-center">
+                <p className="text-xs text-destructive mt-3 text-center">
                   ⚠️ O estoque ficará negativo. A quantidade será limitada a {packaging.currentStock}.
                 </p>
               )}
@@ -338,7 +338,7 @@ export function StockManager({
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className={`font-medium ${entry.quantity < 0 ? 'text-red-600' : 'text-green-600'}`}>
+                    <div className={`font-medium ${entry.quantity < 0 ? 'text-destructive' : 'text-success'}`}>
                       {entry.quantity < 0 ? '' : '+'}{entry.quantity}
                     </div>
                     <div className="text-xs text-muted-foreground">

@@ -19,6 +19,7 @@ import { toast } from 'sonner'
 import { AddressesSection } from './AddressesSection'
 import { RelatedPersonsSection } from './RelatedPersonsSection'
 import { SpecialDatesSection } from './SpecialDatesSection'
+import { TagsSection } from './TagsSection'
 
 interface ClientFormModalProps {
   client?: Client | null
@@ -35,6 +36,8 @@ export function ClientFormModal({ client, onClose, onSuccess }: ClientFormModalP
   const [formData, setFormData] = useState({
     type: client?.type || ('person' as ClientType),
     name: client?.name || '',
+    email: client?.email || '',
+    phone: client?.phone || '',
     cpfCnpj: client?.cpfCnpj || '',
     contactMethods: client?.contactMethods && client.contactMethods.length > 0
       ? client.contactMethods
@@ -116,6 +119,8 @@ export function ClientFormModal({ client, onClose, onSuccess }: ClientFormModalP
       const submitData = {
         type: clientType,
         name: formData.name,
+        email: formData.email || undefined,
+        phone: formData.phone || undefined,
         cpfCnpj: formData.cpfCnpj || undefined,
         addresses: formData.addresses.length > 0 ? formData.addresses : undefined,
         contactMethods: formData.contactMethods,
@@ -144,6 +149,7 @@ export function ClientFormModal({ client, onClose, onSuccess }: ClientFormModalP
         return
       }
 
+      toast.success(client ? 'Cliente atualizado com sucesso!' : 'Cliente criado com sucesso!')
       onSuccess()
     } catch (err) {
       setValidationErrors({ submit: err instanceof Error ? err.message : 'Erro ao salvar cliente' })
@@ -153,7 +159,7 @@ export function ClientFormModal({ client, onClose, onSuccess }: ClientFormModalP
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
       <div className="bg-background rounded-lg max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-border sticky top-0 bg-background z-10">
@@ -225,16 +231,41 @@ export function ClientFormModal({ client, onClose, onSuccess }: ClientFormModalP
               {validationErrors.name && <p className="text-sm text-destructive mt-1">{validationErrors.name}</p>}
             </div>
 
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  placeholder="email@exemplo.com"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="cpfCnpj">
+                  {clientType === 'person' ? 'CPF' : 'CNPJ'}
+                </Label>
+                <Input
+                  id="cpfCnpj"
+                  type="text"
+                  name="cpfCnpj"
+                  value={formData.cpfCnpj}
+                  onChange={handleInputChange}
+                />
+              </div>
+            </div>
+
             <div className="space-y-2">
-              <Label htmlFor="cpfCnpj">
-                {clientType === 'person' ? 'CPF' : 'CNPJ'}
-              </Label>
+              <Label htmlFor="phone">Telefone</Label>
               <Input
-                id="cpfCnpj"
-                type="text"
-                name="cpfCnpj"
-                value={formData.cpfCnpj}
+                id="phone"
+                type="tel"
+                name="phone"
+                value={formData.phone}
                 onChange={handleInputChange}
+                placeholder="(11) 99999-9999"
               />
             </div>
           </div>
@@ -367,6 +398,14 @@ export function ClientFormModal({ client, onClose, onSuccess }: ClientFormModalP
                 ...prev,
                 addresses: prev.addresses.filter((_, i) => i !== index)
               }))}
+            />
+          </div>
+
+          {/* Tags */}
+          <div>
+            <TagsSection
+              tags={formData.tags}
+              onTagsChange={(tags) => setFormData(prev => ({ ...prev, tags }))}
             />
           </div>
 

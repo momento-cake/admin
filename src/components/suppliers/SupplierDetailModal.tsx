@@ -87,7 +87,7 @@ export function SupplierDetailModal({ supplier, open, onOpenChange }: SupplierDe
             <CardContent>
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
-                  <Star className="h-5 w-5 text-yellow-500" />
+                  <Star className="h-5 w-5 text-warning" />
                   <span className={`text-lg font-semibold ${getRatingColor(supplier.rating)}`}>
                     {supplier.rating.toFixed(1)}
                   </span>
