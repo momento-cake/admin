@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { Bell, Menu, User, Settings, LogOut } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
@@ -7,11 +8,18 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Sidebar } from './Sidebar'
 import { useAuth } from '@/hooks/useAuth'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 
 export function Header() {
   const { user, userModel, logout } = useAuth()
   const router = useRouter()
+  const pathname = usePathname()
+  const [sheetOpen, setSheetOpen] = useState(false)
+
+  // Close mobile menu on navigation
+  useEffect(() => {
+    setSheetOpen(false)
+  }, [pathname])
 
   if (!userModel || !user) return null
 
@@ -37,7 +45,7 @@ export function Header() {
     <header className="backdrop-blur-md bg-background/80 border-b border-border shadow-sm sticky top-0 z-40">
       <div className="flex h-16 items-center gap-4 px-4">
         {/* Mobile menu */}
-        <Sheet>
+        <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
           <SheetTrigger asChild>
             <Button
               variant="ghost"
@@ -47,7 +55,7 @@ export function Header() {
               <Menu className="h-5 w-5" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="left" className="p-0">
+          <SheetContent side="left" className="p-0 w-64 sm:max-w-64 [&>button:last-child]:hidden">
             <Sidebar />
           </SheetContent>
         </Sheet>
