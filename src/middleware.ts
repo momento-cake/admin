@@ -14,7 +14,8 @@ const protectedRoutes = [
   '/orders',
   '/reports',
   '/settings',
-  '/images'
+  '/images',
+  '/ponto'
 ]
 
 // Public routes that don't require authentication

@@ -362,7 +362,7 @@ export type RegisterResponse = ApiResponse<UserModel>;
 export interface CreateInvitationRequest {
   email: string;
   name: string;
-  role: 'admin' | 'atendente';
+  role: 'admin' | 'atendente' | 'producao';
   expiresIn?: number;
 }
 

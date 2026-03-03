@@ -20,7 +20,7 @@ import { collection, query, where, getDocs, addDoc, serverTimestamp } from 'fire
 const inviteSchema = z.object({
   email: z.string().email('Digite um email valido'),
   name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
-  role: z.enum(['admin', 'atendente'] as const),
+  role: z.enum(['admin', 'atendente', 'producao'] as const),
   department: z.string().optional(),
   notes: z.string().optional(),
 })
@@ -199,6 +199,7 @@ export function InviteUserDialog({ open, onClose }: InviteUserDialogProps) {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="atendente">Atendente</SelectItem>
+                <SelectItem value="producao">Produção</SelectItem>
                 <SelectItem value="admin">Administrador</SelectItem>
               </SelectContent>
             </Select>

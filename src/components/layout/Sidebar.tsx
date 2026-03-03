@@ -26,7 +26,10 @@ import {
   Calendar,
   FolderOpen,
   Image,
-  Tag
+  Tag,
+  Clock,
+  PlayCircle,
+  Settings
 } from 'lucide-react'
 
 interface NavSubmenuItem {
@@ -34,6 +37,7 @@ interface NavSubmenuItem {
   href: string;
   icon: React.ComponentType<{ className?: string }>;
   feature?: FeatureKey;
+  adminOnly?: boolean;
   hasSubmenu?: boolean;
   submenu?: NavSubmenuItem[];
 }
@@ -160,6 +164,36 @@ const navigation: NavItem[] = [
         icon: Tag
       }
     ]
+  },
+  {
+    name: 'Ponto',
+    icon: Clock,
+    feature: 'time_tracking',
+    hasSubmenu: true,
+    submenu: [
+      {
+        name: 'Registro',
+        href: '/ponto/registro',
+        icon: PlayCircle
+      },
+      {
+        name: 'Meu Espelho',
+        href: '/ponto/espelho',
+        icon: Calendar
+      },
+      {
+        name: 'Painel Admin',
+        href: '/ponto/admin',
+        icon: Users,
+        adminOnly: true
+      },
+      {
+        name: 'Configurações',
+        href: '/ponto/configuracoes',
+        icon: Settings,
+        adminOnly: true
+      }
+    ]
   }
 ]
 
@@ -214,11 +248,12 @@ export function Sidebar() {
               const expanded = isExpanded(item.name)
               const hasAccess = canAccess(item.feature)
 
-              // Filter submenu items by feature access
+              // Filter submenu items by feature access and admin-only flag
               const accessibleSubmenu = hasSubmenu
-                ? item.submenu!.filter((subItem) =>
-                    subItem.feature ? canAccess(subItem.feature) : true
-                  )
+                ? item.submenu!.filter((subItem) => {
+                    if (subItem.adminOnly && role !== 'admin') return false
+                    return subItem.feature ? canAccess(subItem.feature) : true
+                  })
                 : undefined
 
               // Hide parent if it has a submenu but no accessible children

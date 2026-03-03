@@ -1,0 +1,685 @@
+{
+  "scope": "time-tracking",
+  "type": "feature",
+  "prdPath": "context/specs/time-tracking/PRD.md",
+  "totalPhases": 9,
+  "teamSpecification": {
+    "agents": [
+      {
+        "name": "team-lead",
+        "role": "Orchestrator",
+        "type": "general-purpose",
+        "responsibilities": "Coordinate all agents, manage task dependencies, merge work, resolve conflicts"
+      },
+      {
+        "name": "data-architect",
+        "role": "Data Layer Engineer",
+        "type": "general-purpose",
+        "responsibilities": "TypeScript types, Zod schemas, Firebase config, Firestore rules, indexes"
+      },
+      {
+        "name": "permission-engineer",
+        "role": "Permission System Engineer",
+        "type": "general-purpose",
+        "responsibilities": "User roles, permission system, middleware, sidebar navigation"
+      },
+      {
+        "name": "backend-engineer",
+        "role": "Backend & Service Layer Engineer",
+        "type": "general-purpose",
+        "responsibilities": "Service functions, API routes, calculation engine, React hooks"
+      },
+      {
+        "name": "clock-ui-builder",
+        "role": "Clock UI Developer",
+        "type": "general-purpose",
+        "responsibilities": "Clock in/out widget, geolocation capture, today's view. Uses frontend-design skill."
+      },
+      {
+        "name": "calendar-ui-builder",
+        "role": "Calendar Views Developer",
+        "type": "general-purpose",
+        "responsibilities": "Day/week/month calendar views, espelho de ponto, payroll breakdown. Uses frontend-design skill."
+      },
+      {
+        "name": "admin-ui-builder",
+        "role": "Admin Panel Developer",
+        "type": "general-purpose",
+        "responsibilities": "Admin overview, employee detail, edit panels, admin hooks. Uses frontend-design skill."
+      },
+      {
+        "name": "settings-builder",
+        "role": "Settings Module Developer",
+        "type": "general-purpose",
+        "responsibilities": "Work schedules CRUD, workplace locations, holiday calendar"
+      },
+      {
+        "name": "export-engineer",
+        "role": "Export & Compliance Engineer",
+        "type": "general-purpose",
+        "responsibilities": "CSV export, PDF espelho generation, compliance with Portaria 671"
+      },
+      {
+        "name": "qa-reviewer",
+        "role": "Quality Assurance Reviewer",
+        "type": "general-purpose",
+        "responsibilities": "Review each deliverable, verify DOD, run tests, check compliance with CCT rules"
+      }
+    ]
+  },
+  "phases": [
+    {
+      "id": 1,
+      "name": "Data Layer & Types",
+      "agent": "data-architect",
+      "reviewer": "qa-reviewer",
+      "dependencies": [],
+      "estimatedComplexity": "medium",
+      "tasks": [
+        {
+          "id": "1.1",
+          "name": "Create TypeScript Interfaces",
+          "description": "Create all TypeScript interfaces for the time tracking system in src/types/time-tracking.ts. Include: TimeEntry, TimeMarking, TimeEntryAuditLog, WorkSchedule, WorkplaceLocation, PayrollCalculation. Reference the PRD Section 5 for complete data model.",
+          "files": ["src/types/time-tracking.ts"],
+          "dod": [
+            "All interfaces from PRD Section 5.1 are created",
+            "All enums and literal types defined",
+            "Types are exported and importable",
+            "npm run build passes with no type errors"
+          ]
+        },
+        {
+          "id": "1.2",
+          "name": "Create Zod Validation Schemas",
+          "description": "Create Zod validation schemas for all time tracking data operations in src/lib/validators/time-tracking.ts. Follow existing patterns from src/lib/validators/user.ts. Include schemas for: clock operations, time entry CRUD, work schedule CRUD, manual edit with required reason field. All error messages in Portuguese.",
+          "files": ["src/lib/validators/time-tracking.ts"],
+          "dod": [
+            "Zod schemas for clock in/out request validation",
+            "Zod schemas for creating/updating time entries",
+            "Zod schemas for work schedule CRUD",
+            "Zod schemas for manual edit with required reason field",
+            "All schemas have Portuguese error messages",
+            "Type inference from schemas matches TypeScript interfaces"
+          ]
+        },
+        {
+          "id": "1.3",
+          "name": "Firestore Configuration",
+          "description": "Add Firestore indexes and security rules for new collections. Add indexes to firestore.indexes.json for: time_entries (userId+date), time_entry_audit_logs (timeEntryId+timestamp, userId+timestamp), work_schedules (userId+isActive). Add security rules to firestore.rules following existing patterns (isAuthenticated, isAdmin helpers).",
+          "files": ["firestore.indexes.json", "firestore.rules"],
+          "dod": [
+            "All required indexes added to firestore.indexes.json",
+            "Security rules added for all 4 new collections",
+            "Employees can only read their own entries",
+            "Admins can read/write all entries",
+            "Audit logs are immutable (no update/delete)",
+            "Rules follow existing patterns in file"
+          ]
+        }
+      ],
+      "reviewDod": [
+        "All types compile without errors (npm run build)",
+        "Zod schemas validate correctly (valid data passes, invalid fails)",
+        "Security rules cover all access patterns",
+        "Data model supports all payroll calculations from CCT",
+        "Night hour reduced time (52.5 min) is accounted for in types"
+      ],
+      "prompt": "You are the data-architect agent for the Momento Cake time tracking feature. Read the PRD at context/specs/time-tracking/PRD.md first.\n\nYour task is Phase 1: Create the data layer.\n\n1. Create src/types/time-tracking.ts with all interfaces from PRD Section 5.1\n2. Create src/lib/validators/time-tracking.ts with Zod schemas (follow patterns from src/lib/validators/user.ts)\n3. Update firestore.indexes.json with new indexes from PRD Section 5.2\n4. Update firestore.rules with security rules from PRD Section 5.3\n\nIMPORTANT:\n- Follow existing code patterns in the project\n- All error messages in Portuguese (PT-BR)\n- Night hour = 52 min 30 sec, account for this in types\n- Ensure audit logs are immutable (no update/delete in rules)\n- Run npm run build after to verify no type errors"
+    },
+    {
+      "id": 2,
+      "name": "Role & Permission System",
+      "agent": "permission-engineer",
+      "reviewer": "qa-reviewer",
+      "dependencies": [1],
+      "estimatedComplexity": "medium",
+      "tasks": [
+        {
+          "id": "2.1",
+          "name": "Add producao Role & time_tracking Feature",
+          "description": "Modify src/types/index.ts to add 'producao' to UserRole type and 'time_tracking' to FeatureKey. Modify src/lib/permissions.ts to add default permissions for producao role (dashboard view, time_tracking view/create/update) and full time_tracking permissions for admin.",
+          "files": ["src/types/index.ts", "src/lib/permissions.ts"],
+          "dod": [
+            "UserRole type includes 'producao'",
+            "FeatureKey includes 'time_tracking'",
+            "Default producao permissions: dashboard (view), time_tracking (view, create, update)",
+            "Admin has full time_tracking permissions (view, create, update, delete)",
+            "getDefaultPermissions('producao') returns correct defaults",
+            "Existing roles unaffected"
+          ]
+        },
+        {
+          "id": "2.2",
+          "name": "Update Middleware & Navigation",
+          "description": "Add /ponto to protected routes in src/middleware.ts. Add Ponto menu with 4 submenu items to src/components/layout/Sidebar.tsx (use Clock icon from lucide-react). Add isProducao helper to src/hooks/usePermissions.ts. Painel Admin and Configurações submenu items should only be visible to admins.",
+          "files": ["src/middleware.ts", "src/components/layout/Sidebar.tsx", "src/hooks/usePermissions.ts"],
+          "dod": [
+            "/ponto and /ponto/* added to protected routes",
+            "Sidebar has Ponto menu with: Registro, Meu Espelho, Painel Admin, Configurações",
+            "Painel Admin and Configurações only visible to admins",
+            "usePermissions has isProducao boolean helper",
+            "producao users see only Dashboard + Ponto in sidebar",
+            "Active state highlighting works for all ponto routes",
+            "Mobile sidebar closes on navigation"
+          ]
+        }
+      ],
+      "reviewDod": [
+        "Login as admin can see Ponto menu with all 4 items",
+        "producao role user can only see Dashboard + Ponto (Registro, Meu Espelho)",
+        "producao user cannot access /users, /clients, etc.",
+        "Middleware redirects unauthorized access to /login",
+        "npm run build passes",
+        "No regressions for admin/atendente permission behavior"
+      ],
+      "prompt": "You are the permission-engineer agent for the Momento Cake time tracking feature. Read the PRD at context/specs/time-tracking/PRD.md, Sections 4 and 6.\n\nYour task is Phase 2: Add the producao role and time_tracking feature to the permission system.\n\n1. Read existing files first: src/types/index.ts, src/lib/permissions.ts, src/middleware.ts, src/components/layout/Sidebar.tsx, src/hooks/usePermissions.ts\n2. Add 'producao' to UserRole type in src/types/index.ts\n3. Add 'time_tracking' to FeatureKey in src/types/index.ts\n4. Add producao default permissions in src/lib/permissions.ts: dashboard (view only), time_tracking (view, create, update)\n5. Add time_tracking to admin default permissions (full access)\n6. Add /ponto to protected routes in src/middleware.ts\n7. Add Ponto menu items to Sidebar.tsx with Clock icon. Submenu: Registro (/ponto/registro), Meu Espelho (/ponto/espelho), Painel Admin (/ponto/admin, adminOnly), Configurações (/ponto/configuracoes, adminOnly)\n8. Add isProducao helper to usePermissions.ts\n\nIMPORTANT:\n- Follow existing patterns exactly\n- Don't break existing role behavior\n- Run npm run build after to verify"
+    },
+    {
+      "id": 3,
+      "name": "Clock In/Out Service Layer",
+      "agent": "backend-engineer",
+      "reviewer": "qa-reviewer",
+      "dependencies": [1, 2],
+      "estimatedComplexity": "high",
+      "tasks": [
+        {
+          "id": "3.1",
+          "name": "Core Time Tracking Service",
+          "description": "Create src/lib/time-tracking.ts with all CRUD operations for time entries. Follow patterns from src/lib/clients.ts. Include: clockIn, clockLunchOut, clockLunchIn, clockOut, getTimeEntry, getTimeEntries, getTodayEntry. Auto-calculate summary on each marking. Validate lunch break >= 30 min. Validate interjornada >= 11 hours.",
+          "files": ["src/lib/time-tracking.ts"],
+          "dod": [
+            "All clock operations implemented (in, lunch-out, lunch-in, out)",
+            "Summary auto-calculated on each marking",
+            "Lunch break >= 30 min validation",
+            "Interjornada >= 11 hours validation",
+            "CRUD operations for entries",
+            "Proper error handling and logging"
+          ]
+        },
+        {
+          "id": "3.2",
+          "name": "Payroll Calculation Engine",
+          "description": "Create src/lib/time-tracking-calculations.ts with payroll calculation functions per CCT SP 2025/2026 rules. Overtime: 55%. Night (22:00-05:00): 37% with reduced hour (52.5 min = 1h). Rest day: 100%. DSR calculation with loss on unjustified absence. Cesta básica eligibility flag.",
+          "files": ["src/lib/time-tracking-calculations.ts"],
+          "dod": [
+            "calculateDayPayroll(entry, schedule) implemented",
+            "calculatePeriodPayroll(entries, schedule, holidays) implemented",
+            "Overtime at 55% per CCT Cláusula 12ª",
+            "Night premium at 37% per CCT Cláusula 14ª with reduced hour",
+            "Rest day at 100% per CCT Cláusula 5ª",
+            "DSR calculation with loss on unjustified absences",
+            "Cesta básica eligibility flag"
+          ]
+        },
+        {
+          "id": "3.3",
+          "name": "API Routes",
+          "description": "Create API routes following patterns from src/app/api/clients/. Include: POST /api/time-tracking/clock (clock operations), GET /api/time-tracking (list entries), GET/PUT /api/time-tracking/[entryId] (entry CRUD). All routes need auth + permission checks using api-auth.ts.",
+          "files": [
+            "src/app/api/time-tracking/route.ts",
+            "src/app/api/time-tracking/clock/route.ts",
+            "src/app/api/time-tracking/[entryId]/route.ts"
+          ],
+          "dod": [
+            "POST /api/time-tracking/clock endpoint",
+            "GET /api/time-tracking with userId and date range filters",
+            "GET /api/time-tracking/[entryId]",
+            "PUT /api/time-tracking/[entryId] (admin only)",
+            "All routes have auth and permission checks",
+            "Zod validation on request bodies",
+            "Proper error responses (400, 401, 403, 404, 500)"
+          ]
+        },
+        {
+          "id": "3.4",
+          "name": "React Hooks",
+          "description": "Create src/hooks/useTimeTracking.ts for managing today's entry and clock operations. Create src/hooks/useGeolocation.ts for GPS capture. Follow patterns from existing hooks in src/hooks/.",
+          "files": ["src/hooks/useTimeTracking.ts", "src/hooks/useGeolocation.ts"],
+          "dod": [
+            "useTimeTracking() manages today's entry and clock operations",
+            "useTimeEntries(userId?, dateRange) fetches entries",
+            "useGeolocation() captures GPS with error handling",
+            "Loading and error states properly managed",
+            "Proper cleanup on unmount"
+          ]
+        }
+      ],
+      "reviewDod": [
+        "Clock flow works: in → lunch-out → lunch-in → out",
+        "Cannot clock in twice without clocking out",
+        "Lunch break < 30 min shows validation error",
+        "Overtime correctly calculated for > 8h work",
+        "Night hours (22:00-05:00) correctly identified with reduced hour",
+        "Rest day work correctly flagged",
+        "API returns proper errors for unauthorized access",
+        "Payroll calculations match CCT rules with sample data",
+        "npm run build passes"
+      ],
+      "prompt": "You are the backend-engineer agent for the Momento Cake time tracking feature. Read the PRD at context/specs/time-tracking/PRD.md, Sections 5, 8, and the CCT rules in Section 3.2.\n\nYour task is Phase 3: Build the service layer, API routes, and React hooks.\n\n1. Read existing patterns first: src/lib/clients.ts (service pattern), src/app/api/clients/ (API pattern), src/lib/api-auth.ts (auth helper), src/hooks/ (hook patterns)\n2. Create src/lib/time-tracking.ts - Core CRUD with clock operations\n3. Create src/lib/time-tracking-calculations.ts - Payroll calculation engine\n4. Create API routes: /api/time-tracking/clock, /api/time-tracking, /api/time-tracking/[entryId]\n5. Create hooks: useTimeTracking.ts, useGeolocation.ts\n\nCRITICAL CCT RULES:\n- Hora Extra: 55% (NOT 50%)\n- Adicional Noturno: 37% (NOT 20%), period 22:00-05:00, reduced hour 52.5 min = 1h\n- Repouso: 100%\n- Lunch minimum: 30 minutes\n- Interjornada: minimum 11 hours\n\nUse Firestore Timestamp.now() for server times. Use date-fns for date calculations (already in package.json). Run npm run build after to verify."
+    },
+    {
+      "id": 4,
+      "name": "Clock In/Out UI",
+      "agent": "clock-ui-builder",
+      "reviewer": "qa-reviewer",
+      "dependencies": [3],
+      "estimatedComplexity": "medium",
+      "tasks": [
+        {
+          "id": "4.1",
+          "name": "Clock Widget Component",
+          "description": "Create the main clock-in/out page and widget. Use the frontend-design skill for best UI/UX. The widget should have: real-time digital clock, context-aware action button (changes color/text based on state), geolocation status indicator, GPS permission prompt.",
+          "files": [
+            "src/app/(dashboard)/ponto/registro/page.tsx",
+            "src/components/time-tracking/ClockWidget.tsx"
+          ],
+          "dod": [
+            "Real-time digital clock (HH:mm:ss) updating every second",
+            "Current date in PT-BR format",
+            "Context-aware action button with correct colors per state",
+            "Geolocation status indicator",
+            "Loading state during clock operation",
+            "Success/error toast notifications",
+            "Responsive (mobile-first)",
+            "Uses Momento Cake brown/gold brand colors",
+            "Accessible (keyboard navigation)"
+          ]
+        },
+        {
+          "id": "4.2",
+          "name": "Today's Markings & Recent Days",
+          "description": "Create timeline showing today's markings and a collapsible section for last 7 days. Use the frontend-design skill.",
+          "files": [
+            "src/components/time-tracking/TodayMarkings.tsx",
+            "src/components/time-tracking/RecentDays.tsx",
+            "src/components/time-tracking/MarkingTimeline.tsx"
+          ],
+          "dod": [
+            "Vertical timeline showing today's markings with icons and times",
+            "Summary bar: total worked, break time, status badge",
+            "Last 7 days collapsible section with status dots",
+            "Reusable MarkingTimeline component",
+            "Empty state for no markings",
+            "Consistent with app design system"
+          ]
+        }
+      ],
+      "reviewDod": [
+        "Clock updates in real-time",
+        "Button changes state correctly through full day flow",
+        "Geolocation captured and displayed",
+        "Toast messages on success/error",
+        "Mobile layout works",
+        "Page accessible at /ponto/registro",
+        "Only visible to users with time_tracking permission"
+      ],
+      "prompt": "You are the clock-ui-builder agent for the Momento Cake time tracking feature. Read the PRD at context/specs/time-tracking/PRD.md, Section 7.1.\n\nYour task is Phase 4: Build the Clock In/Out UI.\n\nIMPORTANT: Use the frontend-design skill (invoke it) to create best-in-class UI/UX for the clock widget.\n\n1. Read existing page patterns: src/app/(dashboard)/clients/page.tsx, src/components/layout/Sidebar.tsx (for brand colors)\n2. Create src/app/(dashboard)/ponto/registro/page.tsx - Clock page\n3. Create src/components/time-tracking/ClockWidget.tsx - Main clock widget\n4. Create src/components/time-tracking/TodayMarkings.tsx - Today's timeline\n5. Create src/components/time-tracking/RecentDays.tsx - Last 7 days\n6. Create src/components/time-tracking/MarkingTimeline.tsx - Reusable timeline\n\nDesign requirements:\n- Large, prominent clock (real-time HH:mm:ss)\n- Context-aware button: Green 'Registrar Entrada' → Orange 'Registrar Saída p/ Almoço' → Blue 'Registrar Retorno do Almoço' → Red 'Registrar Saída' → Disabled with checkmark\n- Geolocation indicator\n- Brown/gold brand colors\n- Mobile-first responsive\n- Use shadcn/ui components (Card, Button, Badge)\n- Use lucide-react icons"
+    },
+    {
+      "id": 5,
+      "name": "Employee Espelho de Ponto (Calendar Views)",
+      "agent": "calendar-ui-builder",
+      "reviewer": "qa-reviewer",
+      "dependencies": [3],
+      "estimatedComplexity": "high",
+      "tasks": [
+        {
+          "id": "5.1",
+          "name": "Day View",
+          "description": "Create the espelho page with day view tab. Date picker, detailed timeline, summary card, audit log for the day.",
+          "files": [
+            "src/app/(dashboard)/ponto/espelho/page.tsx",
+            "src/components/time-tracking/DayView.tsx"
+          ],
+          "dod": [
+            "Date picker for day selection",
+            "Detailed marking timeline for selected day",
+            "Summary card with all time breakdowns",
+            "Navigate between days with arrows",
+            "Audit log display if changes exist"
+          ]
+        },
+        {
+          "id": "5.2",
+          "name": "Week View",
+          "description": "Create week view component with table layout (days as columns, markings as rows). Weekly totals and anomaly indicators.",
+          "files": ["src/components/time-tracking/WeekView.tsx"],
+          "dod": [
+            "Week picker with Mon-Sun navigation",
+            "Table: days as columns, markings as rows",
+            "Weekly totals row",
+            "Visual indicators for anomalies",
+            "Color coding for status"
+          ]
+        },
+        {
+          "id": "5.3",
+          "name": "Month View & Payroll Breakdown",
+          "description": "Create calendar grid month view and monthly summary with payroll breakdown per CCT rates. Use the frontend-design skill.",
+          "files": [
+            "src/components/time-tracking/MonthView.tsx",
+            "src/components/time-tracking/MonthlySummary.tsx",
+            "src/components/time-tracking/PayrollBreakdown.tsx"
+          ],
+          "dod": [
+            "Calendar grid with status-colored day cells",
+            "Each cell: hours worked, overtime indicator, status icon",
+            "Monthly summary with all hour breakdowns",
+            "Payroll breakdown with CCT rates",
+            "Month/year navigation",
+            "Color legend"
+          ]
+        },
+        {
+          "id": "5.4",
+          "name": "Tab Navigation",
+          "description": "Wire up Dia/Semana/Mês tabs on the espelho page with proper routing.",
+          "files": ["src/app/(dashboard)/ponto/espelho/page.tsx"],
+          "dod": [
+            "Tabs: Dia | Semana | Mês",
+            "Default to Mês view",
+            "Smooth transitions between views",
+            "State preserved when switching tabs"
+          ]
+        }
+      ],
+      "reviewDod": [
+        "All three views render correctly with data",
+        "Date navigation works in all views",
+        "Data consistent across views",
+        "Monthly payroll breakdown matches manual CCT calculation",
+        "Mobile responsive",
+        "Performance: loads within 2 seconds for 30 days"
+      ],
+      "prompt": "You are the calendar-ui-builder agent for the Momento Cake time tracking feature. Read the PRD at context/specs/time-tracking/PRD.md, Section 7.2.\n\nYour task is Phase 5: Build the Employee Espelho de Ponto with calendar views.\n\nIMPORTANT: Use the frontend-design skill for best UI/UX.\n\n1. Read existing patterns: src/app/(dashboard)/clients/page.tsx, src/components/ui/ (available components)\n2. Create src/app/(dashboard)/ponto/espelho/page.tsx with Dia|Semana|Mês tabs\n3. Create DayView.tsx - Detailed day timeline with date picker\n4. Create WeekView.tsx - Table (days as columns, markings as rows)\n5. Create MonthView.tsx - Calendar grid with status colors\n6. Create MonthlySummary.tsx - Monthly totals breakdown\n7. Create PayrollBreakdown.tsx - Pay calculation display per CCT\n\nCCT Rates for PayrollBreakdown:\n- Regular: hourlyRate\n- Overtime: hourlyRate * 1.55\n- Night: hourlyRate * 1.37\n- Rest Day: hourlyRate * 2.00\n\nUse date-fns for date calculations, shadcn/ui components, lucide-react icons, Momento Cake brown/gold colors."
+    },
+    {
+      "id": 6,
+      "name": "Manual Edits & Audit Trail",
+      "agent": "backend-engineer",
+      "reviewer": "qa-reviewer",
+      "dependencies": [3],
+      "estimatedComplexity": "medium",
+      "canRunParallelWith": [4, 5],
+      "tasks": [
+        {
+          "id": "6.1",
+          "name": "Edit & Add Marking Modals",
+          "description": "Create modals for editing markings, adding missing markings, and justifying absences. All require a mandatory reason field. Follow modal patterns from src/components/clients/ClientFormModal.tsx.",
+          "files": [
+            "src/components/time-tracking/EditMarkingModal.tsx",
+            "src/components/time-tracking/AddMarkingModal.tsx",
+            "src/components/time-tracking/JustifyAbsenceModal.tsx"
+          ],
+          "dod": [
+            "Edit modal: change timestamp with required reason",
+            "Add modal: add missing marking with required reason",
+            "Justify absence modal with absence type",
+            "All changes create audit logs",
+            "Original timestamp preserved on edit",
+            "Overlapping marking validation"
+          ]
+        },
+        {
+          "id": "6.2",
+          "name": "Audit Log Service & Display",
+          "description": "Create audit log service (immutable entries) and UI component for displaying chronological audit trail with visual diffs.",
+          "files": [
+            "src/lib/time-tracking-audit.ts",
+            "src/app/api/time-tracking/audit/route.ts",
+            "src/components/time-tracking/AuditLog.tsx"
+          ],
+          "dod": [
+            "createAuditLog(changes) function",
+            "getAuditLogs(entryId) and getAuditLogs(userId, dateRange)",
+            "API route with auth",
+            "UI component with chronological trail",
+            "Visual diff (old → new value)",
+            "Audit logs immutable"
+          ]
+        }
+      ],
+      "reviewDod": [
+        "Admin can edit any marking and audit log is created",
+        "Employee cannot edit their own markings",
+        "Reason field required for all manual changes",
+        "Audit log shows correct before/after values",
+        "Audit logs cannot be deleted",
+        "Multiple edits tracked chronologically"
+      ],
+      "prompt": "You are the backend-engineer agent continuing with Phase 6: Manual Edits & Audit Trail.\n\nRead the PRD at context/specs/time-tracking/PRD.md, Sections 5.1 (TimeEntryAuditLog) and 7.3.\n\n1. Read existing modal pattern: src/components/clients/ClientFormModal.tsx\n2. Create src/lib/time-tracking-audit.ts - Immutable audit log service\n3. Create src/app/api/time-tracking/audit/route.ts - Audit API\n4. Create src/components/time-tracking/EditMarkingModal.tsx\n5. Create src/components/time-tracking/AddMarkingModal.tsx\n6. Create src/components/time-tracking/JustifyAbsenceModal.tsx\n7. Create src/components/time-tracking/AuditLog.tsx\n\nCRITICAL:\n- Reason field is MANDATORY for all manual changes\n- Audit logs are IMMUTABLE (no update/delete)\n- Original timestamp must be preserved when editing\n- Only admins can perform manual edits\n- Employees can only view audit logs for their own entries"
+    },
+    {
+      "id": 7,
+      "name": "Admin Panel",
+      "agent": "admin-ui-builder",
+      "reviewer": "qa-reviewer",
+      "dependencies": [3, 6],
+      "estimatedComplexity": "high",
+      "tasks": [
+        {
+          "id": "7.1",
+          "name": "Admin Overview Page",
+          "description": "Create admin overview with quick stats cards and filterable employee table showing today's status. Use the frontend-design skill.",
+          "files": [
+            "src/app/(dashboard)/ponto/admin/page.tsx",
+            "src/components/time-tracking/admin/EmployeeOverviewTable.tsx",
+            "src/components/time-tracking/admin/EmployeeStatusCards.tsx"
+          ],
+          "dod": [
+            "Quick stats: On time, Late, Absent, On lunch, Not clocked out",
+            "Filterable table with date, employee, status filters",
+            "Table: Name, Schedule, Clock In, Lunch Out, Lunch In, Clock Out, Total, Status",
+            "Row click navigates to employee detail",
+            "Today as default with date picker",
+            "Export button"
+          ]
+        },
+        {
+          "id": "7.2",
+          "name": "Employee Detail Page (Admin)",
+          "description": "Create admin employee detail page reusing calendar views from Phase 5 with admin edit controls. Use the frontend-design skill.",
+          "files": [
+            "src/app/(dashboard)/ponto/admin/[userId]/page.tsx",
+            "src/components/time-tracking/admin/AdminEditPanel.tsx"
+          ],
+          "dod": [
+            "Reuses Day/Week/Month views from Phase 5",
+            "Admin-specific edit controls on each view",
+            "Inline edit buttons on markings",
+            "Add Missing Marking button",
+            "Justify Absence button",
+            "Full audit trail panel",
+            "Monthly payroll calculation summary"
+          ]
+        },
+        {
+          "id": "7.3",
+          "name": "Admin Hook",
+          "description": "Create admin-specific hook for fetching all employees' status and managing time entries.",
+          "files": ["src/hooks/useTimeTrackingAdmin.ts"],
+          "dod": [
+            "useAllEmployeesStatus(date) fetches all employees' status",
+            "useEmployeeTimeEntries(userId, dateRange) fetches employee entries",
+            "useUpdateTimeEntry(entryId) admin update with audit",
+            "Loading and error states"
+          ]
+        }
+      ],
+      "reviewDod": [
+        "Admin sees all employees on overview",
+        "Admin can navigate to any employee detail",
+        "Admin can edit markings with required reason",
+        "Audit log created for every admin edit",
+        "Non-admin cannot access /ponto/admin",
+        "Stats cards show correct counts",
+        "Mobile responsive"
+      ],
+      "prompt": "You are the admin-ui-builder agent for the Momento Cake time tracking feature. Read the PRD at context/specs/time-tracking/PRD.md, Section 7.3.\n\nYour task is Phase 7: Build the Admin Panel.\n\nIMPORTANT: Use the frontend-design skill for best UI/UX.\n\n1. Read existing patterns for admin pages and table components\n2. Create src/app/(dashboard)/ponto/admin/page.tsx - Overview page\n3. Create src/app/(dashboard)/ponto/admin/[userId]/page.tsx - Employee detail\n4. Create admin components: EmployeeOverviewTable, EmployeeStatusCards, AdminEditPanel\n5. Create src/hooks/useTimeTrackingAdmin.ts\n\nThe admin panel should:\n- Show all employees' status for today (default)\n- Allow filtering by date, employee, status\n- Navigate to individual employee detail views\n- Reuse calendar views from Phase 5 (DayView, WeekView, MonthView)\n- Add edit controls (Edit Marking, Add Marking, Justify Absence) that use modals from Phase 6\n- Show full audit trail\n\nOnly admins should access these pages (check permissions)."
+    },
+    {
+      "id": 8,
+      "name": "Settings & Configuration",
+      "agent": "settings-builder",
+      "reviewer": "qa-reviewer",
+      "dependencies": [1, 2],
+      "canRunParallelWith": [4, 5, 6],
+      "estimatedComplexity": "medium",
+      "tasks": [
+        {
+          "id": "8.1",
+          "name": "Work Schedule Management",
+          "description": "Create CRUD for work schedule templates with weekly grid, hourly rate (min R$ 9.68), lunch config, and employee assignment.",
+          "files": [
+            "src/app/(dashboard)/ponto/configuracoes/page.tsx",
+            "src/components/time-tracking/settings/WorkScheduleForm.tsx",
+            "src/lib/work-schedules.ts",
+            "src/app/api/work-schedules/route.ts"
+          ],
+          "dod": [
+            "CRUD for work schedule templates",
+            "Weekly grid: toggle workday, set start/end times per day",
+            "Hourly rate field with R$ 9.68 minimum validation",
+            "Lunch break config: min minutes + compensation type",
+            "Assign schedules to employees",
+            "Effective date range support",
+            "API with auth + admin permission"
+          ]
+        },
+        {
+          "id": "8.2",
+          "name": "Workplace Location Management",
+          "description": "Create CRUD for workplace locations with address, coordinates, and radius.",
+          "files": [
+            "src/components/time-tracking/settings/LocationForm.tsx",
+            "src/lib/workplace-locations.ts",
+            "src/app/api/workplace-locations/route.ts"
+          ],
+          "dod": [
+            "CRUD for workplace locations",
+            "Address, lat/lng, radius fields",
+            "List view with edit/delete",
+            "API with auth + admin permission"
+          ]
+        },
+        {
+          "id": "8.3",
+          "name": "Holiday Calendar",
+          "description": "Create holiday management with year calendar, CRUD for holidays, and pre-populated Brazilian national holidays.",
+          "files": ["src/components/time-tracking/settings/HolidayCalendar.tsx"],
+          "dod": [
+            "Year calendar view with holiday markings",
+            "Add/remove holidays",
+            "Pre-populated Brazilian national holidays",
+            "Municipal holiday support",
+            "Holidays used by payroll engine"
+          ]
+        }
+      ],
+      "reviewDod": [
+        "Can create work schedule with all fields",
+        "Hourly rate validates minimum per CCT",
+        "Lunch break minimum enforced at 30 min",
+        "Location CRUD works",
+        "Holidays appear on calendar",
+        "Only admins can access settings",
+        "Settings affect payroll calculations"
+      ],
+      "prompt": "You are the settings-builder agent for the Momento Cake time tracking feature. Read the PRD at context/specs/time-tracking/PRD.md, Section 7.4.\n\nYour task is Phase 8: Build Settings & Configuration.\n\n1. Read existing CRUD patterns: src/lib/clients.ts, src/app/api/clients/\n2. Create src/app/(dashboard)/ponto/configuracoes/page.tsx with tabs: Escalas | Locais | Feriados\n3. Create work schedule CRUD: WorkScheduleForm.tsx, work-schedules.ts, API route\n4. Create location CRUD: LocationForm.tsx, workplace-locations.ts, API route\n5. Create HolidayCalendar.tsx with pre-populated Brazilian national holidays\n\nCCT Requirements:\n- Minimum hourly rate: R$ 9.68 (Cláusula 3ª)\n- Minimum lunch break: 30 minutes (Cláusula 35ª)\n- Lunch compensation options: late_entry, early_exit, weekly_off, payment_55\n\nBrazilian national holidays 2026:\n- 01/01 Confraternização Universal\n- 16/02, 17/02 Carnaval\n- 03/04 Sexta-feira Santa\n- 05/04 Páscoa\n- 21/04 Tiradentes\n- 01/05 Dia do Trabalho\n- 04/06 Corpus Christi\n- 07/09 Independência\n- 12/10 N.S. Aparecida\n- 02/11 Finados\n- 15/11 Proclamação da República\n- 25/12 Natal\n\nSP Municipal: 25/01 Aniversário de São Paulo"
+    },
+    {
+      "id": 9,
+      "name": "Export & Compliance",
+      "agent": "export-engineer",
+      "reviewer": "qa-reviewer",
+      "dependencies": [3, 5, 7],
+      "estimatedComplexity": "medium",
+      "tasks": [
+        {
+          "id": "9.1",
+          "name": "CSV Payroll Export",
+          "description": "Create CSV export service with monthly payroll data per employee. UTF-8 BOM encoding for Excel compatibility.",
+          "files": [
+            "src/lib/time-tracking-export.ts",
+            "src/app/api/time-tracking/export/route.ts"
+          ],
+          "dod": [
+            "Monthly CSV with all payroll data per employee",
+            "Columns: Employee, Date, Entry, Lunch Out, Lunch In, Exit, Regular, Overtime, Night, Rest Day",
+            "Summary row per employee",
+            "Date range filter",
+            "UTF-8 BOM for Excel",
+            "Downloaded as file"
+          ]
+        },
+        {
+          "id": "9.2",
+          "name": "PDF Espelho de Ponto",
+          "description": "Generate per-employee monthly PDF with all markings, totals, and payroll breakdown. Must include employer CNPJ and employee data per Portaria 671.",
+          "files": ["src/lib/time-tracking-export.ts"],
+          "dod": [
+            "Per-employee monthly PDF",
+            "Employer identification (name, CNPJ)",
+            "Employee data (name, CPF, position, hire date)",
+            "All markings for period",
+            "Daily totals and monthly summary",
+            "Overtime, night, rest day breakdowns",
+            "Compliant with Portaria 671"
+          ]
+        },
+        {
+          "id": "9.3",
+          "name": "Export UI Modal",
+          "description": "Create export modal with format selection, date range, and employee selector. Use the frontend-design skill.",
+          "files": ["src/components/time-tracking/ExportModal.tsx"],
+          "dod": [
+            "Modal with CSV/PDF format options",
+            "Date range picker",
+            "Employee selector (admin: multi, employee: self)",
+            "Download button with loading state",
+            "Error handling"
+          ]
+        }
+      ],
+      "reviewDod": [
+        "CSV opens in Excel with correct encoding",
+        "CSV values match UI calculations",
+        "PDF renders with all Portaria 671 required fields",
+        "Employee can export their own espelho",
+        "Admin can export for all employees",
+        "Edge cases handled (empty months, partial)"
+      ],
+      "prompt": "You are the export-engineer agent for the Momento Cake time tracking feature. Read the PRD at context/specs/time-tracking/PRD.md, Sections 3.1 and 9.\n\nYour task is Phase 9: Build Export & Compliance features.\n\n1. Create src/lib/time-tracking-export.ts with CSV and PDF generation\n2. Create src/app/api/time-tracking/export/route.ts - Export API\n3. Create src/components/time-tracking/ExportModal.tsx - Export UI\n\nCSV Export:\n- UTF-8 BOM encoding for Excel compatibility\n- Monthly data with all time fields\n- Summary per employee with payroll calculations\n\nPDF Espelho de Ponto (Portaria 671 compliance):\n- Employer: name, CNPJ/CPF, CEI/CAEPF/CNO\n- Employee: name, CPF, hire date, position\n- Report period and emission date\n- All clock markings with dates and times\n- Marking types: entrada, saída almoço, retorno almoço, saída\n- Daily totals and monthly summary\n- Overtime, night, rest day breakdowns\n\nUse a client-side PDF library (e.g., jspdf or @react-pdf/renderer if available, or generate server-side). Check package.json for available libraries."
+    }
+  ],
+  "executionPlan": {
+    "sequential": [
+      { "group": 1, "phases": [1], "description": "Data foundation" },
+      { "group": 2, "phases": [2], "description": "Permissions and navigation" },
+      { "group": 3, "phases": [3], "description": "Core backend services" }
+    ],
+    "parallel": [
+      { "group": 4, "phases": [4, 5, 6, 8], "description": "UI components and settings (can run in parallel after Phase 3)" },
+      { "group": 5, "phases": [7], "description": "Admin panel (after Phase 6 completes)" },
+      { "group": 6, "phases": [9], "description": "Export (after Phases 5 and 7 complete)" }
+    ]
+  },
+  "validation": {
+    "commands": [
+      "npm run build",
+      "npm run lint",
+      "npx playwright test tests/time-tracking/"
+    ],
+    "manualChecks": [
+      "Login as producao user - verify access to Ponto only",
+      "Complete full clock cycle: in → lunch-out → lunch-in → out",
+      "Verify overtime calculation at 55%",
+      "Verify night premium at 37% with reduced hour",
+      "Verify rest day premium at 100%",
+      "Verify lunch break minimum 30 min enforcement",
+      "Admin: edit marking and verify audit log",
+      "Export CSV and verify in Excel",
+      "Export PDF and verify Portaria 671 fields"
+    ]
+  }
+}

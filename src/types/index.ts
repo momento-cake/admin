@@ -2,8 +2,9 @@
  * User roles for role-based access control.
  * - `admin`: Full system access including user management
  * - `atendente`: Access to dashboard and client management only
+ * - `producao`: Production staff with access to dashboard and time tracking
  */
-export type UserRole = 'admin' | 'atendente';
+export type UserRole = 'admin' | 'atendente' | 'producao';
 
 /**
  * Portuguese labels for user roles.
@@ -11,6 +12,7 @@ export type UserRole = 'admin' | 'atendente';
 export const ROLE_LABELS: Record<UserRole, string> = {
   admin: 'Administrador',
   atendente: 'Atendente',
+  producao: 'Produção',
 };
 
 /**
@@ -27,7 +29,7 @@ export interface FeaturePermissionConfig {
  */
 export type UserCustomPermissions = Partial<Record<
   'dashboard' | 'users' | 'clients' | 'ingredients' | 'recipes' |
-  'products' | 'packaging' | 'images' | 'orders' | 'reports' | 'settings',
+  'products' | 'packaging' | 'images' | 'orders' | 'reports' | 'settings' | 'time_tracking',
   FeaturePermissionConfig
 >>;
 

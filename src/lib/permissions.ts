@@ -18,7 +18,8 @@ export type FeatureKey =
   | 'orders'
   | 'reports'
   | 'settings'
-  | 'images';
+  | 'images'
+  | 'time_tracking';
 
 /**
  * Action types for granular permission control
@@ -68,6 +69,7 @@ export const FEATURE_METADATA: FeatureMetadata[] = [
   { key: 'orders', label: 'Pedidos', description: 'Gestão de pedidos', availableActions: ['view', 'create', 'update', 'delete'] },
   { key: 'reports', label: 'Relatórios', description: 'Relatórios e análises', availableActions: ['view'] },
   { key: 'settings', label: 'Configurações', description: 'Configurações do sistema', availableActions: ['view', 'update'] },
+  { key: 'time_tracking', label: 'Controle de Ponto', description: 'Registro e gestão de ponto dos funcionários', availableActions: ['view', 'create', 'update', 'delete'] },
 ];
 
 /**
@@ -101,11 +103,22 @@ export const DEFAULT_ATENDENTE_PERMISSIONS: CustomPermissions = {
 };
 
 /**
+ * Default permissions for producao role
+ * Production staff: dashboard (view only) + time tracking
+ */
+export const DEFAULT_PRODUCAO_PERMISSIONS: CustomPermissions = {
+  dashboard: { enabled: true, actions: ['view'] },
+  time_tracking: { enabled: true, actions: ['view', 'create', 'update'] },
+  // All other features are disabled by default for producao
+};
+
+/**
  * All features available in the system
  */
 export const ALL_FEATURES: FeatureKey[] = [
   'dashboard', 'users', 'clients', 'ingredients', 'recipes',
-  'products', 'packaging', 'images', 'orders', 'reports', 'settings'
+  'products', 'packaging', 'images', 'orders', 'reports', 'settings',
+  'time_tracking'
 ];
 
 // ============================================================================
@@ -141,6 +154,11 @@ export const PATH_TO_FEATURE: Record<string, FeatureKey> = {
   '/orders': 'orders',
   '/reports': 'reports',
   '/settings': 'settings',
+  '/ponto': 'time_tracking',
+  '/ponto/registro': 'time_tracking',
+  '/ponto/espelho': 'time_tracking',
+  '/ponto/admin': 'time_tracking',
+  '/ponto/configuracoes': 'time_tracking',
 };
 
 // ============================================================================
@@ -170,8 +188,11 @@ export function getEffectivePermissions(user: UserModel | null): CustomPermissio
     return allPermissions;
   }
 
-  // Atendente: Start with defaults, apply custom overrides
-  const permissions: CustomPermissions = { ...DEFAULT_ATENDENTE_PERMISSIONS };
+  // Non-admin roles: Start with role defaults, apply custom overrides
+  const defaults = role === 'producao'
+    ? DEFAULT_PRODUCAO_PERMISSIONS
+    : DEFAULT_ATENDENTE_PERMISSIONS;
+  const permissions: CustomPermissions = { ...defaults };
 
   if (user.customPermissions) {
     for (const [feature, permission] of Object.entries(user.customPermissions)) {
@@ -235,6 +256,7 @@ export function canAccessPath(user: UserModel | null, path: string): boolean {
  */
 export function canAccessFeatureByRole(role: UserRole, feature: FeatureKey): boolean {
   if (role === 'admin') return true;
+  if (role === 'producao') return DEFAULT_PRODUCAO_PERMISSIONS[feature]?.enabled ?? false;
   return DEFAULT_ATENDENTE_PERMISSIONS[feature]?.enabled ?? false;
 }
 
@@ -248,11 +270,12 @@ export function getDefaultRedirectPath(user: UserModel | null): string {
     return '/dashboard';
   }
 
-  // For atendente, redirect to first accessible feature
+  // For non-admin roles, redirect to first accessible feature
   const permissions = getEffectivePermissions(user);
 
   if (permissions.dashboard?.enabled) return '/dashboard';
   if (permissions.clients?.enabled) return '/clients';
+  if (permissions.time_tracking?.enabled) return '/ponto/registro';
 
   // Fallback
   return '/dashboard';
@@ -275,7 +298,7 @@ export function getAccessibleFeatures(user: UserModel | null): FeatureKey[] {
 /**
  * Check if an admin can modify another user's permissions
  * - Admins cannot modify other admins
- * - Admins can only modify atendente users
+ * - Admins can modify atendente and producao users
  */
 export function canModifyUserPermissions(adminUser: UserModel | null, targetUser: UserModel): boolean {
   // Must be an admin to modify permissions

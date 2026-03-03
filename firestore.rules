@@ -241,6 +241,36 @@ service cloud.firestore {
                              (isUserActive() && resource.data.createdBy == request.auth.uid);
     }
 
+    // Time entries collection - Employee time tracking (Controle de Ponto)
+    // NOTE: Permissive rules - granular permission enforcement happens in API routes
+    match /time_entries/{entryId} {
+      allow read, write: if true;
+    }
+
+    // Time entry audit logs - Audit trail for time entry modifications
+    // NOTE: Permissive rules - granular permission enforcement happens in API routes
+    match /time_entry_audit_logs/{logId} {
+      allow read, write: if true;
+    }
+
+    // Work schedules collection - Employee work schedule management
+    // NOTE: Permissive rules - granular permission enforcement happens in API routes
+    match /work_schedules/{scheduleId} {
+      allow read, write: if true;
+    }
+
+    // Workplace locations collection - Physical work locations
+    // NOTE: Permissive rules - granular permission enforcement happens in API routes
+    match /workplace_locations/{locationId} {
+      allow read, write: if true;
+    }
+
+    // Holidays collection - Public/municipal holiday calendar
+    // NOTE: Permissive rules - granular permission enforcement happens in API routes
+    match /holidays/{holidayId} {
+      allow read, write: if true;
+    }
+
     // SKU Counters collection - Internal counter management for SKU generation
     match /skuCounters/{document=**} {
       // Only the system can access SKU counters (via transactions)

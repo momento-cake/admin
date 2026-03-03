@@ -32,6 +32,7 @@ export function usePermissions() {
       effectivePermissions: {} as CustomPermissions,
       isAdmin: false,
       isAtendente: false,
+      isProducao: false,
       canModifyPermissions: () => false,
     };
   }
@@ -84,6 +85,11 @@ export function usePermissions() {
      * Check if current user is atendente
      */
     isAtendente: role === 'atendente',
+
+    /**
+     * Check if current user is producao (production staff)
+     */
+    isProducao: role === 'producao',
 
     /**
      * Check if current user can modify another user's permissions
