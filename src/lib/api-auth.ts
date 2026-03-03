@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { UserRole } from '@/types'
-import { FeatureKey, ActionKey, DEFAULT_ATENDENTE_PERMISSIONS } from './permissions'
+import { FeatureKey, ActionKey, DEFAULT_ATENDENTE_PERMISSIONS, DEFAULT_PRODUCAO_PERMISSIONS } from './permissions'
 import { adminAuth, adminDb } from './firebase-admin'
 
 interface AuthInfo {
@@ -101,7 +101,9 @@ export async function getAuthFromRequest(request: NextRequest): Promise<AuthInfo
           const email = payload.email || ''
           // In dev mode, determine role from email pattern
           // Admin SDK Firestore is unavailable, so we use a simple heuristic
-          const role: UserRole = email.startsWith('admin') ? 'admin' : 'atendente'
+          let role: UserRole = 'atendente'
+          if (email.startsWith('admin')) role = 'admin'
+          else if (email.startsWith('producao')) role = 'producao'
           console.warn(`[api-auth] Dev fallback: uid=${uid}, email=${email}, role=${role}`)
           return { uid, role }
         }
@@ -127,8 +129,11 @@ export function canPerformActionFromRequest(
     return true
   }
 
-  // Check default atendente permissions
-  const defaultPerm = DEFAULT_ATENDENTE_PERMISSIONS[feature]
+  // Check default permissions for the user's role
+  const defaultPerms = auth.role === 'producao'
+    ? DEFAULT_PRODUCAO_PERMISSIONS
+    : DEFAULT_ATENDENTE_PERMISSIONS
+  const defaultPerm = defaultPerms[feature]
   if (defaultPerm?.enabled && defaultPerm.actions.includes(action)) {
     return true
   }

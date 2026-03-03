@@ -1,6 +1,7 @@
 import { Suspense } from 'react'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { AccessDeniedHandler } from '@/components/auth/AccessDeniedHandler'
+import { FeatureGuard } from '@/components/auth/FeatureGuard'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { Header } from '@/components/layout/Header'
 
@@ -23,7 +24,9 @@ export default function DashboardLayout({
             <Header />
           </div>
           <main className="flex-1 overflow-auto p-3 sm:p-4 md:p-8">
-            {children}
+            <FeatureGuard>
+              {children}
+            </FeatureGuard>
           </main>
         </div>
       </div>

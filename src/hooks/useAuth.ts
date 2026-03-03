@@ -91,9 +91,9 @@ export function useAuth() {
     }
   }
 
-  // Check if user has platform access (admin or atendente)
+  // Check if user has platform access (admin, atendente, or producao)
   const hasPlatformAccess = () => {
-    return userModel?.role.type === 'admin' || userModel?.role.type === 'atendente'
+    return userModel?.role.type === 'admin' || userModel?.role.type === 'atendente' || userModel?.role.type === 'producao'
   }
 
   // Check if user is platform admin
