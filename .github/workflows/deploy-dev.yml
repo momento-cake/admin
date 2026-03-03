@@ -38,7 +38,7 @@ jobs:
       - name: Build application
         run: npm run build
         env:
-          NODE_ENV: development
+          NODE_ENV: production
           NEXT_PUBLIC_ENVIRONMENT: dev
           NEXT_PUBLIC_FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY_DEV }}
           NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ secrets.FIREBASE_AUTH_DOMAIN_DEV }}
