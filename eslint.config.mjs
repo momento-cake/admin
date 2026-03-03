@@ -21,6 +21,8 @@ const eslintConfig = [
       "tests/**",
       "src/__tests__/**",
       "scripts/**",
+      "temp-test-files/**",
+      "playwright-report/**",
     ],
   },
   {
