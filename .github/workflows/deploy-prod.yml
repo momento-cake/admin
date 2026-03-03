@@ -14,6 +14,7 @@ jobs:
     env:
       NODE_VERSION: '20'
       FIREBASE_PROJECT: momentocake-admin
+      HAS_FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN != '' }}
 
     steps:
       - name: Checkout code
@@ -51,11 +52,11 @@ jobs:
           NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID: ${{ secrets.FIREBASE_MEASUREMENT_ID_PROD }}
 
       - name: Setup Firebase CLI
-        if: ${{ secrets.FIREBASE_TOKEN != '' }}
+        if: env.HAS_FIREBASE_TOKEN == 'true'
         run: npm install -g firebase-tools
 
       - name: Deploy Firestore Rules
-        if: ${{ secrets.FIREBASE_TOKEN != '' }}
+        if: env.HAS_FIREBASE_TOKEN == 'true'
         run: |
           firebase use ${{ env.FIREBASE_PROJECT }}
           firebase deploy --only firestore:rules --non-interactive
@@ -63,7 +64,7 @@ jobs:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
 
       - name: Deploy Storage Rules
-        if: ${{ secrets.FIREBASE_TOKEN != '' }}
+        if: env.HAS_FIREBASE_TOKEN == 'true'
         run: |
           firebase use ${{ env.FIREBASE_PROJECT }}
           firebase deploy --only storage:rules --non-interactive
@@ -71,7 +72,7 @@ jobs:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
 
       - name: Deploy Firestore Indexes
-        if: ${{ secrets.FIREBASE_TOKEN != '' }}
+        if: env.HAS_FIREBASE_TOKEN == 'true'
         run: |
           firebase use ${{ env.FIREBASE_PROJECT }}
           firebase deploy --only firestore:indexes --non-interactive
@@ -79,7 +80,7 @@ jobs:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
 
       - name: Deploy to Firebase Hosting
-        if: ${{ secrets.FIREBASE_TOKEN != '' }}
+        if: env.HAS_FIREBASE_TOKEN == 'true'
         run: |
           firebase use ${{ env.FIREBASE_PROJECT }}
           firebase deploy --only hosting --non-interactive
