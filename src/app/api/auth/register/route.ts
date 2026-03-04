@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/firebase'
-import { collection, query, where, getDocs, doc, updateDoc, setDoc, serverTimestamp } from 'firebase/firestore'
-import { adminAuth } from '@/lib/firebase-admin'
+import { adminAuth, adminDb } from '@/lib/firebase-admin'
+import { FieldValue } from 'firebase-admin/firestore'
 import { validateRegistrationData } from '@/lib/invitations'
 
 // POST /api/auth/register - Register a new user from an invitation
@@ -26,15 +25,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Find the invitation by token
-    const invitationsRef = collection(db, 'invitations')
-    const q = query(
-      invitationsRef,
-      where('token', '==', invitationToken),
-      where('status', '==', 'pending')
-    )
-
-    const snapshot = await getDocs(q)
+    // Find the invitation by token via Admin SDK
+    const snapshot = await adminDb
+      .collection('invitations')
+      .where('token', '==', invitationToken)
+      .where('status', '==', 'pending')
+      .get()
 
     if (snapshot.empty) {
       return NextResponse.json(
@@ -88,15 +84,15 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Create user document in Firestore
-    const userDocData = {
+    // Create user document in Firestore via Admin SDK
+    await adminDb.collection('users').doc(userRecord.uid).set({
       email: email.toLowerCase(),
       displayName,
       emailVerified: true,
       role: { type: invitationData.role || 'atendente' },
       isActive: true,
-      createdAt: serverTimestamp(),
-      lastSignInAt: serverTimestamp(),
+      createdAt: FieldValue.serverTimestamp(),
+      lastSignInAt: FieldValue.serverTimestamp(),
       metadata: {
         firstName,
         lastName,
@@ -105,16 +101,14 @@ export async function POST(request: NextRequest) {
         registeredFrom: 'invitation',
         invitationId: invitationDoc.id,
       }
-    }
+    })
 
-    await setDoc(doc(db, 'users', userRecord.uid), userDocData)
-
-    // Update invitation status to accepted
-    await updateDoc(doc(db, 'invitations', invitationDoc.id), {
+    // Update invitation status to accepted via Admin SDK
+    await adminDb.collection('invitations').doc(invitationDoc.id).update({
       status: 'accepted',
-      acceptedAt: serverTimestamp(),
+      acceptedAt: FieldValue.serverTimestamp(),
       acceptedByUid: userRecord.uid,
-      updatedAt: serverTimestamp()
+      updatedAt: FieldValue.serverTimestamp()
     })
 
     return NextResponse.json({

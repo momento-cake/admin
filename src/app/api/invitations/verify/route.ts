@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/firebase'
-import { collection, query, where, getDocs } from 'firebase/firestore'
+import { adminDb } from '@/lib/firebase-admin'
 
 // POST /api/invitations/verify - Verify an invitation token
 export async function POST(request: NextRequest) {
@@ -15,15 +14,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Query Firestore for invitation with this token
-    const invitationsRef = collection(db, 'invitations')
-    const q = query(
-      invitationsRef,
-      where('token', '==', token),
-      where('status', '==', 'pending')
-    )
-
-    const snapshot = await getDocs(q)
+    // Query Firestore via Admin SDK (bypasses security rules)
+    const snapshot = await adminDb
+      .collection('invitations')
+      .where('token', '==', token)
+      .where('status', '==', 'pending')
+      .get()
 
     if (snapshot.empty) {
       return NextResponse.json(
