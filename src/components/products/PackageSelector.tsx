@@ -136,7 +136,7 @@ export function PackageSelector({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onCancel()}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
         <DialogHeader>
           <DialogTitle>Selecionar Embalagens</DialogTitle>
           <DialogDescription>
@@ -144,7 +144,7 @@ export function PackageSelector({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-4 overflow-y-auto flex-1 min-h-0">
           {/* Search Input */}
           <Input
             placeholder="Buscar embalagens por nome, marca ou categoria..."

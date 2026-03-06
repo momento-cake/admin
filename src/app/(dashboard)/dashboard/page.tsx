@@ -34,14 +34,13 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // TODO: Replace with real API calls
     const loadDashboardData = async () => {
       try {
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1000))
-        
-        // For now, using empty data - replace with real Firebase queries
-        setStats({ users: 0, clients: 0, ingredients: 0, recipes: 0 })
+        const res = await fetch('/api/dashboard/stats')
+        const data = await res.json()
+        if (data.success) {
+          setStats(data.stats)
+        }
         setActivities([])
       } catch (error) {
         console.error('Error loading dashboard data:', error)

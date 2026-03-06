@@ -389,10 +389,23 @@ export async function createProductCategory(
   createdBy: string
 ): Promise<ProductCategory> {
   try {
+    // Check for duplicate category code
+    const codeUpper = data.code.toUpperCase();
+    const existingQuery = query(
+      collection(db, CATEGORIES_COLLECTION),
+      where('code', '==', codeUpper),
+      where('isActive', '==', true),
+      firestoreLimit(1)
+    );
+    const existingSnapshot = await getDocs(existingQuery);
+    if (!existingSnapshot.empty) {
+      throw new Error(`Ja existe uma categoria com o codigo "${codeUpper}"`);
+    }
+
     const now = Timestamp.now();
     const categoryData = {
       ...data,
-      code: data.code.toUpperCase(),
+      code: codeUpper,
       isActive: true,
       createdAt: now,
       createdBy

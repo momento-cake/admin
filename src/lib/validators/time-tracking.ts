@@ -160,8 +160,8 @@ export const workplaceLocationSchema = z.object({
     .max(100, 'Nome do local deve ter no maximo 100 caracteres')
     .trim(),
   address: z.string()
-    .min(1, 'Endereco e obrigatorio')
-    .max(300, 'Endereco deve ter no maximo 300 caracteres')
+    .min(1, 'Endereço é obrigatório')
+    .max(300, 'Endereço deve ter no máximo 300 caracteres')
     .trim(),
   latitude: z.number()
     .min(-90, 'Latitude deve ser entre -90 e 90')

@@ -42,7 +42,7 @@ export function LocationForm({ location, open, onOpenChange, onSuccess }: Locati
     }
 
     if (!address.trim()) {
-      setError('Endereco e obrigatorio')
+      setError('Endereço é obrigatório')
       return
     }
 
@@ -134,7 +134,7 @@ export function LocationForm({ location, open, onOpenChange, onSuccess }: Locati
 
           {/* Address */}
           <div className="space-y-2">
-            <Label htmlFor="location-address">Endereco</Label>
+            <Label htmlFor="location-address">Endereço</Label>
             <Input
               id="location-address"
               value={address}

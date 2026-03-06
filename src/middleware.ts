@@ -27,6 +27,7 @@ const publicRoutes = [
   '/api/auth/register',
   '/api/invitations',
   '/gallery',
+  '/pedido',
   '/api/public'
 ]
 

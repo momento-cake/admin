@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { toast } from 'sonner';
 import { Product } from '@/types/product';
 import { ProductForm } from '@/components/products/ProductForm';
+import { fetchProduct, updateProduct } from '@/lib/products';
 import { AlertCircle, Loader2, ArrowLeft } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { formatErrorMessage } from '@/lib/error-handler';
@@ -20,19 +21,18 @@ export default function EditProductPage() {
 
   const productId = params.id as string;
 
-  // Load product
+  // Load product directly from Firestore (client-side)
   useEffect(() => {
     const loadProduct = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`/api/products/${productId}`);
+        const result = await fetchProduct(productId);
 
-        if (!response.ok) {
+        if (!result) {
           throw new Error('Produto não encontrado');
         }
 
-        const result = await response.json();
-        setProduct(result.data);
+        setProduct(result);
         setError(null);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Erro ao carregar produto');
@@ -48,16 +48,7 @@ export default function EditProductPage() {
     try {
       setIsSubmitting(true);
 
-      const response = await fetch(`/api/products/${productId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Falha ao atualizar produto');
-      }
+      await updateProduct(productId, data);
 
       toast.success('Produto atualizado com sucesso!', {
         description: `As alterações em "${data.name}" foram salvas`

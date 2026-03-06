@@ -129,17 +129,28 @@ export function ProductCategoryList({
     }
   };
 
-  const filteredCategories = categories.filter(cat =>
-    cat.name.toLowerCase().includes(debouncedSearch.toLowerCase())
-  );
-
   const filteredSubcategories = (categoryId: string) => {
     const subs = subcategories[categoryId] || [];
     if (!debouncedSearch) return subs;
     return subs.filter(sub =>
-      sub.name.toLowerCase().includes(debouncedSearch.toLowerCase())
+      sub.name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+      sub.code.toLowerCase().includes(debouncedSearch.toLowerCase())
     );
   };
+
+  // Show category if its name matches OR if any of its subcategories match
+  const filteredCategories = categories.filter(cat => {
+    const searchLower = debouncedSearch.toLowerCase();
+    if (!searchLower) return true;
+    if (cat.name.toLowerCase().includes(searchLower)) return true;
+    if (cat.code.toLowerCase().includes(searchLower)) return true;
+    // Show parent category when a child subcategory matches the search
+    const subs = subcategories[cat.id] || [];
+    return subs.some(sub =>
+      sub.name.toLowerCase().includes(searchLower) ||
+      sub.code.toLowerCase().includes(searchLower)
+    );
+  });
 
   if (loading) {
     return (
@@ -281,7 +292,7 @@ export function ProductCategoryList({
                             <AlertDialogHeader>
                               <AlertDialogTitle>Deletar Categoria</AlertDialogTitle>
                               <AlertDialogDescription>
-                                Tem certeza que deseja deletar &quot;{category.name}&quot;? Esta ação não pode ser desfeita.
+                                Tem certeza que deseja desativar a categoria &quot;{category.name}&quot;? O conteudo sera desativado do catalogo.
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
@@ -373,7 +384,7 @@ export function ProductCategoryList({
                                   <AlertDialogHeader>
                                     <AlertDialogTitle>Deletar Subcategoria</AlertDialogTitle>
                                     <AlertDialogDescription>
-                                      Tem certeza que deseja deletar &quot;{subcategory.name}&quot;? Esta ação não pode ser desfeita.
+                                      Tem certeza que deseja desativar a subcategoria &quot;{subcategory.name}&quot;? O conteudo sera desativado do catalogo.
                                     </AlertDialogDescription>
                                   </AlertDialogHeader>
                                   <AlertDialogFooter>

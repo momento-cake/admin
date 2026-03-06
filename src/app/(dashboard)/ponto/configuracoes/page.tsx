@@ -305,7 +305,7 @@ export default function SettingsPage() {
                     <TableHeader>
                       <TableRow>
                         <TableHead>Nome</TableHead>
-                        <TableHead>Endereco</TableHead>
+                        <TableHead>Endereço</TableHead>
                         <TableHead>Raio</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead className="w-24"></TableHead>

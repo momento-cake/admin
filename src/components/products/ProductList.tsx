@@ -58,7 +58,7 @@ export function ProductList({
   const loadProducts = async () => {
     try {
       setLoading(true);
-      const response = await fetchProducts(filters);
+      const response = await fetchProducts(filters, 500);
       setProducts(response.products);
       setError(null);
 

@@ -4,26 +4,24 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { ProductForm } from '@/components/products/ProductForm';
+import { createProduct } from '@/lib/products';
+import { useAuthContext } from '@/contexts/AuthContext';
 import { formatErrorMessage } from '@/lib/error-handler';
 
 export default function CreateProductPage() {
   const router = useRouter();
+  const { user } = useAuthContext();
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (data: any) => {
     try {
       setIsLoading(true);
 
-      const response = await fetch('/api/products', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Falha ao criar produto');
+      if (!user?.uid) {
+        throw new Error('Usuário não autenticado');
       }
+
+      await createProduct(data, user.uid);
 
       toast.success('Produto criado com sucesso!', {
         description: `O produto "${data.name}" foi adicionado ao catálogo`

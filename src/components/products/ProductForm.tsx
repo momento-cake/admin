@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Product, ProductCategory, ProductSubcategory, ProductRecipeItem, ProductPackageItem } from '@/types/product';
 import { productValidation } from '@/lib/validators/product';
-import { fetchProductCategories, fetchProductSubcategories, formatPrice, calculateProductCost, calculateSuggestedPrice, generateSKU } from '@/lib/products';
+import { fetchProductCategories, fetchProductSubcategories, formatPrice, calculateProductCost, calculateSuggestedPrice, calculateProfitMargin, isMarginViable } from '@/lib/products';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -15,7 +15,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Badge } from '@/components/ui/badge';
-import { AlertCircle, Loader, Plus, X, CheckCircle } from 'lucide-react';
+import { AlertCircle, Loader, Plus, X, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { RecipeSelector } from './RecipeSelector';
 import { PackageSelector } from './PackageSelector';
@@ -45,7 +45,7 @@ export function ProductForm({
   const [selectedPackages, setSelectedPackages] = useState<ProductPackageItem[]>(product?.productPackages || []);
   const [showRecipeSelector, setShowRecipeSelector] = useState(false);
   const [showPackageSelector, setShowPackageSelector] = useState(false);
-  const [generatedSku, setGeneratedSku] = useState<string>(product?.sku || '');
+  // SKU is generated server-side in createProduct(); only display existing SKU in edit mode
 
   const isEditMode = !!product;
 
@@ -95,8 +95,6 @@ export function ProductForm({
       setSelectedCategoryId(categoryId);
       form.setValue('categoryId', categoryId);
       form.setValue('subcategoryId', ''); // Reset subcategory
-      setGeneratedSku(''); // Reset SKU
-
       const subs = await fetchProductSubcategories(categoryId);
       setSubcategories(subs);
     } catch (err) {
@@ -104,20 +102,9 @@ export function ProductForm({
     }
   };
 
-  // Generate SKU when category and subcategory are selected
+  // Handle subcategory change - SKU is generated server-side in createProduct()
   const handleSubcategoryChange = async (subcategoryId: string) => {
-    try {
-      form.setValue('subcategoryId', subcategoryId);
-      const categoryId = form.getValues('categoryId');
-
-      if (categoryId && subcategoryId) {
-        const sku = await generateSKU(categoryId, subcategoryId);
-        setGeneratedSku(sku);
-      }
-    } catch (err) {
-      console.error('Error generating SKU:', err);
-      setError(err instanceof Error ? err.message : 'Erro ao gerar SKU');
-    }
+    form.setValue('subcategoryId', subcategoryId);
   };
 
   // Handle recipe selection
@@ -148,29 +135,33 @@ export function ProductForm({
     form.setValue('productPackages', updated);
   };
 
+  // Watch price and markup for real-time cost recalculation
+  const watchedPrice = form.watch('price');
+  const watchedMarkup = form.watch('markup');
+
   // Calculate real-time costs with memoization
   const costAnalysisData = useMemo(() => {
-    const formData = {
+    const costPrice = calculateProductCost({
       productRecipes: selectedRecipes,
-      productPackages: selectedPackages,
-      price: form.getValues('price'),
-      markup: form.getValues('markup')
-    };
+      productPackages: selectedPackages
+    });
 
     return {
-      ...formData,
-      costPrice: calculateProductCost(formData),
-      suggestedPrice: calculateSuggestedPrice(calculateProductCost(formData), form.getValues('markup'))
+      productRecipes: selectedRecipes,
+      productPackages: selectedPackages,
+      price: watchedPrice,
+      markup: watchedMarkup,
+      costPrice,
+      suggestedPrice: calculateSuggestedPrice(costPrice, watchedMarkup)
     };
-  }, [selectedRecipes, selectedPackages, form]);
+  }, [selectedRecipes, selectedPackages, watchedPrice, watchedMarkup]);
 
   const handleFormSubmit = async (data: any) => {
     try {
       setSubmitError(null);
-      // Add generated SKU and calculated costs to form data
+      // Add calculated costs to form data (SKU is generated server-side)
       const submissionData = {
         ...data,
-        sku: generatedSku,
         productRecipes: selectedRecipes,
         productPackages: selectedPackages,
         costPrice: costAnalysisData.costPrice,
@@ -254,16 +245,19 @@ export function ProductForm({
               )}
             />
 
-            {(product?.sku || generatedSku) && (
+            {product?.sku && (
               <FormItem>
                 <FormLabel>SKU</FormLabel>
                 <div className="flex items-center gap-2">
                   <Badge variant="outline" className="font-mono text-base">
-                    {generatedSku || product?.sku}
+                    {product.sku}
                   </Badge>
                   <span className="text-sm text-muted-foreground">(auto-gerado)</span>
                 </div>
               </FormItem>
+            )}
+            {!isEditMode && (
+              <p className="text-sm text-muted-foreground">O SKU sera gerado automaticamente ao criar o produto.</p>
             )}
           </CardContent>
         </Card>
@@ -427,8 +421,10 @@ export function ProductForm({
           </CardContent>
         </Card>
 
-        {/* Cost Analysis - Only show when editing existing product */}
-        {isEditMode && <CostAnalysis product={costAnalysisData} />}
+        {/* Cost Analysis - Show when recipes or packages are selected */}
+        {(selectedRecipes.length > 0 || selectedPackages.length > 0) && (
+          <CostAnalysis product={costAnalysisData} />
+        )}
 
         {/* Pricing Section */}
         <Card>
@@ -484,6 +480,53 @@ export function ProductForm({
                 </FormItem>
               )}
             />
+
+            {/* Pricing summary - show when cost data is available */}
+            {costAnalysisData.costPrice > 0 && (
+              <div className="space-y-3 bg-muted/50 p-4 rounded-lg">
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Custo Total</p>
+                    <p className="font-semibold font-mono">{formatPrice(costAnalysisData.costPrice)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Preço Sugerido</p>
+                    <p className="font-semibold font-mono text-primary">{formatPrice(costAnalysisData.suggestedPrice)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Margem de Lucro</p>
+                    {(() => {
+                      const margin = calculateProfitMargin(watchedPrice, costAnalysisData.costPrice);
+                      const viability = isMarginViable(margin);
+                      return (
+                        <p className={cn('font-semibold', {
+                          'text-green-600': viability === 'good',
+                          'text-yellow-600': viability === 'warning',
+                          'text-red-600': viability === 'poor'
+                        })}>
+                          {margin.toFixed(1)}%
+                          <span className="text-xs ml-1">
+                            ({viability === 'good' ? 'Otima' : viability === 'warning' ? 'Aviso' : 'Critica'})
+                          </span>
+                        </p>
+                      );
+                    })()}
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Lucro</p>
+                    <p className="font-semibold font-mono">{formatPrice(watchedPrice - costAnalysisData.costPrice)}</p>
+                  </div>
+                </div>
+
+                {/* BUG-PRICING-004: Warning when price below cost */}
+                {watchedPrice > 0 && watchedPrice < costAnalysisData.costPrice && (
+                  <div className="flex items-center gap-2 text-sm text-destructive bg-destructive/10 p-2 rounded">
+                    <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+                    <p>Preco de venda esta abaixo do custo de producao!</p>
+                  </div>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
 

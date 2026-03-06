@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { Product } from '@/types/product';
 import { ProductList } from '@/components/products/ProductList';
+import { deleteProduct } from '@/lib/products';
 import { formatErrorMessage } from '@/lib/error-handler';
 
 export default function ProductsPage() {
@@ -21,14 +22,7 @@ export default function ProductsPage() {
 
   const handleProductDelete = async (product: Product) => {
     try {
-      const response = await fetch(`/api/products/${product.id}`, {
-        method: 'DELETE'
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to delete product');
-      }
+      await deleteProduct(product.id);
 
       toast.success('Produto excluído com sucesso!', {
         description: `O produto "${product.name}" foi removido do catálogo`

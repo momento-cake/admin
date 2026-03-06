@@ -29,7 +29,10 @@ import {
   Tag,
   Clock,
   PlayCircle,
-  Settings
+  Settings,
+  MapPin,
+  ShoppingCart,
+  Plus
 } from 'lucide-react'
 
 interface NavSubmenuItem {
@@ -143,6 +146,24 @@ const navigation: NavItem[] = [
     ]
   },
   {
+    name: 'Pedidos',
+    icon: ShoppingCart,
+    feature: 'orders' as FeatureKey,
+    hasSubmenu: true,
+    submenu: [
+      {
+        name: 'Todos os Pedidos',
+        href: '/orders',
+        icon: ShoppingCart
+      },
+      {
+        name: 'Novo Pedido',
+        href: '/orders/new',
+        icon: Plus
+      }
+    ]
+  },
+  {
     name: 'Imagens',
     icon: Image,
     feature: 'images',
@@ -192,6 +213,34 @@ const navigation: NavItem[] = [
         href: '/ponto/configuracoes',
         icon: Settings,
         adminOnly: true
+      }
+    ]
+  },
+  {
+    name: 'Configurações',
+    icon: Settings,
+    feature: 'settings' as FeatureKey,
+    hasSubmenu: true,
+    submenu: [
+      {
+        name: 'Geral',
+        href: '/settings',
+        icon: Settings
+      },
+      {
+        name: 'Endereços da Loja',
+        href: '/settings/store-addresses',
+        icon: MapPin
+      },
+      {
+        name: 'Frete',
+        href: '/settings/freight',
+        icon: Truck
+      },
+      {
+        name: 'Horários',
+        href: '/settings/store-hours',
+        icon: Clock
       }
     ]
   }

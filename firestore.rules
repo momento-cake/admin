@@ -273,8 +273,39 @@ service cloud.firestore {
 
     // SKU Counters collection - Internal counter management for SKU generation
     match /skuCounters/{document=**} {
-      // Only the system can access SKU counters (via transactions)
-      allow read, write: if false;
+      // Only admins can access SKU counters (used via transactions for SKU generation)
+      allow read, write: if isAdmin();
+    }
+
+    // Pedidos collection - Order management
+    match /pedidos/{pedidoId} {
+      allow read: if isViewer();
+      allow create: if isAdmin() || (isUserActive());
+      allow update: if isAdmin() || (isUserActive());
+      allow delete: if isAdmin();
+    }
+
+    // Store Addresses collection - Store location management
+    match /storeAddresses/{addressId} {
+      allow read: if isViewer();
+      allow write: if isAdmin();
+    }
+
+    // Store Settings collection - Store configuration (freight, etc.)
+    match /storeSettings/{document} {
+      allow read: if isViewer();
+      allow write: if isAdmin();
+    }
+
+    // Store Hours collection - Store operating hours
+    match /storeHours/{dayId} {
+      allow read: if true; // Public page needs this
+      allow write: if isAdmin();
+    }
+
+    // Pedido Counter collection - Auto-increment counter for pedido numbers
+    match /pedidoCounters/{document} {
+      allow read, write: if isAdmin();
     }
 
     // Businesses collection - Business entity management
