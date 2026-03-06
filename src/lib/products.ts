@@ -23,8 +23,7 @@ import {
   limit as firestoreLimit,
   Timestamp,
   DocumentSnapshot,
-  runTransaction,
-  Query
+  runTransaction
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { fetchRecipe } from '@/lib/recipes';
@@ -122,23 +121,8 @@ export async function fetchProducts(
   offsetVal: number = 0
 ): Promise<{ products: Product[]; total: number }> {
   try {
-    let q: Query = query(
-      collection(db, PRODUCTS_COLLECTION),
-      where('isActive', '==', true),
-      orderBy('name')
-    );
-
-    // Add filter conditions
+    // Add filter conditions (only exact-match Firestore filters)
     const conditions = [where('isActive', '==', true)];
-
-    if (filters?.searchQuery) {
-      // Simple search: check if product name contains query (case-insensitive)
-      // For production, consider using full-text search or Algolia
-      conditions.push(
-        where('name', '>=', filters.searchQuery),
-        where('name', '<=', filters.searchQuery + '\uf8ff')
-      );
-    }
 
     if (filters?.categoryId) {
       // Verify category still exists before filtering
@@ -162,27 +146,28 @@ export async function fetchProducts(
       conditions.push(where('subcategoryId', '==', filters.subcategoryId));
     }
 
-    // Build query with conditions
-    // Note: Firestore doesn't support offset, so we load limit + 1 for pagination check
-    q = query(
+    // Build query with conditions and fetch all matching products for client-side filtering
+    const q = query(
       collection(db, PRODUCTS_COLLECTION),
       ...conditions,
-      orderBy('name'),
-      firestoreLimit(limitVal + 1) // +1 to check if there are more
+      orderBy('name')
     );
 
     const snapshot = await getDocs(q);
-    const products = snapshot.docs.map(docToProduct);
+    const allProducts = snapshot.docs.map(docToProduct);
 
-    // Get total count (expensive, consider caching)
-    const totalQuery = query(
-      collection(db, PRODUCTS_COLLECTION),
-      ...conditions
-    );
-    const totalSnapshot = await getDocs(totalQuery);
-    const total = totalSnapshot.size;
+    // Client-side search filtering (case-insensitive, matches name, description, or SKU)
+    let filteredProducts = allProducts;
+    if (filters?.searchQuery) {
+      const searchLower = filters.searchQuery.toLowerCase();
+      filteredProducts = allProducts.filter(p =>
+        p.name.toLowerCase().includes(searchLower) ||
+        (p.description && p.description.toLowerCase().includes(searchLower)) ||
+        (p.sku && p.sku.toLowerCase().includes(searchLower))
+      );
+    }
 
-    return { products: products.slice(0, limitVal), total };
+    return { products: filteredProducts, total: filteredProducts.length };
   } catch (error) {
     console.error('Error fetching products:', error);
     throw error;

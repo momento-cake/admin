@@ -4,12 +4,13 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { EmptyState, StatCard } from '@/components/ui/empty-state'
 import { useAuth } from '@/hooks/useAuth'
-import { 
-  Users, 
-  ShoppingBag, 
-  Package, 
+import {
+  Users,
+  ShoppingBag,
+  Package,
   ChefHat,
-  Activity
+  Activity,
+  Tag
 } from 'lucide-react'
 
 interface DashboardStats {
@@ -17,6 +18,7 @@ interface DashboardStats {
   clients: number
   ingredients: number
   recipes: number
+  products: number
 }
 
 interface Activity {
@@ -29,7 +31,7 @@ interface Activity {
 
 export default function DashboardPage() {
   const { userModel } = useAuth()
-  const [stats, setStats] = useState<DashboardStats>({ users: 0, clients: 0, ingredients: 0, recipes: 0 })
+  const [stats, setStats] = useState<DashboardStats>({ users: 0, clients: 0, ingredients: 0, recipes: 0, products: 0 })
   const [activities, setActivities] = useState<Activity[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -60,8 +62,8 @@ export default function DashboardPage() {
           <div className="h-8 bg-muted rounded w-48 mb-2"></div>
           <div className="h-4 bg-muted rounded w-64"></div>
         </div>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {[...Array(4)].map((_, i) => (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+          {[...Array(5)].map((_, i) => (
             <div key={i} className="animate-pulse">
               <div className="h-32 bg-muted rounded"></div>
             </div>
@@ -82,7 +84,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
         <StatCard
           title="Usuários"
           value={stats.users}
@@ -96,6 +98,13 @@ export default function DashboardPage() {
           icon={ShoppingBag}
           description="Clientes cadastrados"
           href="/clients"
+        />
+        <StatCard
+          title="Produtos"
+          value={stats.products}
+          icon={Tag}
+          description="Produtos no catálogo"
+          href="/products"
         />
         <StatCard
           title="Ingredientes"

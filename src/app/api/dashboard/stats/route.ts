@@ -10,11 +10,12 @@ export async function GET(request: NextRequest) {
       return unauthorizedResponse()
     }
 
-    const [usersSnap, clientsSnap, ingredientsSnap, recipesSnap] = await Promise.all([
+    const [usersSnap, clientsSnap, ingredientsSnap, recipesSnap, productsSnap] = await Promise.all([
       adminDb.collection('users').where('isActive', '==', true).count().get(),
       adminDb.collection('clients').where('isActive', '==', true).count().get(),
       adminDb.collection('ingredients').where('isActive', '==', true).count().get(),
       adminDb.collection('recipes').where('isActive', '==', true).count().get(),
+      adminDb.collection('products').where('isActive', '==', true).count().get(),
     ])
 
     const stats = {
@@ -22,6 +23,7 @@ export async function GET(request: NextRequest) {
       clients: clientsSnap.data().count,
       ingredients: ingredientsSnap.data().count,
       recipes: recipesSnap.data().count,
+      products: productsSnap.data().count,
     }
 
     return NextResponse.json({ success: true, stats })
