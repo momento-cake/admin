@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { restoreClient } from '@/lib/clients'
+import { adminDb } from '@/lib/firebase-admin'
+import { FieldValue } from 'firebase-admin/firestore'
 import { getAuthFromRequest, canPerformActionFromRequest, unauthorizedResponse, forbiddenResponse } from '@/lib/api-auth'
+
+const CLIENTS_COLLECTION = 'clients'
 
 // POST /api/clients/[id]/restore - Restore soft-deleted client (admin only)
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -17,36 +20,45 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     // 2. Simplicity: avoids adding a new action type to the permission system
     // 3. Security: effectively restricts restore to admins, matching delete behavior
     if (!canPerformActionFromRequest(auth, 'clients', 'delete')) {
-      return forbiddenResponse('Sem permissão para restaurar clientes')
+      return forbiddenResponse('Sem permissao para restaurar clientes')
     }
-
-    console.log(`♻️ POST /api/clients/${id}/restore - Restoring client`)
 
     if (!id) {
       return NextResponse.json(
-        { success: false, error: 'ID do cliente é obrigatório' },
+        { success: false, error: 'ID do cliente e obrigatorio' },
         { status: 400 }
       )
     }
 
-    const client = await restoreClient(id)
+    const docSnapshot = await adminDb.collection(CLIENTS_COLLECTION).doc(id).get()
 
-    console.log(`✅ Successfully restored client: ${client.id}`)
-
-    return NextResponse.json({
-      success: true,
-      data: client,
-      message: 'Cliente restaurado com sucesso'
-    })
-  } catch (error) {
-    console.error(`❌ Error restoring client ${id}:`, error)
-
-    if (error instanceof Error && error.message.includes('não encontrado')) {
+    if (!docSnapshot.exists) {
       return NextResponse.json(
-        { success: false, error: 'Cliente não encontrado' },
+        { success: false, error: 'Cliente nao encontrado' },
         { status: 404 }
       )
     }
+
+    // Restore - mark as active
+    await adminDb.collection(CLIENTS_COLLECTION).doc(id).update({
+      isActive: true,
+      updatedAt: FieldValue.serverTimestamp()
+    })
+
+    // Return restored client data
+    const restoredDoc = await adminDb.collection(CLIENTS_COLLECTION).doc(id).get()
+    const restoredClient = {
+      id: restoredDoc.id,
+      ...restoredDoc.data()
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: restoredClient,
+      message: 'Cliente restaurado com sucesso'
+    })
+  } catch (error) {
+    console.error(`Error restoring client ${id}:`, error)
 
     return NextResponse.json(
       {

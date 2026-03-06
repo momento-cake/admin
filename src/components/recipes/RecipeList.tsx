@@ -24,7 +24,7 @@ import {
   formatTime,
   formatPrice
 } from '@/lib/recipes';
-import { Search, Plus, ChefHat, RefreshCw, Eye, Edit, Trash2, Clock, Users } from 'lucide-react';
+import { Search, Plus, ChefHat, RefreshCw, Eye, Edit, Trash2, Clock, Users, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface RecipeListProps {
@@ -49,6 +49,8 @@ export function RecipeList({
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const ITEMS_PER_PAGE = 20;
   const [searchInput, setSearchInput] = useState('');
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [filters, setFilters] = useState<RecipeFilters>({
@@ -86,6 +88,7 @@ export function RecipeList({
   }, [debouncedSearchQuery]);
 
   useEffect(() => {
+    setPage(1);
     loadRecipes();
   }, [filters]);
 
@@ -122,6 +125,9 @@ export function RecipeList({
     filters.category || 
     filters.difficulty
   );
+
+  const total = recipes.length;
+  const paginatedRecipes = recipes.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
 
   if (loading) {
     return (
@@ -244,7 +250,7 @@ export function RecipeList({
         <div className="space-y-4">
           <div className="flex justify-between items-center">
             <p className="text-sm text-muted-foreground">
-              {recipes.length} receita{recipes.length !== 1 ? 's' : ''} encontrada{recipes.length !== 1 ? 's' : ''}
+              {total} receita{total !== 1 ? 's' : ''} encontrada{total !== 1 ? 's' : ''}
             </p>
             {onRefresh && (
               <Button variant="outline" size="sm" onClick={onRefresh}>
@@ -268,7 +274,7 @@ export function RecipeList({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {recipes.map((recipe) => (
+                {paginatedRecipes.map((recipe) => (
                   <TableRow key={recipe.id} className="hover:bg-muted/50">
                     <TableCell>
                       <div>
@@ -382,6 +388,22 @@ export function RecipeList({
               </TableBody>
             </Table>
           </div>
+
+          {total > ITEMS_PER_PAGE && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-2 pt-4 border-t">
+              <p className="text-sm text-muted-foreground">
+                Exibindo {((page - 1) * ITEMS_PER_PAGE) + 1}-{Math.min(page * ITEMS_PER_PAGE, total)} de {total} receitas
+              </p>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={() => setPage(p => p - 1)} disabled={page === 1}>
+                  <ChevronLeft className="h-4 w-4" /> Anterior
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => setPage(p => p + 1)} disabled={page * ITEMS_PER_PAGE >= total}>
+                  Próximo <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

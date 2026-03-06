@@ -1,13 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import {
-  fetchClients,
-  createClient,
-  deleteClient,
-  fetchInactiveClients
-} from '@/lib/clients'
+import { adminDb } from '@/lib/firebase-admin'
+import { FieldValue } from 'firebase-admin/firestore'
 import { createClientSchema, clientQuerySchema } from '@/lib/validators/client'
-import { ClientQueryFilters } from '@/types/client'
 import { getAuthFromRequest, canPerformActionFromRequest, unauthorizedResponse, forbiddenResponse } from '@/lib/api-auth'
+
+const CLIENTS_COLLECTION = 'clients'
 
 // GET /api/clients - Get all clients with filters
 export async function GET(request: NextRequest) {
@@ -21,8 +18,6 @@ export async function GET(request: NextRequest) {
       return forbiddenResponse('Sem permissão para visualizar clientes')
     }
 
-    console.log('🔍 GET /api/clients - Fetching clients')
-
     const searchParams = request.nextUrl.searchParams
 
     // Check if user is requesting inactive clients (admin only)
@@ -31,7 +26,7 @@ export async function GET(request: NextRequest) {
       return forbiddenResponse('Apenas administradores podem ver clientes inativos')
     }
 
-    const filters: ClientQueryFilters = {
+    const filters = {
       searchQuery: searchParams.get('searchQuery') || undefined,
       type: (searchParams.get('type') as 'person' | 'business') || undefined,
       sortBy: (searchParams.get('sortBy') as 'name' | 'created' | 'updated') || 'created',
@@ -43,7 +38,6 @@ export async function GET(request: NextRequest) {
     // Validate query parameters
     const validationResult = clientQuerySchema.safeParse(filters)
     if (!validationResult.success) {
-      console.error('❌ Validation failed:', validationResult.error)
       return NextResponse.json(
         {
           error: 'Parâmetros de consulta inválidos',
@@ -56,16 +50,73 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Fetch active or inactive clients
-    const result = includeInactive
-      ? await fetchInactiveClients(filters)
-      : await fetchClients(filters)
+    // Build query using admin SDK
+    const isActiveValue = !includeInactive
+    let q: FirebaseFirestore.Query = adminDb
+      .collection(CLIENTS_COLLECTION)
+      .where('isActive', '==', isActiveValue)
 
-    console.log(`✅ Successfully fetched ${result.clients.length} clients`)
+    // Apply type filter at query level
+    if (filters.type) {
+      q = q.where('type', '==', filters.type)
+    }
 
-    return NextResponse.json(result)
+    // Apply sort order
+    const sortFieldMap: Record<string, string> = {
+      name: 'name',
+      created: 'createdAt',
+      updated: 'updatedAt'
+    }
+    const sortField = sortFieldMap[filters.sortBy] || 'createdAt'
+    const sortDirection = filters.sortOrder === 'asc' ? 'asc' : 'desc'
+
+    // For inactive clients, sort by updatedAt desc to match original behavior
+    if (includeInactive) {
+      q = q.orderBy('updatedAt', 'desc')
+    } else {
+      q = q.orderBy(sortField, sortDirection)
+    }
+
+    const snapshot = await q.get()
+
+    // Map documents to client objects
+    let clients = snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data()
+    }))
+
+    // Apply client-side search filtering (Firestore doesn't support full-text search)
+    if (filters.searchQuery) {
+      const searchLower = filters.searchQuery.toLowerCase()
+      clients = clients.filter((client: any) =>
+        client.name?.toLowerCase().includes(searchLower) ||
+        client.email?.toLowerCase().includes(searchLower) ||
+        client.cpfCnpj?.toLowerCase().includes(searchLower) ||
+        client.contactMethods?.some((cm: any) =>
+          cm.value?.toLowerCase().includes(searchLower)
+        )
+      )
+    }
+
+    const total = clients.length
+
+    // Apply pagination
+    const page = filters.page
+    const limit = Math.min(filters.limit, 100)
+    const startIndex = (page - 1) * limit
+    const endIndex = startIndex + limit
+    const paginatedClients = clients.slice(startIndex, endIndex)
+
+    return NextResponse.json({
+      success: true,
+      clients: paginatedClients,
+      total,
+      hasMore: endIndex < total,
+      page,
+      limit
+    })
   } catch (error) {
-    console.error('❌ Error fetching clients:', error)
+    console.error('Error fetching clients:', error)
 
     return NextResponse.json(
       {
@@ -89,15 +140,11 @@ export async function POST(request: NextRequest) {
       return forbiddenResponse('Sem permissão para criar clientes')
     }
 
-    console.log('➕ POST /api/clients - Creating client')
-
     const body = await request.json()
-    // Request body log removed to avoid logging PII (name, CPF, phone, email)
 
     // Validate the client data
     const validationResult = createClientSchema.safeParse(body)
     if (!validationResult.success) {
-      console.error('❌ Validation failed:', validationResult.error)
       return NextResponse.json(
         {
           success: false,
@@ -113,20 +160,51 @@ export async function POST(request: NextRequest) {
 
     const clientData = validationResult.data
 
-    const client = await createClient(clientData as any)
+    // Check if client with same CPF/CNPJ already exists
+    if (clientData.cpfCnpj) {
+      const existingSnapshot = await adminDb
+        .collection(CLIENTS_COLLECTION)
+        .where('cpfCnpj', '==', clientData.cpfCnpj)
+        .where('isActive', '==', true)
+        .get()
 
-    console.log(`✅ Successfully created client: ${client.id}`)
+      if (!existingSnapshot.empty) {
+        const label = clientData.type === 'business' ? 'CNPJ' : 'CPF'
+        return NextResponse.json(
+          { success: false, error: `Já existe um cliente com esse ${label}` },
+          { status: 409 }
+        )
+      }
+    }
+
+    const now = FieldValue.serverTimestamp()
+    const docData = {
+      ...clientData,
+      isActive: true,
+      createdAt: now,
+      updatedAt: now,
+      createdBy: auth.uid
+    }
+
+    const docRef = await adminDb.collection(CLIENTS_COLLECTION).add(docData)
 
     return NextResponse.json(
       {
         success: true,
-        data: client,
+        data: {
+          id: docRef.id,
+          ...clientData,
+          isActive: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          createdBy: auth.uid
+        },
         message: 'Cliente criado com sucesso'
       },
       { status: 201 }
     )
   } catch (error) {
-    console.error('❌ Error creating client:', error)
+    console.error('Error creating client:', error)
 
     return NextResponse.json(
       {

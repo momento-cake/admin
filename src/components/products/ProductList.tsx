@@ -12,7 +12,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Search, Plus, Package, RefreshCw, Eye, Edit, Trash2 } from 'lucide-react';
+import { Search, Plus, Package, RefreshCw, Eye, Edit, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatErrorMessage, logError } from '@/lib/error-handler';
 
@@ -43,6 +43,8 @@ export function ProductList({
   const [searchInput, setSearchInput] = useState('');
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [marginFilter, setMarginFilter] = useState<'all' | 'good' | 'warning' | 'poor'>('all');
+  const [page, setPage] = useState(1);
+  const ITEMS_PER_PAGE = 20;
   const [filters, setFilters] = useState<ProductFilters>({
     searchQuery: '',
     categoryId: undefined,
@@ -90,6 +92,7 @@ export function ProductList({
   // Update filters when debounced search changes
   useEffect(() => {
     setFilters(prev => ({ ...prev, searchQuery: debouncedSearchQuery }));
+    setPage(1);
   }, [debouncedSearchQuery]);
 
   // Load products when filters change
@@ -100,6 +103,7 @@ export function ProductList({
   // Load subcategories when category changes
   const handleCategoryChange = async (categoryId: string) => {
     try {
+      setPage(1);
       setFilters(prev => ({
         ...prev,
         categoryId: categoryId === 'all' ? undefined : categoryId,
@@ -118,6 +122,7 @@ export function ProductList({
   };
 
   const handleSubcategoryChange = (subcategoryId: string) => {
+    setPage(1);
     setFilters(prev => ({
       ...prev,
       subcategoryId: subcategoryId === 'all' ? undefined : subcategoryId
@@ -131,6 +136,7 @@ export function ProductList({
   const clearFilters = () => {
     setSearchInput('');
     setMarginFilter('all');
+    setPage(1);
     setFilters({
       searchQuery: '',
       categoryId: undefined,
@@ -164,6 +170,14 @@ export function ProductList({
     if (marginFilter === 'all') return true;
     return getMarginStatus(product.profitMargin) === marginFilter;
   });
+
+  // Pagination
+  const total = filteredProductsByMargin.length;
+  const totalPages = Math.ceil(total / ITEMS_PER_PAGE);
+  const paginatedProducts = filteredProductsByMargin.slice(
+    (page - 1) * ITEMS_PER_PAGE,
+    page * ITEMS_PER_PAGE
+  );
 
   if (loading) {
     return (
@@ -242,7 +256,7 @@ export function ProductList({
 
           <Select
             value={marginFilter}
-            onValueChange={(value: any) => setMarginFilter(value)}
+            onValueChange={(value: any) => { setMarginFilter(value); setPage(1); }}
           >
             <SelectTrigger className="w-auto min-w-40">
               <SelectValue placeholder="Margem de Lucro" />
@@ -285,7 +299,7 @@ export function ProductList({
       </div>
 
       {/* Results */}
-      {filteredProductsByMargin.length === 0 ? (
+      {total === 0 ? (
         <EmptyState
           icon={Package}
           title={hasActiveFilters || marginFilter !== 'all' ? 'Nenhum produto encontrado' : 'Nenhum produto cadastrado'}
@@ -303,7 +317,7 @@ export function ProductList({
         <div className="space-y-4">
           <div className="flex justify-between items-center">
             <p className="text-sm text-muted-foreground">
-              {filteredProductsByMargin.length} produto{filteredProductsByMargin.length !== 1 ? 's' : ''} encontrado{filteredProductsByMargin.length !== 1 ? 's' : ''}
+              {total} produto{total !== 1 ? 's' : ''} encontrado{total !== 1 ? 's' : ''}
             </p>
             {onRefresh && (
               <Button variant="outline" size="sm" onClick={onRefresh}>
@@ -327,7 +341,7 @@ export function ProductList({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredProductsByMargin.map((product) => (
+                {paginatedProducts.map((product) => (
                   <TableRow key={product.id} className="hover:bg-muted/50">
                     <TableCell>
                       <div>
@@ -404,17 +418,20 @@ export function ProductList({
                               <AlertDialogHeader>
                                 <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                  Tem certeza de que deseja excluir o produto "{product.name}"?
-                                  Esta ação não pode ser desfeita.
+                                  Tem certeza de que deseja excluir o produto &quot;{product.name}&quot;?
+                                  O produto sera desativado do catalogo.
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>
                                 <AlertDialogCancel>Cancelar</AlertDialogCancel>
                                 <AlertDialogAction
-                                  onClick={() => {
+                                  onClick={async () => {
                                     setDeletingId(product.id);
-                                    onProductDelete(product);
-                                    setDeletingId(null);
+                                    try {
+                                      await onProductDelete(product);
+                                    } finally {
+                                      setDeletingId(null);
+                                    }
                                   }}
                                   disabled={deletingId === product.id}
                                   className="bg-destructive hover:bg-destructive/90"
@@ -432,6 +449,36 @@ export function ProductList({
               </TableBody>
             </Table>
           </div>
+
+          {/* Pagination */}
+          {total > ITEMS_PER_PAGE && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-2 pt-4 border-t">
+              <p className="text-sm text-muted-foreground">
+                Exibindo <span className="font-semibold">{((page - 1) * ITEMS_PER_PAGE) + 1}-{Math.min(page * ITEMS_PER_PAGE, total)}</span> de <span className="font-semibold">{total}</span> produtos
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <div className="px-3 py-2 text-sm font-medium">
+                  Pagina {page}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage(p => p + 1)}
+                  disabled={page >= totalPages}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

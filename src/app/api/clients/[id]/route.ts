@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { fetchClient, updateClient, deleteClient } from '@/lib/clients'
+import { adminDb } from '@/lib/firebase-admin'
+import { FieldValue } from 'firebase-admin/firestore'
 import { updateClientSchema } from '@/lib/validators/client'
 import { getAuthFromRequest, canPerformActionFromRequest, unauthorizedResponse, forbiddenResponse } from '@/lib/api-auth'
+
+const CLIENTS_COLLECTION = 'clients'
 
 // GET /api/clients/[id] - Get single client
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -16,8 +19,6 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       return forbiddenResponse('Sem permissão para visualizar clientes')
     }
 
-    console.log(`🔍 GET /api/clients/${id} - Fetching client`)
-
     if (!id) {
       return NextResponse.json(
         { success: false, error: 'ID do cliente é obrigatório' },
@@ -25,23 +26,21 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       )
     }
 
-    const client = await fetchClient(id)
+    const docSnapshot = await adminDb.collection(CLIENTS_COLLECTION).doc(id).get()
 
-    console.log(`✅ Successfully fetched client: ${client.id}`)
-
-    return NextResponse.json({
-      success: true,
-      data: client
-    })
-  } catch (error) {
-    console.error(`❌ Error fetching client ${id}:`, error)
-
-    if (error instanceof Error && error.message.includes('não encontrado')) {
+    if (!docSnapshot.exists) {
       return NextResponse.json(
         { success: false, error: 'Cliente não encontrado' },
         { status: 404 }
       )
     }
+
+    return NextResponse.json({
+      success: true,
+      data: { id: docSnapshot.id, ...docSnapshot.data() }
+    })
+  } catch (error) {
+    console.error(`Error fetching client ${id}:`, error)
 
     return NextResponse.json(
       {
@@ -66,8 +65,6 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       return forbiddenResponse('Sem permissão para editar clientes')
     }
 
-    console.log(`🔄 PUT /api/clients/${id} - Updating client`)
-
     if (!id) {
       return NextResponse.json(
         { success: false, error: 'ID do cliente é obrigatório' },
@@ -76,7 +73,6 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     const body = await request.json()
-    // Request body log removed to avoid logging PII (name, CPF, phone, email)
 
     // Add the ID to the body for validation
     const dataWithId = { ...body, id }
@@ -84,7 +80,6 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     // Validate the client data
     const validationResult = updateClientSchema.safeParse(dataWithId)
     if (!validationResult.success) {
-      console.error('❌ Validation failed:', validationResult.error)
       return NextResponse.json(
         {
           success: false,
@@ -98,19 +93,76 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       )
     }
 
-    const updateData = validationResult.data
+    // Fetch existing client
+    const existingDoc = await adminDb.collection(CLIENTS_COLLECTION).doc(id).get()
+    if (!existingDoc.exists) {
+      return NextResponse.json(
+        { success: false, error: 'Cliente não encontrado' },
+        { status: 404 }
+      )
+    }
 
-    const client = await updateClient(id, updateData as any)
+    const existingData = existingDoc.data()!
 
-    console.log(`✅ Successfully updated client: ${client.id}`)
+    // Prevent editing inactive clients
+    if (!existingData.isActive) {
+      return NextResponse.json(
+        { success: false, error: 'Cliente inativo não pode ser editado. Restaure primeiro.' },
+        { status: 400 }
+      )
+    }
+
+    const { id: _validatedId, ...updateFields } = validationResult.data
+
+    // If updating CPF/CNPJ, check for duplicates
+    if (updateFields.cpfCnpj && updateFields.cpfCnpj !== existingData.cpfCnpj) {
+      const existingSnapshot = await adminDb
+        .collection(CLIENTS_COLLECTION)
+        .where('cpfCnpj', '==', updateFields.cpfCnpj)
+        .where('isActive', '==', true)
+        .get()
+
+      const isDuplicate = existingSnapshot.docs.some((doc) => doc.id !== id)
+      if (isDuplicate) {
+        const label = existingData.type === 'business' ? 'CNPJ' : 'CPF'
+        return NextResponse.json(
+          { success: false, error: `Já existe outro cliente com esse ${label}` },
+          { status: 409 }
+        )
+      }
+    }
+
+    // Build update payload
+    const updatePayload: Record<string, unknown> = {
+      ...updateFields,
+      updatedAt: FieldValue.serverTimestamp(),
+      lastModifiedBy: auth.uid
+    }
+
+    // Remove undefined fields
+    Object.keys(updatePayload).forEach((key) => {
+      if (updatePayload[key] === undefined) {
+        delete updatePayload[key]
+      }
+    })
+
+    await adminDb.collection(CLIENTS_COLLECTION).doc(id).update(updatePayload)
+
+    // Return merged result
+    const updatedClient = {
+      id,
+      ...existingData,
+      ...updatePayload,
+      updatedAt: new Date().toISOString()
+    }
 
     return NextResponse.json({
       success: true,
-      data: client,
+      data: updatedClient,
       message: 'Cliente atualizado com sucesso'
     })
   } catch (error) {
-    console.error(`❌ Error updating client ${id}:`, error)
+    console.error(`Error updating client ${id}:`, error)
 
     if (error instanceof Error && error.message.includes('não encontrado')) {
       return NextResponse.json(
@@ -142,8 +194,6 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
       return forbiddenResponse('Sem permissão para excluir clientes')
     }
 
-    console.log(`🗑️ DELETE /api/clients/${id} - Deleting client`)
-
     if (!id) {
       return NextResponse.json(
         { success: false, error: 'ID do cliente é obrigatório' },
@@ -151,16 +201,27 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
       )
     }
 
-    await deleteClient(id)
+    // Verify client exists
+    const docSnapshot = await adminDb.collection(CLIENTS_COLLECTION).doc(id).get()
+    if (!docSnapshot.exists) {
+      return NextResponse.json(
+        { success: false, error: 'Cliente não encontrado' },
+        { status: 404 }
+      )
+    }
 
-    console.log(`✅ Successfully deleted client: ${id}`)
+    // Soft delete: set isActive = false
+    await adminDb.collection(CLIENTS_COLLECTION).doc(id).update({
+      isActive: false,
+      updatedAt: FieldValue.serverTimestamp()
+    })
 
     return NextResponse.json({
       success: true,
       message: 'Cliente removido com sucesso'
     })
   } catch (error) {
-    console.error(`❌ Error deleting client ${id}:`, error)
+    console.error(`Error deleting client ${id}:`, error)
 
     if (error instanceof Error && error.message.includes('não encontrado')) {
       return NextResponse.json(

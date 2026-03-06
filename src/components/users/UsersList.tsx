@@ -9,7 +9,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { UserModel, ROLE_LABELS } from '@/types'
 import { UserEditDialog } from './UserEditDialog'
-import { Users, RefreshCw, CheckCircle, XCircle, Shield, UserCog, Pencil } from 'lucide-react'
+import { Users, RefreshCw, CheckCircle, XCircle, Shield, UserCog, Pencil, ChevronLeft, ChevronRight } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { collection, getDocs, query, orderBy } from 'firebase/firestore'
@@ -17,6 +17,8 @@ import { db } from '@/lib/firebase'
 
 export function UsersList() {
   const [users, setUsers] = useState<UserModel[]>([])
+  const [page, setPage] = useState(1)
+  const ITEMS_PER_PAGE = 20
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [editingUser, setEditingUser] = useState<UserModel | null>(null)
@@ -87,6 +89,9 @@ export function UsersList() {
     return 'U'
   }
 
+  const total = users.length
+  const paginatedUsers = users.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE)
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -122,7 +127,7 @@ export function UsersList() {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <p className="text-sm text-muted-foreground">
-          {users.length} usuário{users.length !== 1 ? 's' : ''} encontrado{users.length !== 1 ? 's' : ''}
+          {total} usuário{total !== 1 ? 's' : ''} encontrado{total !== 1 ? 's' : ''}
         </p>
         <Button variant="outline" size="sm" onClick={fetchUsers}>
           <RefreshCw className="h-4 w-4 mr-2" />
@@ -144,7 +149,7 @@ export function UsersList() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {users.map((user) => (
+            {paginatedUsers.map((user) => (
               <TableRow key={user.uid}>
                 <TableCell>
                   <div className="flex items-center space-x-3">
@@ -209,6 +214,22 @@ export function UsersList() {
           </TableBody>
         </Table>
       </div>
+
+      {total > ITEMS_PER_PAGE && (
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-2 pt-4 border-t">
+          <p className="text-sm text-muted-foreground">
+            Exibindo {((page - 1) * ITEMS_PER_PAGE) + 1}-{Math.min(page * ITEMS_PER_PAGE, total)} de {total} usuários
+          </p>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => setPage(p => p - 1)} disabled={page === 1}>
+              <ChevronLeft className="h-4 w-4" /> Anterior
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setPage(p => p + 1)} disabled={page * ITEMS_PER_PAGE >= total}>
+              Próximo <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
 
       {editingUser && (
         <UserEditDialog

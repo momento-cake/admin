@@ -26,7 +26,7 @@ import {
   getUnitDisplayName
 } from '@/lib/ingredients';
 import { fetchSuppliers } from '@/lib/suppliers';
-import { Search, Plus, Package, RefreshCw, Eye, Edit, Trash2 } from 'lucide-react';
+import { Search, Plus, Package, RefreshCw, Eye, Edit, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface IngredientListProps {
@@ -53,6 +53,8 @@ export function IngredientList({
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const ITEMS_PER_PAGE = 20;
   const [searchInput, setSearchInput] = useState('');
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [filters, setFilters] = useState<IngredientFilters>({
@@ -100,6 +102,7 @@ export function IngredientList({
   }, [debouncedSearchQuery]);
 
   useEffect(() => {
+    setPage(1);
     loadIngredients();
   }, [filters]);
 
@@ -177,6 +180,9 @@ export function IngredientList({
     };
     return names[status];
   };
+
+  const total = ingredients.length;
+  const paginatedIngredients = ingredients.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
 
   if (loading) {
     return (
@@ -316,7 +322,7 @@ export function IngredientList({
         <div className="space-y-4">
           <div className="flex justify-between items-center">
             <p className="text-sm text-muted-foreground">
-              {ingredients.length} ingrediente{ingredients.length !== 1 ? 's' : ''} encontrado{ingredients.length !== 1 ? 's' : ''}
+              {total} ingrediente{total !== 1 ? 's' : ''} encontrado{total !== 1 ? 's' : ''}
             </p>
             {onRefresh && (
               <Button variant="outline" size="sm" onClick={onRefresh}>
@@ -340,7 +346,7 @@ export function IngredientList({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {ingredients.map((ingredient) => {
+                    {paginatedIngredients.map((ingredient) => {
                       const stockStatus = getStockStatus(ingredient.currentStock, ingredient.minStock);
                       return (
                         <TableRow key={ingredient.id} className="hover:bg-muted/50">
@@ -460,6 +466,22 @@ export function IngredientList({
                   </TableBody>
             </Table>
           </div>
+
+          {total > ITEMS_PER_PAGE && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-2 pt-4 border-t">
+              <p className="text-sm text-muted-foreground">
+                Exibindo {((page - 1) * ITEMS_PER_PAGE) + 1}-{Math.min(page * ITEMS_PER_PAGE, total)} de {total} ingredientes
+              </p>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={() => setPage(p => p - 1)} disabled={page === 1}>
+                  <ChevronLeft className="h-4 w-4" /> Anterior
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => setPage(p => p + 1)} disabled={page * ITEMS_PER_PAGE >= total}>
+                  Próximo <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
