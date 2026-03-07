@@ -12,6 +12,7 @@ import {
   Activity,
   Tag
 } from 'lucide-react'
+import { DashboardShortcuts } from '@/components/dashboard/DashboardShortcuts'
 
 interface DashboardStats {
   users: number
@@ -121,6 +122,9 @@ export default function DashboardPage() {
           href="/recipes"
         />
       </div>
+
+      {/* Shortcuts */}
+      <DashboardShortcuts />
 
       <div className="grid gap-6 md:grid-cols-2">
         {/* Recent Activities */}

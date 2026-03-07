@@ -99,6 +99,7 @@ export const DEFAULT_ATENDENTE_PERMISSIONS: CustomPermissions = {
   dashboard: { enabled: true, actions: ['view'] },
   clients: { enabled: true, actions: ['view', 'create', 'update'] },
   images: { enabled: true, actions: ['view', 'create', 'update'] },
+  time_tracking: { enabled: true, actions: ['view', 'create', 'update'] },
   // All other features are disabled by default for atendente
 };
 
