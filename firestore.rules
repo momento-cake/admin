@@ -16,7 +16,7 @@ service cloud.firestore {
     function isViewer() {
       return isAuthenticated() &&
              exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.type in ['admin', 'viewer', 'atendente'] &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.type in ['admin', 'producao', 'atendente'] &&
              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isActive == true;
     }
 
@@ -305,7 +305,7 @@ service cloud.firestore {
 
     // Pedido Counter collection - Auto-increment counter for pedido numbers
     match /pedidoCounters/{document} {
-      allow read, write: if isAdmin();
+      allow read, write: if isUserActive();
     }
 
     // Businesses collection - Business entity management
