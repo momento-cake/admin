@@ -86,9 +86,11 @@ export function NfSection({ pedido }: NfSectionProps) {
                       hour: '2-digit',
                       minute: '2-digit',
                     }).format(
-                      pedido.nfEmittedAt && 'toDate' in pedido.nfEmittedAt
+                      pedido.nfEmittedAt && typeof pedido.nfEmittedAt === 'object' && 'toDate' in pedido.nfEmittedAt
                         ? (pedido.nfEmittedAt as any).toDate()
-                        : new Date(pedido.nfEmittedAt as any)
+                        : pedido.nfEmittedAt && typeof pedido.nfEmittedAt === 'object' && '_seconds' in (pedido.nfEmittedAt as any)
+                          ? new Date((pedido.nfEmittedAt as any)._seconds * 1000)
+                          : new Date(pedido.nfEmittedAt as any)
                     )}
                   </strong>
                 </p>

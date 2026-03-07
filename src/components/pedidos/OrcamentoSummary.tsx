@@ -20,7 +20,15 @@ interface OrcamentoSummaryProps {
 export function OrcamentoSummary({ orcamento }: OrcamentoSummaryProps) {
   const formatDate = (timestamp: any): string => {
     if (!timestamp) return '-'
-    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp)
+    let date: Date
+    if (timestamp.toDate) {
+      date = timestamp.toDate()
+    } else if (timestamp._seconds !== undefined) {
+      date = new Date(timestamp._seconds * 1000)
+    } else {
+      date = new Date(timestamp)
+    }
+    if (isNaN(date.getTime())) return '-'
     return new Intl.DateTimeFormat('pt-BR', {
       day: '2-digit',
       month: '2-digit',

@@ -87,9 +87,17 @@ export function PedidoDetailView({ pedido, onUpdate }: PedidoDetailViewProps) {
     }
   }
 
+  const parseTimestamp = (timestamp: any): Date | null => {
+    if (!timestamp) return null
+    if (timestamp.toDate) return timestamp.toDate()
+    if (timestamp._seconds !== undefined) return new Date(timestamp._seconds * 1000)
+    const d = new Date(timestamp)
+    return isNaN(d.getTime()) ? null : d
+  }
+
   const formatDate = (timestamp: any): string => {
-    if (!timestamp) return '-'
-    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp)
+    const date = parseTimestamp(timestamp)
+    if (!date) return '-'
     return new Intl.DateTimeFormat('pt-BR', {
       day: '2-digit',
       month: '2-digit',
@@ -100,8 +108,8 @@ export function PedidoDetailView({ pedido, onUpdate }: PedidoDetailViewProps) {
   }
 
   const formatDateShort = (timestamp: any): string => {
-    if (!timestamp) return '-'
-    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp)
+    const date = parseTimestamp(timestamp)
+    if (!date) return '-'
     return new Intl.DateTimeFormat('pt-BR', {
       day: '2-digit',
       month: '2-digit',
