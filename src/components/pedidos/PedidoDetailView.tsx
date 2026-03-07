@@ -30,6 +30,7 @@ import { PaymentSection } from './PaymentSection'
 import { NfSection } from './NfSection'
 import { PacoteManager } from './PacoteManager'
 import { EntregaSection } from './EntregaSection'
+import { ShareOrderButton } from './ShareOrderButton'
 
 interface PedidoDetailViewProps {
   pedido: Pedido
@@ -152,15 +153,25 @@ export function PedidoDetailView({ pedido, onUpdate }: PedidoDetailViewProps) {
               </div>
             </div>
 
-            <div className="text-right">
-              {activeOrcamento && (
-                <p className="text-2xl font-bold">
-                  {formatPrice(activeOrcamento.total)}
+            <div className="flex items-center gap-3">
+              <div className="text-right">
+                {activeOrcamento && (
+                  <p className="text-2xl font-bold">
+                    {formatPrice(activeOrcamento.total)}
+                  </p>
+                )}
+                <p className="text-sm text-muted-foreground">
+                  {ENTREGA_TIPO_LABELS[pedido.entrega.tipo]}
                 </p>
+              </div>
+              {pedido.status === 'AGUARDANDO_APROVACAO' && (
+                <ShareOrderButton
+                  publicToken={pedido.publicToken}
+                  pedidoStatus={pedido.status}
+                  clienteNome={pedido.clienteNome}
+                  numeroPedido={pedido.numeroPedido}
+                />
               )}
-              <p className="text-sm text-muted-foreground">
-                {ENTREGA_TIPO_LABELS[pedido.entrega.tipo]}
-              </p>
             </div>
           </div>
 

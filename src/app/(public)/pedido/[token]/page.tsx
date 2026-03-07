@@ -2,9 +2,12 @@
 
 import * as React from 'react'
 import { useParams } from 'next/navigation'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Sparkles } from 'lucide-react'
 import { PublicPedidoView } from '@/components/public/PublicPedidoView'
 import type { PublicPedidoData } from '@/components/public/PublicPedidoView'
+
+const fontHeading = { fontFamily: 'var(--font-playfair), Georgia, serif' }
+const fontBody = { fontFamily: 'var(--font-dm-sans), system-ui, sans-serif' }
 
 export default function PublicPedidoPage() {
   const params = useParams()
@@ -22,6 +25,8 @@ export default function PublicPedidoPage() {
       if (!response.ok || !json.success) {
         if (response.status === 404) {
           setError('Pedido não encontrado')
+        } else if (response.status === 403) {
+          setError('Este pedido não está disponível para visualização')
         } else {
           setError(json.error || 'Erro ao carregar pedido')
         }
@@ -45,10 +50,23 @@ export default function PublicPedidoPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-rose-50 to-white">
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#faf7f2' }}>
         <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin text-rose-500 mx-auto mb-4" />
-          <p className="text-gray-500">Carregando pedido...</p>
+          {/* Logo */}
+          <div className="relative inline-block mb-6">
+            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#b8956a] to-[#8b7355] flex items-center justify-center shadow-md mx-auto">
+              <span className="text-white text-2xl" style={{ ...fontHeading, fontWeight: 600 }}>
+                M
+              </span>
+            </div>
+            <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-[#e8c87a] flex items-center justify-center">
+              <Sparkles className="w-3 h-3 text-[#5c4a2e]" />
+            </div>
+          </div>
+          <Loader2 className="h-5 w-5 animate-spin text-[#b8956a] mx-auto mb-4" />
+          <p className="text-[#8b7e6e] text-sm tracking-wide" style={fontBody}>
+            Carregando seu pedido...
+          </p>
         </div>
       </div>
     )
@@ -56,17 +74,31 @@ export default function PublicPedidoPage() {
 
   if (error || !pedido) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-rose-50 to-white">
-        <div className="text-center max-w-md px-4">
-          <div className="w-16 h-16 bg-rose-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <span className="text-2xl">&#x1f382;</span>
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#faf7f2' }}>
+        <div className="text-center max-w-md px-6">
+          {/* Logo */}
+          <div className="relative inline-block mb-6">
+            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#b8956a] to-[#8b7355] flex items-center justify-center shadow-md mx-auto">
+              <span className="text-white text-2xl" style={{ ...fontHeading, fontWeight: 600 }}>
+                M
+              </span>
+            </div>
           </div>
-          <h1 className="text-2xl font-semibold text-gray-800 mb-2">
+          <h1
+            className="text-2xl text-[#2d2319] mb-3"
+            style={{ ...fontHeading, fontWeight: 600 }}
+          >
             {error || 'Pedido não encontrado'}
           </h1>
-          <p className="text-gray-500">
+          <p className="text-sm text-[#8b7e6e] leading-relaxed" style={fontBody}>
             O pedido que você está procurando não existe ou não está mais disponível.
           </p>
+          {/* Decorative divider */}
+          <div className="flex items-center justify-center gap-3 mt-8" aria-hidden="true">
+            <div className="h-px w-12 bg-gradient-to-r from-transparent to-[#d4c4a8]" />
+            <div className="w-1.5 h-1.5 rounded-full bg-[#d4c4a8]" />
+            <div className="h-px w-12 bg-gradient-to-l from-transparent to-[#d4c4a8]" />
+          </div>
         </div>
       </div>
     )

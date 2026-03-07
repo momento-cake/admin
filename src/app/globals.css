@@ -294,3 +294,173 @@
 .status-info {
   @apply bg-info/10 text-info;
 }
+
+/* ── Public Portal Animations ── */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes confettiFall {
+  0% {
+    opacity: 1;
+    transform: translateY(-20px) rotate(0deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(400px) rotate(720deg);
+  }
+}
+
+@keyframes confettiSpin {
+  0% { transform: rotateX(0deg) rotateY(0deg); }
+  50% { transform: rotateX(180deg) rotateY(90deg); }
+  100% { transform: rotateX(360deg) rotateY(180deg); }
+}
+
+@keyframes shimmerGold {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+@keyframes celebrateCheck {
+  0% {
+    opacity: 0;
+    transform: scale(0) rotate(-45deg);
+  }
+  50% {
+    transform: scale(1.2) rotate(0deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.6s ease-out both;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out both;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.4s ease-out both;
+}
+
+.animate-slide-down {
+  animation: slideDown 0.3s ease-out both;
+}
+
+.animate-confetti-fall {
+  animation: confettiFall 2.5s ease-in forwards;
+}
+
+.animate-confetti-spin {
+  animation: confettiSpin 1s linear infinite;
+}
+
+.animate-celebrate-check {
+  animation: celebrateCheck 0.6s ease-out both;
+}
+
+/* Stagger delays for entrance animations */
+.stagger-1 { animation-delay: 0.05s; }
+.stagger-2 { animation-delay: 0.1s; }
+.stagger-3 { animation-delay: 0.15s; }
+.stagger-4 { animation-delay: 0.2s; }
+.stagger-5 { animation-delay: 0.25s; }
+.stagger-6 { animation-delay: 0.3s; }
+.stagger-7 { animation-delay: 0.35s; }
+
+/* ── Public Portal Styles ── */
+
+/* Linen texture background */
+.linen-bg {
+  background-color: #faf7f2;
+  background-image: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23d4c4a8' fill-opacity='0.06'%3E%3Cpath d='M0 0h1v1H0zM4 4h1v1H4zM8 0h1v1H8zM12 4h1v1h-1zM16 0h1v1h-1zM20 4h1v1h-1zM24 0h1v1h-1zM28 4h1v1h-1zM32 0h1v1h-1zM36 4h1v1h-1zM2 2h1v1H2zM6 6h1v1H6zM10 2h1v1h-1zM14 6h1v1h-1zM18 2h1v1h-1zM22 6h1v1h-1zM26 2h1v1h-1zM30 6h1v1h-1zM34 2h1v1h-1zM38 6h1v1h-1zM0 8h1v1H0zM4 12h1v1H4zM8 8h1v1H8zM12 12h1v1h-1zM16 8h1v1h-1zM20 12h1v1h-1zM24 8h1v1h-1zM28 12h1v1h-1zM32 8h1v1h-1zM36 12h1v1h-1zM2 10h1v1H2zM6 14h1v1H6zM10 10h1v1h-1zM14 14h1v1h-1zM18 10h1v1h-1zM22 14h1v1h-1zM26 10h1v1h-1zM30 14h1v1h-1zM34 10h1v1h-1zM38 14h1v1h-1z'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+/* Gold shimmer text effect */
+.gold-shimmer {
+  background: linear-gradient(
+    90deg,
+    #b8956a 0%,
+    #e8c87a 25%,
+    #d4a574 50%,
+    #e8c87a 75%,
+    #b8956a 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmerGold 3s linear infinite;
+}
+
+/* Premium card with warm shadow */
+.premium-card {
+  background: #ffffff;
+  border: 1px solid rgba(212, 196, 168, 0.3);
+  box-shadow:
+    0 1px 3px rgba(45, 35, 25, 0.04),
+    0 4px 12px rgba(45, 35, 25, 0.03);
+  border-radius: 16px;
+}
+
+/* Confirm button with gold gradient and glow */
+.confirm-btn {
+  background: linear-gradient(135deg, #b8956a 0%, #c9a96e 50%, #d4a574 100%);
+  box-shadow:
+    0 2px 8px rgba(184, 149, 106, 0.3),
+    0 0 0 0 rgba(184, 149, 106, 0);
+  transition: all 0.3s ease;
+}
+
+.confirm-btn:hover:not(:disabled) {
+  box-shadow:
+    0 4px 16px rgba(184, 149, 106, 0.4),
+    0 0 0 4px rgba(184, 149, 106, 0.1);
+  transform: translateY(-1px);
+}
+
+.confirm-btn:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow:
+    0 1px 4px rgba(184, 149, 106, 0.3),
+    0 0 0 2px rgba(184, 149, 106, 0.15);
+}

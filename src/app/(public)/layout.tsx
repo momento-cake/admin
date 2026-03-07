@@ -1,8 +1,21 @@
 import type { Metadata } from 'next'
+import { Playfair_Display, DM_Sans } from 'next/font/google'
+
+const playfair = Playfair_Display({
+  variable: '--font-playfair',
+  subsets: ['latin'],
+  display: 'swap',
+})
+
+const dmSans = DM_Sans({
+  variable: '--font-dm-sans',
+  subsets: ['latin'],
+  display: 'swap',
+})
 
 export const metadata: Metadata = {
-  title: 'Galeria | Momento Cake',
-  description: 'Galeria de fotos Momento Cake',
+  title: 'Seu Pedido | Momento Cake',
+  description: 'Acompanhe e confirme seu pedido Momento Cake',
 }
 
 export default function PublicLayout({
@@ -11,10 +24,8 @@ export default function PublicLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="pt-BR">
-      <body className="min-h-screen bg-background antialiased">
-        {children}
-      </body>
-    </html>
+    <div className={`${playfair.variable} ${dmSans.variable}`}>
+      {children}
+    </div>
   )
 }

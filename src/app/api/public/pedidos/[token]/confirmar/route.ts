@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase-admin';
-import type { PedidoStatus } from '@/types/pedido';
+import { FieldValue } from 'firebase-admin/firestore';
 
 const PEDIDOS_COLLECTION = 'pedidos';
 const STORE_ADDRESSES_COLLECTION = 'storeAddresses';
@@ -8,18 +8,17 @@ const STORE_HOURS_COLLECTION = 'storeHours';
 
 const DIAS_SEMANA_DEFAULTS = [
   { diaSemana: 0, diaSemanaLabel: 'Domingo', abreAs: '08:00', fechaAs: '18:00', fechado: true },
-  { diaSemana: 1, diaSemanaLabel: 'Segunda-feira', abreAs: '08:00', fechaAs: '18:00', fechado: false },
-  { diaSemana: 2, diaSemanaLabel: 'Terça-feira', abreAs: '08:00', fechaAs: '18:00', fechado: false },
-  { diaSemana: 3, diaSemanaLabel: 'Quarta-feira', abreAs: '08:00', fechaAs: '18:00', fechado: false },
-  { diaSemana: 4, diaSemanaLabel: 'Quinta-feira', abreAs: '08:00', fechaAs: '18:00', fechado: false },
-  { diaSemana: 5, diaSemanaLabel: 'Sexta-feira', abreAs: '08:00', fechaAs: '18:00', fechado: false },
-  { diaSemana: 6, diaSemanaLabel: 'Sábado', abreAs: '08:00', fechaAs: '14:00', fechado: false },
+  { diaSemana: 1, diaSemanaLabel: 'Segunda', abreAs: '08:00', fechaAs: '18:00', fechado: false },
+  { diaSemana: 2, diaSemanaLabel: 'Terça', abreAs: '08:00', fechaAs: '18:00', fechado: false },
+  { diaSemana: 3, diaSemanaLabel: 'Quarta', abreAs: '08:00', fechaAs: '18:00', fechado: false },
+  { diaSemana: 4, diaSemanaLabel: 'Quinta', abreAs: '08:00', fechaAs: '18:00', fechado: false },
+  { diaSemana: 5, diaSemanaLabel: 'Sexta', abreAs: '08:00', fechaAs: '18:00', fechado: false },
+  { diaSemana: 6, diaSemanaLabel: 'Sábado', abreAs: '08:00', fechaAs: '13:00', fechado: false },
 ];
 
-// GET /api/public/pedidos/[token] - Get pedido by public token (no auth required)
-// Filters out: pacotes, observacoes, createdBy, lastModifiedBy, non-active orcamentos, NF internal fields
-// Includes: store addresses and hours for pickup display
-export async function GET(
+// POST /api/public/pedidos/[token]/confirmar - Confirm a pedido by public token (no auth required)
+// Only allows confirmation of orders with status AGUARDANDO_APROVACAO
+export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ token: string }> }
 ) {
@@ -47,19 +46,50 @@ export async function GET(
       );
     }
 
-    const doc = snapshot.docs[0];
-    const data = doc.data();
+    const docRef = snapshot.docs[0].ref;
 
-    // Status-based access control: only allow viewing certain statuses
-    const allowedStatuses: PedidoStatus[] = ['AGUARDANDO_APROVACAO', 'CONFIRMADO'];
-    if (!allowedStatuses.includes(data.status)) {
+    // Use transaction to prevent race condition on concurrent confirmation
+    const data = await adminDb.runTransaction(async (transaction) => {
+      const freshDoc = await transaction.get(docRef);
+      if (!freshDoc.exists) {
+        throw new Error('NOT_FOUND');
+      }
+
+      const freshData = freshDoc.data()!;
+      if (freshData.status !== 'AGUARDANDO_APROVACAO') {
+        throw new Error('INVALID_STATUS');
+      }
+
+      transaction.update(docRef, {
+        status: 'CONFIRMADO',
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+
+      return freshData;
+    }).catch((err) => {
+      if (err.message === 'NOT_FOUND') {
+        return { _error: 'NOT_FOUND' as const };
+      }
+      if (err.message === 'INVALID_STATUS') {
+        return { _error: 'INVALID_STATUS' as const };
+      }
+      throw err;
+    });
+
+    if ('_error' in data) {
+      if (data._error === 'NOT_FOUND') {
+        return NextResponse.json(
+          { success: false, error: 'Pedido não encontrado' },
+          { status: 404 }
+        );
+      }
       return NextResponse.json(
-        { success: false, error: 'Este pedido não está disponível para visualização' },
-        { status: 403 }
+        { success: false, error: 'Este pedido não pode ser confirmado no status atual' },
+        { status: 400 }
       );
     }
 
-    // Filter to only the active orcamento and strip internal fields
+    // Build public-safe response (same filter as GET), strip internal fields
     const rawOrcamento = (data.orcamentos || []).find(
       (o: { isAtivo: boolean }) => o.isAtivo
     );
@@ -68,7 +98,7 @@ export async function GET(
       ? (() => { const { criadoPor, criadoEm, ...safe } = rawOrcamento; return safe; })()
       : null;
 
-    // Fetch store addresses and hours in parallel for pickup display
+    // Fetch store addresses and hours for consistent response shape
     const [addressesSnap, hoursSnap] = await Promise.all([
       adminDb
         .collection(STORE_ADDRESSES_COLLECTION)
@@ -104,12 +134,11 @@ export async function GET(
           fechado: d.data().fechado,
         }));
 
-    // Build public-safe response (exclude internal data)
     const publicPedido = {
-      id: doc.id,
+      id: docRef.id,
       numeroPedido: data.numeroPedido,
       clienteNome: data.clienteNome,
-      status: data.status,
+      status: 'CONFIRMADO',
       orcamento: activeOrcamento || null,
       entrega: data.entrega,
       dataEntrega: data.dataEntrega || null,
@@ -121,7 +150,7 @@ export async function GET(
 
     return NextResponse.json({ success: true, data: publicPedido });
   } catch (error) {
-    console.error('Erro ao buscar pedido público:', error);
+    console.error('Erro ao confirmar pedido público:', error);
     return NextResponse.json(
       { success: false, error: 'Erro interno do servidor' },
       { status: 500 }

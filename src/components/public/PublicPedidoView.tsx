@@ -1,8 +1,10 @@
 'use client'
 
+import { useState, useEffect, useRef } from 'react'
 import { PEDIDO_STATUS_LABELS, type PedidoStatus, type EntregaTipo } from '@/types/pedido'
 import { PublicEntregaToggle } from './PublicEntregaToggle'
-import { PublicPaymentOptions } from './PublicPaymentOptions'
+import { CheckCircle2, Loader2, Calendar, Sparkles, MessageSquare, Package } from 'lucide-react'
+import { toast } from 'sonner'
 
 // Types for the public API response (filtered data)
 export interface PublicPedidoItem {
@@ -101,31 +103,79 @@ function formatCurrency(value: number): string {
   })
 }
 
-function getStatusColor(status: PedidoStatus): string {
-  const colors: Record<PedidoStatus, string> = {
-    RASCUNHO: 'bg-gray-100 text-gray-700',
-    AGUARDANDO_APROVACAO: 'bg-amber-100 text-amber-700',
-    CONFIRMADO: 'bg-blue-100 text-blue-700',
-    EM_PRODUCAO: 'bg-purple-100 text-purple-700',
-    PRONTO: 'bg-green-100 text-green-700',
-    ENTREGUE: 'bg-emerald-100 text-emerald-700',
-    CANCELADO: 'bg-red-100 text-red-700',
+function formatDate(dateStr: string): string {
+  // Handle both 'YYYY-MM-DD' and ISO strings like '2026-03-15T14:00:00.000Z'
+  const date = dateStr.includes('T') ? new Date(dateStr) : new Date(dateStr + 'T00:00:00')
+  if (isNaN(date.getTime())) return dateStr // fallback to raw string if invalid
+  return date.toLocaleDateString('pt-BR', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric',
+  })
+}
+
+function getStatusConfig(status: PedidoStatus): { bg: string; text: string; dot: string } {
+  const configs: Record<PedidoStatus, { bg: string; text: string; dot: string }> = {
+    RASCUNHO: { bg: 'bg-stone-100', text: 'text-stone-600', dot: 'bg-stone-400' },
+    AGUARDANDO_APROVACAO: { bg: 'bg-amber-50', text: 'text-amber-700', dot: 'bg-amber-400' },
+    CONFIRMADO: { bg: 'bg-emerald-50', text: 'text-emerald-700', dot: 'bg-emerald-400' },
+    EM_PRODUCAO: { bg: 'bg-violet-50', text: 'text-violet-700', dot: 'bg-violet-400' },
+    PRONTO: { bg: 'bg-sky-50', text: 'text-sky-700', dot: 'bg-sky-400' },
+    ENTREGUE: { bg: 'bg-emerald-50', text: 'text-emerald-700', dot: 'bg-emerald-400' },
+    CANCELADO: { bg: 'bg-red-50', text: 'text-red-600', dot: 'bg-red-400' },
   }
-  return colors[status] || 'bg-gray-100 text-gray-700'
+  return configs[status] || configs.RASCUNHO
+}
+
+// Ornamental divider SVG
+function OrnamentalDivider({ className = '' }: { className?: string }) {
+  return (
+    <div className={`flex items-center justify-center gap-3 ${className}`} aria-hidden="true">
+      <div className="h-px flex-1 bg-gradient-to-r from-transparent via-[#d4c4a8] to-transparent" />
+      <svg width="24" height="12" viewBox="0 0 24 12" fill="none" className="text-[#c9a96e] flex-shrink-0">
+        <path d="M12 0C8 0 5 3 2 6C5 9 8 12 12 12C16 12 19 9 22 6C19 3 16 0 12 0Z" fill="currentColor" opacity="0.2" />
+        <circle cx="12" cy="6" r="2" fill="currentColor" />
+      </svg>
+      <div className="h-px flex-1 bg-gradient-to-r from-transparent via-[#d4c4a8] to-transparent" />
+    </div>
+  )
+}
+
+// Confetti particle for celebration
+function ConfettiParticle({ delay, x, color }: { delay: number; x: number; color: string }) {
+  return (
+    <div
+      className="absolute top-0 opacity-0 animate-confetti-fall pointer-events-none"
+      style={{
+        left: `${x}%`,
+        animationDelay: `${delay}ms`,
+        color,
+      }}
+    >
+      <div
+        className="w-2 h-2 rounded-sm animate-confetti-spin"
+        style={{ backgroundColor: 'currentColor' }}
+      />
+    </div>
+  )
 }
 
 export function PublicPedidoView({ pedido, token, onPedidoUpdate }: PublicPedidoViewProps) {
+  const [isConfirming, setIsConfirming] = useState(false)
+  const [showConfetti, setShowConfetti] = useState(false)
+  const [mounted, setMounted] = useState(false)
+  const confirmingRef = useRef(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
   const orcamento = pedido.orcamento
   const entrega = pedido.entrega
 
   const freteDisplay = entrega.tipo === 'ENTREGA' ? entrega.freteTotal : 0
   const grandTotal = (orcamento?.total ?? 0) + freteDisplay
-
-  // Progress steps
-  const step1Complete = !!(orcamento && orcamento.itens.length > 0)
-  const step2Complete = entrega.tipo === 'RETIRADA'
-    ? !!entrega.enderecoRetiradaId
-    : !!(entrega.enderecoEntrega || entrega.enderecoEntregaClienteId)
+  const statusConfig = getStatusConfig(pedido.status)
 
   const handleEntregaUpdate = (newEntrega: PublicEntrega) => {
     onPedidoUpdate({
@@ -134,210 +184,421 @@ export function PublicPedidoView({ pedido, token, onPedidoUpdate }: PublicPedido
     })
   }
 
+  const handleConfirm = async () => {
+    if (confirmingRef.current) return
+    confirmingRef.current = true
+    setIsConfirming(true)
+    try {
+      const response = await fetch(`/api/public/pedidos/${token}/confirmar`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      })
+
+      const json = await response.json()
+
+      if (!response.ok || !json.success) {
+        toast.error(json.error || 'Erro ao confirmar pedido')
+        return
+      }
+
+      setShowConfetti(true)
+      toast.success('Pedido confirmado com sucesso!')
+      onPedidoUpdate(json.data)
+
+      setTimeout(() => setShowConfetti(false), 4000)
+    } catch {
+      toast.error('Erro ao confirmar pedido. Tente novamente.')
+    } finally {
+      setIsConfirming(false)
+      confirmingRef.current = false
+    }
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-rose-50 to-white">
-      {/* Header */}
-      <header className="bg-white border-b border-rose-100 sticky top-0 z-10">
-        <div className="max-w-2xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-rose-500 rounded-full flex items-center justify-center">
-              <span className="text-white text-lg font-bold">M</span>
-            </div>
-            <div>
-              <h1 className="text-lg font-semibold text-gray-900">Momento Cake</h1>
-              <p className="text-xs text-gray-500">Seu Pedido</p>
-            </div>
+    <div className="min-h-screen linen-bg relative overflow-x-hidden">
+        {/* Confetti overlay */}
+        {showConfetti && (
+          <div className="fixed inset-0 z-50 pointer-events-none overflow-hidden" aria-hidden="true">
+            {Array.from({ length: 30 }).map((_, i) => (
+              <ConfettiParticle
+                key={i}
+                delay={i * 80}
+                x={Math.random() * 100}
+                color={['#b8956a', '#e8c87a', '#d4a574', '#c9a96e', '#8b7355', '#5c8a4d'][i % 6]}
+              />
+            ))}
           </div>
-          <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(pedido.status)}`}>
-            {PEDIDO_STATUS_LABELS[pedido.status]}
-          </span>
-        </div>
-      </header>
+        )}
 
-      {/* Content */}
-      <main className="max-w-2xl mx-auto px-4 py-6 space-y-6">
-        {/* Progress Indicator */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-          <div className="flex items-center justify-between">
-            {/* Step 1: Itens */}
-            <div className="flex flex-col items-center flex-1">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                step1Complete
-                  ? 'bg-rose-500 text-white'
-                  : 'bg-gray-200 text-gray-500'
-              }`}>
-                1
+        {/* Decorative top accent line */}
+        <div className="h-1 bg-gradient-to-r from-[#b8956a] via-[#e8c87a] to-[#b8956a]" aria-hidden="true" />
+
+        {/* Header */}
+        <header className="bg-white/80 backdrop-blur-md border-b border-[#d4c4a8]/20 sticky top-0 z-10">
+          <div className="max-w-2xl mx-auto px-5 py-4 flex items-center justify-between">
+            <div className="flex items-center gap-3.5">
+              {/* Logo mark */}
+              <div className="relative">
+                <div className="w-11 h-11 rounded-full bg-gradient-to-br from-[#b8956a] to-[#8b7355] flex items-center justify-center shadow-sm">
+                  <span
+                    className="text-white text-lg tracking-tight"
+                    style={{ fontFamily: 'var(--font-playfair), Georgia, serif' }}
+                  >
+                    M
+                  </span>
+                </div>
+                <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-[#e8c87a] flex items-center justify-center">
+                  <Sparkles className="w-2.5 h-2.5 text-[#5c4a2e]" />
+                </div>
               </div>
-              <span className={`text-xs mt-1 ${
-                step1Complete
-                  ? 'text-rose-600 font-medium'
-                  : 'text-gray-400'
-              }`}>
-                Itens
-              </span>
+              <div>
+                <h1
+                  className="text-lg text-[#2d2319] tracking-wide"
+                  style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontWeight: 600 }}
+                >
+                  Momento Cake
+                </h1>
+                <p
+                  className="text-[11px] text-[#8b7e6e] tracking-widest uppercase"
+                  style={{ fontFamily: 'var(--font-dm-sans), system-ui, sans-serif' }}
+                >
+                  Confeitaria Artesanal
+                </p>
+              </div>
             </div>
 
-            {/* Line 1-2 */}
-            <div className={`flex-1 h-0.5 -mt-4 ${
-              step2Complete ? 'bg-rose-500' : 'bg-gray-200'
-            }`} />
-
-            {/* Step 2: Entrega */}
-            <div className="flex flex-col items-center flex-1">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                step2Complete
-                  ? 'bg-rose-500 text-white'
-                  : 'bg-gray-200 text-gray-500'
-              }`}>
-                2
-              </div>
-              <span className={`text-xs mt-1 ${
-                step2Complete
-                  ? 'text-rose-600 font-medium'
-                  : 'text-gray-400'
-              }`}>
-                Entrega
-              </span>
-            </div>
-
-            {/* Line 2-3 */}
-            <div className="flex-1 h-0.5 -mt-4 bg-gray-200" />
-
-            {/* Step 3: Pagamento */}
-            <div className="flex flex-col items-center flex-1">
-              <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium bg-gray-200 text-gray-500">
-                3
-              </div>
-              <span className="text-xs mt-1 text-gray-400">
-                Pagamento
-              </span>
-            </div>
+            {/* Status badge */}
+            <span
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium tracking-wide ${statusConfig.bg} ${statusConfig.text}`}
+              style={{ fontFamily: 'var(--font-dm-sans), system-ui, sans-serif' }}
+            >
+              <span className={`w-1.5 h-1.5 rounded-full ${statusConfig.dot}`} />
+              {PEDIDO_STATUS_LABELS[pedido.status]}
+            </span>
           </div>
-        </div>
+        </header>
 
-        {/* Pedido Info */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-          <div className="flex items-center justify-between mb-1">
-            <h2 className="text-sm font-medium text-gray-500">Pedido</h2>
-            <span className="text-sm font-mono text-gray-700">{pedido.numeroPedido}</span>
-          </div>
-          <p className="text-lg font-semibold text-gray-900">{pedido.clienteNome}</p>
-        </div>
+        {/* Content */}
+        <main className="max-w-2xl mx-auto px-5 py-8 space-y-6">
+          {/* Confirmed Success Banner */}
+          {pedido.status === 'CONFIRMADO' && (
+            <div
+              role="alert"
+              className={`premium-card overflow-hidden ${mounted ? 'animate-scale-in' : 'opacity-0'}`}
+            >
+              <div className="bg-gradient-to-r from-emerald-50 via-emerald-50/60 to-transparent p-6">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0 animate-celebrate-check">
+                    <CheckCircle2 className="h-6 w-6 text-emerald-600" />
+                  </div>
+                  <div className="pt-0.5">
+                    <p
+                      className="text-xl text-emerald-800 mb-1"
+                      style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontWeight: 600 }}
+                    >
+                      Pedido Confirmado!
+                    </p>
+                    <p
+                      className="text-sm text-emerald-600/80 leading-relaxed"
+                      style={{ fontFamily: 'var(--font-dm-sans), system-ui, sans-serif' }}
+                    >
+                      Obrigada por confirmar. Estamos preparando tudo com muito carinho para
+                      {pedido.dataEntrega
+                        ? ` o dia ${formatDate(pedido.dataEntrega)}`
+                        : ' você'
+                      }.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
-        {/* Items Table */}
-        {orcamento && orcamento.itens.length > 0 && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="px-5 py-4 border-b border-gray-100">
-              <h3 className="text-sm font-semibold text-gray-700">Itens do Pedido</h3>
+          {/* Greeting & Order Info Card */}
+          <div
+            className={`premium-card p-6 ${mounted ? 'animate-fade-in-up stagger-1' : 'opacity-0'}`}
+          >
+            <div className="text-center mb-4">
+              <p
+                className="text-sm text-[#8b7e6e] tracking-wide mb-1"
+                style={{ fontFamily: 'var(--font-dm-sans), system-ui, sans-serif' }}
+              >
+                Pedido {pedido.numeroPedido}
+              </p>
+              <h2
+                className="text-2xl text-[#2d2319] mb-0.5"
+                style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontWeight: 600 }}
+              >
+                {pedido.clienteNome}
+              </h2>
             </div>
 
-            {/* Mobile-friendly items */}
-            <div className="divide-y divide-gray-50">
-              {orcamento.itens.map((item) => (
-                <div key={item.id} className="px-5 py-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">{item.nome}</p>
-                      {item.descricao && (
-                        <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{item.descricao}</p>
-                      )}
-                      <p className="text-xs text-gray-400 mt-1">
-                        {item.quantidade} x {formatCurrency(item.precoUnitario)}
-                      </p>
+            <OrnamentalDivider className="my-4" />
+
+            {/* Delivery Date */}
+            {pedido.dataEntrega && (
+              <div className="flex items-center justify-center gap-2.5 mt-2">
+                <Calendar className="h-4 w-4 text-[#b8956a]" />
+                <span
+                  className="text-sm text-[#5c4a2e]"
+                  style={{ fontFamily: 'var(--font-dm-sans), system-ui, sans-serif' }}
+                >
+                  {formatDate(pedido.dataEntrega)}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Items Section */}
+          {orcamento && orcamento.itens.length > 0 && (
+            <div
+              className={`premium-card overflow-hidden ${mounted ? 'animate-fade-in-up stagger-2' : 'opacity-0'}`}
+            >
+              {/* Section Header */}
+              <div className="px-6 pt-6 pb-4">
+                <div className="flex items-center gap-2.5">
+                  <Package className="w-4 h-4 text-[#b8956a]" />
+                  <h3
+                    className="text-base text-[#2d2319] tracking-wide"
+                    style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontWeight: 600 }}
+                  >
+                    Itens do Pedido
+                  </h3>
+                </div>
+              </div>
+
+              {/* Items list - menu style */}
+              <div className="px-6 space-y-0">
+                {orcamento.itens.map((item, idx) => (
+                  <div
+                    key={item.id}
+                    className={`py-4 ${idx < orcamento.itens.length - 1 ? 'border-b border-[#d4c4a8]/15' : ''}`}
+                    style={{
+                      animationDelay: mounted ? `${0.15 + idx * 0.06}s` : '0s',
+                    }}
+                  >
+                    {/* Item name and price on same line, connected by dots */}
+                    <div className="flex items-baseline gap-2 min-w-0">
+                      <span
+                        className="text-[15px] text-[#2d2319] min-w-0"
+                        style={{ fontFamily: 'var(--font-dm-sans), system-ui, sans-serif', fontWeight: 500 }}
+                      >
+                        {item.nome}
+                      </span>
+                      {/* Dotted leader */}
+                      <span
+                        className="flex-1 border-b border-dotted border-[#d4c4a8]/40 mb-1 min-w-[12px] shrink-[999]"
+                        aria-hidden="true"
+                      />
+                      <span
+                        className="text-[15px] text-[#2d2319] flex-shrink-0 tabular-nums whitespace-nowrap"
+                        style={{ fontFamily: 'var(--font-dm-sans), system-ui, sans-serif', fontWeight: 500 }}
+                      >
+                        {formatCurrency(item.total)}
+                      </span>
                     </div>
-                    <span className="text-sm font-medium text-gray-900 whitespace-nowrap">
-                      {formatCurrency(item.total)}
+
+                    {/* Description */}
+                    {item.descricao && (
+                      <p
+                        className="text-[13px] text-[#8b7e6e] mt-1 leading-relaxed line-clamp-2"
+                        style={{ fontFamily: 'var(--font-dm-sans), system-ui, sans-serif' }}
+                      >
+                        {item.descricao}
+                      </p>
+                    )}
+
+                    {/* Quantity detail */}
+                    <p
+                      className="text-[12px] text-[#a89b8a] mt-1 tabular-nums"
+                      style={{ fontFamily: 'var(--font-dm-sans), system-ui, sans-serif' }}
+                    >
+                      {item.quantidade} {item.quantidade > 1 ? 'unidades' : 'unidade'} &middot; {formatCurrency(item.precoUnitario)} cada
+                    </p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Totals section */}
+              <div className="bg-[#faf7f2] border-t border-[#d4c4a8]/20 px-6 py-5 space-y-2.5">
+                <div
+                  className="flex justify-between text-sm"
+                  style={{ fontFamily: 'var(--font-dm-sans), system-ui, sans-serif' }}
+                >
+                  <span className="text-[#8b7e6e]">Subtotal</span>
+                  <span className="text-[#5c4a2e] tabular-nums">{formatCurrency(orcamento.subtotal)}</span>
+                </div>
+
+                {orcamento.desconto > 0 && (
+                  <div
+                    className="flex justify-between text-sm"
+                    style={{ fontFamily: 'var(--font-dm-sans), system-ui, sans-serif' }}
+                  >
+                    <span className="text-emerald-600">Desconto</span>
+                    <span className="text-emerald-600 tabular-nums">- {formatCurrency(orcamento.desconto)}</span>
+                  </div>
+                )}
+
+                {orcamento.acrescimo > 0 && (
+                  <div
+                    className="flex justify-between text-sm"
+                    style={{ fontFamily: 'var(--font-dm-sans), system-ui, sans-serif' }}
+                  >
+                    <span className="text-[#8b7e6e]">Acréscimo</span>
+                    <span className="text-[#5c4a2e] tabular-nums">+ {formatCurrency(orcamento.acrescimo)}</span>
+                  </div>
+                )}
+
+                {/* Freight / Pickup */}
+                <div
+                  className="flex justify-between text-sm"
+                  style={{ fontFamily: 'var(--font-dm-sans), system-ui, sans-serif' }}
+                >
+                  {entrega.tipo === 'ENTREGA' ? (
+                    <>
+                      <span className="text-[#8b7e6e]">Frete</span>
+                      <span className="text-[#5c4a2e] tabular-nums">{formatCurrency(entrega.freteTotal)}</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-[#8b7e6e]">Retirada</span>
+                      <span className="text-emerald-600 font-medium">Grátis</span>
+                    </>
+                  )}
+                </div>
+
+                {/* Grand Total */}
+                <div className="pt-3 border-t border-[#d4c4a8]/30">
+                  <div className="flex justify-between items-baseline">
+                    <span
+                      className="text-base text-[#2d2319]"
+                      style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontWeight: 600 }}
+                    >
+                      Total
+                    </span>
+                    <span
+                      className="text-2xl gold-shimmer"
+                      style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontWeight: 700 }}
+                    >
+                      {formatCurrency(grandTotal)}
                     </span>
                   </div>
                 </div>
-              ))}
-            </div>
-
-            {/* Totals */}
-            <div className="border-t border-gray-100 px-5 py-3 space-y-2 bg-gray-50/50">
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500">Subtotal</span>
-                <span className="text-gray-700">{formatCurrency(orcamento.subtotal)}</span>
               </div>
+            </div>
+          )}
 
-              {orcamento.desconto > 0 && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-green-600">Desconto</span>
-                  <span className="text-green-600">- {formatCurrency(orcamento.desconto)}</span>
-                </div>
-              )}
+          {/* No items */}
+          {(!orcamento || orcamento.itens.length === 0) && (
+            <div
+              className={`premium-card p-10 text-center ${mounted ? 'animate-fade-in-up stagger-2' : 'opacity-0'}`}
+            >
+              <div className="w-14 h-14 rounded-full bg-[#f5f0eb] flex items-center justify-center mx-auto mb-4">
+                <Package className="w-6 h-6 text-[#b8956a]" />
+              </div>
+              <p
+                className="text-[#8b7e6e] text-sm"
+                style={{ fontFamily: 'var(--font-dm-sans), system-ui, sans-serif' }}
+              >
+                Nenhum item neste pedido ainda.
+              </p>
+            </div>
+          )}
 
-              {orcamento.acrescimo > 0 && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">Acréscimo</span>
-                  <span className="text-gray-700">+ {formatCurrency(orcamento.acrescimo)}</span>
-                </div>
-              )}
+          {/* Delivery / Pickup Toggle */}
+          <div className={`${mounted ? 'animate-fade-in-up stagger-4' : 'opacity-0'}`}>
+            <PublicEntregaToggle
+              entrega={entrega}
+              token={token}
+              storeAddresses={pedido.storeAddresses}
+              storeHours={pedido.storeHours}
+              onEntregaUpdate={handleEntregaUpdate}
+              readOnly={pedido.status === 'CONFIRMADO'}
+            />
+          </div>
 
-              {/* Freight / Pickup line */}
-              <div className="flex justify-between text-sm">
-                {entrega.tipo === 'ENTREGA' ? (
+          {/* Client Notes */}
+          {pedido.observacoesCliente && (
+            <div
+              className={`premium-card p-6 ${mounted ? 'animate-fade-in-up stagger-5' : 'opacity-0'}`}
+            >
+              <div className="flex items-center gap-2.5 mb-3">
+                <MessageSquare className="w-4 h-4 text-[#b8956a]" />
+                <h3
+                  className="text-base text-[#2d2319] tracking-wide"
+                  style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontWeight: 600 }}
+                >
+                  Observações
+                </h3>
+              </div>
+              <p
+                className="text-sm text-[#5c4a2e] leading-relaxed whitespace-pre-wrap pl-[26px]"
+                style={{ fontFamily: 'var(--font-dm-sans), system-ui, sans-serif' }}
+              >
+                {pedido.observacoesCliente}
+              </p>
+            </div>
+          )}
+
+          {/* Confirm Button */}
+          {pedido.status === 'AGUARDANDO_APROVACAO' && (
+            <div className={`pt-2 pb-4 ${mounted ? 'animate-fade-in-up stagger-6' : 'opacity-0'}`}>
+              <button
+                onClick={handleConfirm}
+                disabled={isConfirming}
+                className="confirm-btn w-full py-4 text-white rounded-2xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2.5"
+                style={{ fontFamily: 'var(--font-dm-sans), system-ui, sans-serif' }}
+              >
+                {isConfirming ? (
                   <>
-                    <span className="text-gray-500">Frete</span>
-                    <span className="text-gray-700">{formatCurrency(entrega.freteTotal)}</span>
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    <span className="text-base font-semibold tracking-wide">Confirmando...</span>
                   </>
                 ) : (
                   <>
-                    <span className="text-gray-500">Retirada</span>
-                    <span className="text-green-600">Grátis</span>
+                    <CheckCircle2 className="h-5 w-5" />
+                    <span className="text-base font-semibold tracking-wide">Confirmar Pedido</span>
                   </>
                 )}
-              </div>
-
-              {/* Grand Total */}
-              <div className="flex justify-between pt-2 border-t border-gray-200">
-                <span className="text-base font-semibold text-gray-900">Total</span>
-                <span className="text-xl font-bold text-rose-600">{formatCurrency(grandTotal)}</span>
-              </div>
+              </button>
+              <p
+                className="text-center text-[11px] text-[#a89b8a] mt-3 tracking-wide"
+                style={{ fontFamily: 'var(--font-dm-sans), system-ui, sans-serif' }}
+              >
+                Ao confirmar, seu pedido será enviado para produção
+              </p>
             </div>
-          </div>
-        )}
+          )}
+        </main>
 
-        {/* No items */}
-        {(!orcamento || orcamento.itens.length === 0) && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center">
-            <p className="text-gray-500">Nenhum item neste pedido ainda.</p>
-          </div>
-        )}
-
-        {/* Delivery / Pickup Toggle */}
-        <PublicEntregaToggle
-          entrega={entrega}
-          token={token}
-          storeAddresses={pedido.storeAddresses}
-          storeHours={pedido.storeHours}
-          onEntregaUpdate={handleEntregaUpdate}
-        />
-
-        {/* Payment Options */}
-        <PublicPaymentOptions />
-
-        {/* Client Notes */}
-        {pedido.observacoesCliente && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-            <h3 className="text-sm font-semibold text-gray-700 mb-2">Observações</h3>
-            <p className="text-sm text-gray-600 whitespace-pre-wrap">{pedido.observacoesCliente}</p>
-          </div>
-        )}
-      </main>
-
-      {/* Footer */}
-      <footer className="border-t border-rose-100 bg-white mt-8">
-        <div className="max-w-2xl mx-auto px-4 py-6 text-center">
-          <div className="flex items-center justify-center gap-2 mb-1">
-            <div className="w-6 h-6 bg-rose-500 rounded-full flex items-center justify-center">
-              <span className="text-white text-xs font-bold">M</span>
+        {/* Footer */}
+        <footer className="mt-12 pb-10">
+          <OrnamentalDivider className="max-w-2xl mx-auto px-5 mb-8" />
+          <div className="max-w-2xl mx-auto px-5 text-center">
+            <div className="flex items-center justify-center gap-2.5 mb-2">
+              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#b8956a] to-[#8b7355] flex items-center justify-center">
+                <span
+                  className="text-white text-xs"
+                  style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontWeight: 600 }}
+                >
+                  M
+                </span>
+              </div>
+              <span
+                className="text-sm text-[#5c4a2e] tracking-wide"
+                style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontWeight: 500 }}
+              >
+                Momento Cake
+              </span>
             </div>
-            <span className="text-sm font-medium text-gray-700">Momento Cake</span>
+            <p
+              className="text-[11px] text-[#a89b8a] tracking-widest uppercase"
+              style={{ fontFamily: 'var(--font-dm-sans), system-ui, sans-serif' }}
+            >
+              Feito com carinho para você
+            </p>
           </div>
-          <p className="text-xs text-gray-400">Feito com carinho para você</p>
-        </div>
-      </footer>
-    </div>
+        </footer>
+      </div>
   )
 }

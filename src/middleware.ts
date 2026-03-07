@@ -31,8 +31,30 @@ const publicRoutes = [
   '/api/public'
 ]
 
+const PORTAL_SUBDOMAIN = 'pedidos.momentocake.com.br'
+
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
+  const hostname = request.headers.get('host') || ''
+
+  // Subdomain routing for pedidos.momentocake.com.br
+  if (hostname === PORTAL_SUBDOMAIN) {
+    // Already on /pedido/* path — let it through
+    if (pathname.startsWith('/pedido/')) {
+      return NextResponse.next()
+    }
+
+    // Single path segment like /{token} — rewrite to /pedido/{token}
+    const segments = pathname.split('/').filter(Boolean)
+    if (segments.length === 1) {
+      const token = segments[0]
+      const rewriteUrl = new URL(`/pedido/${token}`, request.url)
+      return NextResponse.rewrite(rewriteUrl)
+    }
+
+    // Everything else on subdomain (root, multi-segment paths) → 404
+    return new NextResponse('Not Found', { status: 404 })
+  }
 
   // Skip middleware for static files, API routes, and Next.js internal routes
   if (
