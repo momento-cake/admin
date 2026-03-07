@@ -9,7 +9,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Checkbox } from '@/components/ui/checkbox'
 import { Clock, Loader2 } from 'lucide-react'
 import { DIAS_SEMANA, StoreHours } from '@/types/store-settings'
-import { fetchStoreHours, updateStoreHours } from '@/lib/store-settings'
 import { useAuth } from '@/hooks/useAuth'
 import { formatErrorMessage } from '@/lib/error-handler'
 
@@ -30,10 +29,13 @@ export function StoreHoursEditor() {
   useEffect(() => {
     async function load() {
       try {
-        const hours = await fetchStoreHours()
+        const response = await fetch('/api/store-hours')
+        const result = await response.json()
+        if (!result.success) throw new Error(result.error || 'Erro ao carregar horários')
+        const hours = result.data as StoreHours[]
         setDays(
           DIAS_SEMANA.map((d) => {
-            const existing = hours.find((h) => h.diaSemana === d.diaSemana)
+            const existing = hours.find((h: StoreHours) => h.diaSemana === d.diaSemana)
             return {
               diaSemana: d.diaSemana,
               diaSemanaLabel: d.label,
@@ -65,7 +67,21 @@ export function StoreHoursEditor() {
   const handleSave = async () => {
     setSaving(true)
     try {
-      await updateStoreHours(days, userModel?.uid || '')
+      const response = await fetch('/api/store-hours', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          hours: days.map((d) => ({
+            diaSemana: d.diaSemana,
+            diaSemanaLabel: d.diaSemanaLabel,
+            abreAs: d.abreAs,
+            fechaAs: d.fechaAs,
+            fechado: d.fechado,
+          })),
+        }),
+      })
+      const result = await response.json()
+      if (!result.success) throw new Error(result.error || 'Erro ao salvar horários')
       toast.success('Horários salvos com sucesso!')
     } catch (error) {
       toast.error('Erro ao salvar horários', {

@@ -12,10 +12,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { AlertCircle, Loader2, ArrowLeft, Save } from 'lucide-react'
-import { Timestamp } from 'firebase/firestore'
-import { Pedido, UpdatePedidoData } from '@/types/pedido'
+import { Pedido } from '@/types/pedido'
 import { formatErrorMessage } from '@/lib/error-handler'
-import { updatePedido } from '@/lib/pedidos'
 import { useAuthContext } from '@/contexts/AuthContext'
 import { ClienteSelector } from '@/components/pedidos/ClienteSelector'
 
@@ -92,7 +90,7 @@ export default function EditOrderPage() {
 
     setSaving(true)
     try {
-      const updateData: UpdatePedidoData = {
+      const updateData = {
         clienteId: selectedClient.id,
         clienteNome: selectedClient.nome,
         clienteTelefone: selectedClient.telefone,
@@ -101,13 +99,19 @@ export default function EditOrderPage() {
           tipo: entregaTipo,
         },
         dataEntrega: dataEntrega
-          ? Timestamp.fromDate(new Date(dataEntrega))
+          ? new Date(dataEntrega).toISOString()
           : null,
         observacoes: observacoes || undefined,
         observacoesCliente: observacoesCliente || undefined,
       }
 
-      await updatePedido(pedidoId, updateData, user?.uid || '')
+      const response = await fetch(`/api/pedidos/${pedidoId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updateData),
+      })
+      const result = await response.json()
+      if (!result.success) throw new Error(result.error || 'Erro ao atualizar pedido')
 
       toast.success('Pedido atualizado com sucesso!')
       router.push(`/orders/${pedidoId}`)

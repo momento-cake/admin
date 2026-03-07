@@ -11,7 +11,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Loader2, Save } from 'lucide-react'
 import { PedidoItem, PedidoEntrega } from '@/types/pedido'
-import { fetchStoreSettings } from '@/lib/store-settings'
 import { formatErrorMessage } from '@/lib/error-handler'
 import { ClienteSelector } from './ClienteSelector'
 import { PedidoItemsTable } from './PedidoItemsTable'
@@ -68,7 +67,10 @@ export function PedidoForm({ mode = 'create' }: PedidoFormProps) {
     setSaving(true)
     try {
       // Get default freight settings
-      const storeSettings = await fetchStoreSettings()
+      const settingsResponse = await fetch('/api/store-settings')
+      const settingsResult = await settingsResponse.json()
+      if (!settingsResult.success) throw new Error(settingsResult.error || 'Erro ao carregar configurações')
+      const storeSettings = settingsResult.data
 
       const entrega: PedidoEntrega = {
         tipo: entregaTipo,

@@ -37,7 +37,6 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 import { formatErrorMessage, logError } from '@/lib/error-handler'
 import { Pedido, PedidoStatus, PEDIDO_STATUS_LABELS } from '@/types/pedido'
-import { fetchPedidos } from '@/lib/pedidos'
 import { formatPrice } from '@/lib/products'
 import { PedidoStatusBadge } from './PedidoStatusBadge'
 
@@ -86,15 +85,18 @@ export function PedidoList({
       setLoading(true)
       setError(null)
 
-      const response = await fetchPedidos({
-        searchQuery: debouncedSearch || undefined,
-        status: statusFilter === 'ALL' ? undefined : statusFilter,
-        page,
-        limit: perPage,
-      })
+      const params = new URLSearchParams()
+      if (debouncedSearch) params.set('searchQuery', debouncedSearch)
+      if (statusFilter !== 'ALL') params.set('status', statusFilter)
+      params.set('page', String(page))
+      params.set('limit', String(perPage))
 
-      setPedidos(response.pedidos)
-      setTotal(response.total)
+      const response = await fetch('/api/pedidos?' + params.toString())
+      const result = await response.json()
+      if (!result.success) throw new Error(result.error || 'Erro ao carregar pedidos')
+
+      setPedidos(result.data)
+      setTotal(result.total)
     } catch (err) {
       const msg = formatErrorMessage(err)
       setError(msg)

@@ -17,12 +17,6 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Plus, Edit2, Trash2, MapPin, Loader2 } from 'lucide-react'
 import { StoreAddress } from '@/types/store-settings'
-import {
-  fetchStoreAddresses,
-  createStoreAddress,
-  updateStoreAddress,
-  deleteStoreAddress,
-} from '@/lib/store-settings'
 import { StoreAddressForm } from './StoreAddressForm'
 import { useAuth } from '@/hooks/useAuth'
 import { formatErrorMessage } from '@/lib/error-handler'
@@ -39,8 +33,10 @@ export function StoreAddressList() {
   const loadAddresses = async () => {
     try {
       setLoading(true)
-      const data = await fetchStoreAddresses()
-      setAddresses(data)
+      const response = await fetch('/api/store-addresses')
+      const result = await response.json()
+      if (!result.success) throw new Error(result.error || 'Erro ao carregar endereços')
+      setAddresses(result.data)
     } catch (error) {
       toast.error('Erro ao carregar endereços', {
         description: formatErrorMessage(error),
@@ -68,16 +64,27 @@ export function StoreAddressList() {
     setIsSaving(true)
     try {
       if (editingAddress) {
-        await updateStoreAddress(editingAddress.id, data)
+        const response = await fetch(`/api/store-addresses/${editingAddress.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        })
+        const result = await response.json()
+        if (!result.success) throw new Error(result.error || 'Erro ao atualizar endereço')
         toast.success('Endereço atualizado com sucesso!')
       } else {
         // If this is the first address, force it as default
         const isFirstAddress = addresses.length === 0
-        await createStoreAddress({
-          ...data,
-          isDefault: isFirstAddress ? true : data.isDefault,
-          createdBy: userModel?.uid || '',
+        const response = await fetch('/api/store-addresses', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ...data,
+            isDefault: isFirstAddress ? true : data.isDefault,
+          }),
         })
+        const result = await response.json()
+        if (!result.success) throw new Error(result.error || 'Erro ao criar endereço')
         toast.success('Endereço adicionado com sucesso!')
       }
       setShowForm(false)
@@ -96,7 +103,11 @@ export function StoreAddressList() {
     if (!deletingId) return
 
     try {
-      await deleteStoreAddress(deletingId)
+      const response = await fetch(`/api/store-addresses/${deletingId}`, {
+        method: 'DELETE',
+      })
+      const result = await response.json()
+      if (!result.success) throw new Error(result.error || 'Erro ao remover endereço')
       toast.success('Endereço removido com sucesso!')
       setDeletingId(null)
       await loadAddresses()

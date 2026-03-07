@@ -2,7 +2,6 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react'
 import { Pedido } from '@/types/pedido'
-import { fetchPedidoById } from '@/lib/pedidos'
 
 interface PedidoContextValue {
   pedido: Pedido | null
@@ -30,7 +29,10 @@ export function PedidoProvider({ pedidoId, children }: PedidoProviderProps) {
     try {
       setIsLoading(true)
       setError(null)
-      const result = await fetchPedidoById(pedidoId)
+      const response = await fetch(`/api/pedidos/${pedidoId}`)
+      const json = await response.json()
+      if (!json.success) throw new Error(json.error || 'Erro ao carregar pedido')
+      const result = json.data as Pedido
       setPedido(result)
       previousPedidoRef.current = result
     } catch (err) {
@@ -42,7 +44,10 @@ export function PedidoProvider({ pedidoId, children }: PedidoProviderProps) {
 
   const refreshPedido = useCallback(async () => {
     try {
-      const result = await fetchPedidoById(pedidoId)
+      const response = await fetch(`/api/pedidos/${pedidoId}`)
+      const json = await response.json()
+      if (!json.success) throw new Error(json.error || 'Erro ao atualizar pedido')
+      const result = json.data as Pedido
       setPedido(result)
       previousPedidoRef.current = result
     } catch (err) {

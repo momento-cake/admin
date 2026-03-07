@@ -7,7 +7,6 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Loader2, Truck } from 'lucide-react'
-import { fetchStoreSettings, updateStoreSettings } from '@/lib/store-settings'
 import { useAuth } from '@/hooks/useAuth'
 import { formatErrorMessage } from '@/lib/error-handler'
 
@@ -20,8 +19,10 @@ export function FreightSettings() {
   useEffect(() => {
     async function load() {
       try {
-        const settings = await fetchStoreSettings()
-        setCustoPorKm(settings.custoPorKm.toFixed(2).replace('.', ','))
+        const response = await fetch('/api/store-settings')
+        const result = await response.json()
+        if (!result.success) throw new Error(result.error || 'Erro ao carregar configurações')
+        setCustoPorKm(result.data.custoPorKm.toFixed(2).replace('.', ','))
       } catch (error) {
         toast.error('Erro ao carregar configurações', {
           description: formatErrorMessage(error),
@@ -50,10 +51,15 @@ export function FreightSettings() {
 
     setSaving(true)
     try {
-      await updateStoreSettings({
-        custoPorKm: numericValue,
-        updatedBy: userModel?.uid || '',
+      const response = await fetch('/api/store-settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          custoPorKm: numericValue,
+        }),
       })
+      const result = await response.json()
+      if (!result.success) throw new Error(result.error || 'Erro ao salvar configuração')
       toast.success('Configuração de frete salva com sucesso!')
     } catch (error) {
       toast.error('Erro ao salvar configuração', {
