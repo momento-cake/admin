@@ -14,7 +14,6 @@ import {
   Package,
   LogOut,
   Home,
-  Bell,
   ChevronDown,
   ChevronRight,
   UserPlus,
@@ -435,22 +434,6 @@ export function Sidebar() {
               )
             })}
           </nav>
-          
-          {/* Notifications */}
-          <div className="px-2 pb-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent relative"
-            >
-              <Bell className="mr-3 h-4 w-4" />
-              Notificações
-              {/* Notification badge */}
-              <span className="absolute right-2 h-4 w-4 rounded-full bg-destructive text-xs text-destructive-foreground flex items-center justify-center">
-                3
-              </span>
-            </Button>
-          </div>
           
           <div className="px-2 pb-4">
             <div className="border-t border-sidebar-border pt-4">
