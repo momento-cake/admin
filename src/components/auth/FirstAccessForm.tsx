@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
@@ -70,16 +69,16 @@ interface ValidatedInvitation {
 
 interface FirstAccessFormProps {
   onBack: () => void
+  onSuccess: () => void
 }
 
-export function FirstAccessForm({ onBack }: FirstAccessFormProps) {
+export function FirstAccessForm({ onBack, onSuccess }: FirstAccessFormProps) {
   const [step, setStep] = useState<'email' | 'registration'>('email')
   const [invitation, setInvitation] = useState<ValidatedInvitation | null>(null)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
-  const router = useRouter()
 
   const emailForm = useForm<EmailValidationData>({
     resolver: zodResolver(emailValidationSchema),
@@ -175,8 +174,7 @@ export function FirstAccessForm({ onBack }: FirstAccessFormProps) {
         return
       }
 
-      // Registration successful - redirect to login with success message
-      router.push('/login?firstAccess=success')
+      onSuccess()
     } catch (error) {
       console.error('Error completing registration:', error)
       setError('Erro de conexão. Tente novamente.')

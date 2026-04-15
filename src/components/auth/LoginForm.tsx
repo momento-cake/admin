@@ -69,11 +69,15 @@ export function LoginForm() {
     setSuccessMessage(null)
   }
 
-  // Show first access form if requested
+  const handleFirstAccessSuccess = () => {
+    setShowFirstAccess(false)
+    setSuccessMessage('Conta criada com sucesso! Agora você pode fazer login.')
+  }
+
   if (showFirstAccess) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5 px-4">
-        <FirstAccessForm onBack={handleBackToLogin} />
+        <FirstAccessForm onBack={handleBackToLogin} onSuccess={handleFirstAccessSuccess} />
       </div>
     )
   }

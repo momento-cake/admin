@@ -51,9 +51,10 @@ vi.mock('@/components/ui/form', () => ({
 }));
 
 vi.mock('@/components/auth/FirstAccessForm', () => ({
-  FirstAccessForm: ({ onBack }: any) => (
+  FirstAccessForm: ({ onBack, onSuccess }: any) => (
     <div>
       <button onClick={onBack}>Back to Login</button>
+      <button onClick={onSuccess}>Simulate Success</button>
     </div>
   ),
 }));
@@ -329,20 +330,42 @@ describe('LoginForm Component', () => {
   });
 
   describe('First Access Flow', () => {
-    it('should show first access form when toggled', async () => {
+    it('should show first access form when Primeiro Acesso button is clicked', async () => {
       const user = userEvent.setup();
       render(<LoginForm />);
 
-      // Find and click first access button
-      const buttons = screen.getAllByRole('button');
-      const firstAccessButton = buttons.find(
-        btn => btn.textContent?.includes('Não tem conta') ||
-               btn.textContent?.includes('criar') ||
-               btn.className?.includes('link')
-      );
+      const firstAccessButton = screen.getByRole('button', { name: /primeiro acesso/i });
+      await user.click(firstAccessButton);
 
-      // Note: Actual button depends on component implementation
-      // This is a placeholder for the actual first access button
+      expect(screen.getByRole('button', { name: /back to login/i })).toBeInTheDocument();
+      expect(screen.queryByText('Fazer Login')).not.toBeInTheDocument();
+    });
+
+    it('should return to login form when onBack is called inside FirstAccessForm', async () => {
+      const user = userEvent.setup();
+      render(<LoginForm />);
+
+      const firstAccessButton = screen.getByRole('button', { name: /primeiro acesso/i });
+      await user.click(firstAccessButton);
+
+      const backButton = screen.getByRole('button', { name: /back to login/i });
+      await user.click(backButton);
+
+      expect(screen.getByText('Fazer Login')).toBeInTheDocument();
+    });
+
+    it('should return to login form and show success alert when onSuccess is called', async () => {
+      const user = userEvent.setup();
+      render(<LoginForm />);
+
+      const firstAccessButton = screen.getByRole('button', { name: /primeiro acesso/i });
+      await user.click(firstAccessButton);
+
+      const simulateSuccessButton = screen.getByRole('button', { name: /simulate success/i });
+      await user.click(simulateSuccessButton);
+
+      expect(screen.getByText('Fazer Login')).toBeInTheDocument();
+      expect(screen.getByText(/conta criada com sucesso/i)).toBeInTheDocument();
     });
   });
 

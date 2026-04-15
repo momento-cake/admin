@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { EmptyState, StatCard } from '@/components/ui/empty-state'
 import { useAuth } from '@/hooks/useAuth'
+import { usePermissions } from '@/hooks/usePermissions'
 import {
   Users,
   ShoppingBag,
@@ -32,6 +33,7 @@ interface Activity {
 
 export default function DashboardPage() {
   const { userModel } = useAuth()
+  const { canAccess, isAdmin } = usePermissions()
   const [stats, setStats] = useState<DashboardStats>({ users: 0, clients: 0, ingredients: 0, recipes: 0, products: 0 })
   const [activities, setActivities] = useState<Activity[]>([])
   const [loading, setLoading] = useState(true)
@@ -86,41 +88,51 @@ export default function DashboardPage() {
 
       {/* Stats Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-        <StatCard
-          title="Usuários"
-          value={stats.users}
-          icon={Users}
-          description="Usuários cadastrados"
-          href={userModel.role.type === 'admin' ? '/users' : undefined}
-        />
-        <StatCard
-          title="Clientes"
-          value={stats.clients}
-          icon={ShoppingBag}
-          description="Clientes cadastrados"
-          href="/clients"
-        />
-        <StatCard
-          title="Produtos"
-          value={stats.products}
-          icon={Tag}
-          description="Produtos no catálogo"
-          href="/products"
-        />
-        <StatCard
-          title="Ingredientes"
-          value={stats.ingredients}
-          icon={Package}
-          description="Ingredientes no catálogo"
-          href="/ingredients"
-        />
-        <StatCard
-          title="Receitas"
-          value={stats.recipes}
-          icon={ChefHat}
-          description="Receitas criadas"
-          href="/recipes"
-        />
+        {canAccess('users') && (
+          <StatCard
+            title="Usuários"
+            value={stats.users}
+            icon={Users}
+            description="Usuários cadastrados"
+            href={isAdmin ? '/users' : undefined}
+          />
+        )}
+        {canAccess('clients') && (
+          <StatCard
+            title="Clientes"
+            value={stats.clients}
+            icon={ShoppingBag}
+            description="Clientes cadastrados"
+            href="/clients"
+          />
+        )}
+        {canAccess('products') && (
+          <StatCard
+            title="Produtos"
+            value={stats.products}
+            icon={Tag}
+            description="Produtos no catálogo"
+            href="/products"
+          />
+        )}
+        {canAccess('ingredients') && (
+          <StatCard
+            title="Ingredientes"
+            value={stats.ingredients}
+            icon={Package}
+            description="Ingredientes no catálogo"
+            href="/ingredients"
+          />
+        )}
+        {canAccess('recipes') && (
+          <StatCard
+            title="Receitas"
+            value={stats.recipes}
+            icon={ChefHat}
+            description="Receitas criadas"
+            href="/recipes"
+          />
+        )}
       </div>
 
       {/* Shortcuts */}
@@ -163,61 +175,73 @@ export default function DashboardPage() {
         )}
 
         {/* Quick Actions */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Ações Rápidas</CardTitle>
-            <CardDescription>
-              Comece adicionando dados ao seu sistema
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {stats.clients === 0 && (
-              <EmptyState
-                icon={ShoppingBag}
-                title="Adicionar Primeiro Cliente"
-                description="Comece cadastrando seu primeiro cliente"
-                action={{
-                  label: "Adicionar Cliente",
-                  href: "/clients"
-                }}
-                className="border-0 shadow-none p-4"
-              />
-            )}
-            {stats.ingredients === 0 && (
-              <EmptyState
-                icon={Package}
-                title="Cadastrar Ingredientes"
-                description="Adicione ingredientes para criar suas receitas"
-                action={{
-                  label: "Adicionar Ingrediente",
-                  href: "/ingredients"
-                }}
-                className="border-0 shadow-none p-4"
-              />
-            )}
-            {stats.recipes === 0 && stats.ingredients > 0 && (
-              <EmptyState
-                icon={ChefHat}
-                title="Criar Primeira Receita"
-                description="Use seus ingredientes para criar receitas"
-                action={{
-                  label: "Criar Receita",
-                  href: "/recipes"
-                }}
-                className="border-0 shadow-none p-4"
-              />
-            )}
-            {stats.clients > 0 && stats.recipes > 0 && (
-              <div className="text-center py-8">
-                <div className="text-2xl mb-2">🎉</div>
-                <h3 className="font-semibold text-foreground">Sistema Configurado!</h3>
-                <p className="text-sm text-muted-foreground">
-                  Você já tem clientes e receitas cadastrados. Explore os relatórios!
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        {(() => {
+          const showClientsNudge = canAccess('clients') && stats.clients === 0;
+          const showIngredientsNudge = canAccess('ingredients') && stats.ingredients === 0;
+          const showRecipesNudge = canAccess('recipes') && stats.recipes === 0 && stats.ingredients > 0;
+          const showCelebration = canAccess('clients') && canAccess('recipes') && stats.clients > 0 && stats.recipes > 0;
+          const hasAnyContent = showClientsNudge || showIngredientsNudge || showRecipesNudge || showCelebration;
+
+          if (!hasAnyContent) return null;
+
+          return (
+            <Card>
+              <CardHeader>
+                <CardTitle>Ações Rápidas</CardTitle>
+                <CardDescription>
+                  Comece adicionando dados ao seu sistema
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {showClientsNudge && (
+                  <EmptyState
+                    icon={ShoppingBag}
+                    title="Adicionar Primeiro Cliente"
+                    description="Comece cadastrando seu primeiro cliente"
+                    action={{
+                      label: "Adicionar Cliente",
+                      href: "/clients"
+                    }}
+                    className="border-0 shadow-none p-4"
+                  />
+                )}
+                {showIngredientsNudge && (
+                  <EmptyState
+                    icon={Package}
+                    title="Cadastrar Ingredientes"
+                    description="Adicione ingredientes para criar suas receitas"
+                    action={{
+                      label: "Adicionar Ingrediente",
+                      href: "/ingredients"
+                    }}
+                    className="border-0 shadow-none p-4"
+                  />
+                )}
+                {showRecipesNudge && (
+                  <EmptyState
+                    icon={ChefHat}
+                    title="Criar Primeira Receita"
+                    description="Use seus ingredientes para criar receitas"
+                    action={{
+                      label: "Criar Receita",
+                      href: "/recipes"
+                    }}
+                    className="border-0 shadow-none p-4"
+                  />
+                )}
+                {showCelebration && (
+                  <div className="text-center py-8">
+                    <div className="text-2xl mb-2">🎉</div>
+                    <h3 className="font-semibold text-foreground">Sistema Configurado!</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Você já tem clientes e receitas cadastrados. Explore os relatórios!
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          );
+        })()}
       </div>
     </div>
   )
