@@ -110,10 +110,14 @@ vi.mock('@/components/ui/select', () => ({
   SelectValue: () => null,
 }));
 
-vi.mock('lucide-react', () => ({
-  Loader2: () => <span data-testid="loader">loading</span>,
-  Save: () => <span>save</span>,
-}));
+vi.mock('lucide-react', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('lucide-react')>();
+  return {
+    ...actual,
+    Loader2: () => <span data-testid="loader">loading</span>,
+    Save: () => <span>save</span>,
+  };
+});
 
 import { PedidoForm } from '@/components/pedidos/PedidoForm';
 

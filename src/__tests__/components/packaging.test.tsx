@@ -149,15 +149,19 @@ vi.mock('@/components/packaging/EmptyState', () => ({
   ),
 }));
 
-vi.mock('lucide-react', () => ({
-  Loader2: (props: any) => <div {...props}>Loading</div>,
-  Edit: (props: any) => <div {...props}>Edit</div>,
-  Trash2: (props: any) => <div {...props}>Delete</div>,
-  Plus: (props: any) => <div {...props}>Plus</div>,
-  Package: (props: any) => <div {...props}>Package</div>,
-  ArrowUp: (props: any) => <div {...props}>ArrowUp</div>,
-  ArrowDown: (props: any) => <div {...props}>ArrowDown</div>,
-}));
+vi.mock('lucide-react', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('lucide-react')>();
+  return {
+    ...actual,
+    Loader2: (props: any) => <div {...props}>Loading</div>,
+    Edit: (props: any) => <div {...props}>Edit</div>,
+    Trash2: (props: any) => <div {...props}>Delete</div>,
+    Plus: (props: any) => <div {...props}>Plus</div>,
+    Package: (props: any) => <div {...props}>Package</div>,
+    ArrowUp: (props: any) => <div {...props}>ArrowUp</div>,
+    ArrowDown: (props: any) => <div {...props}>ArrowDown</div>,
+  };
+});
 
 // Test data
 const mockSuppliers: Supplier[] = [

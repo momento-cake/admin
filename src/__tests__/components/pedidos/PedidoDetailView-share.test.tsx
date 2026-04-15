@@ -65,16 +65,20 @@ vi.mock('@/lib/products', () => ({
   formatPrice: (v: number) => `R$ ${v.toFixed(2)}`,
 }));
 
-vi.mock('lucide-react', () => ({
-  FileText: () => null,
-  Package: () => null,
-  Truck: () => null,
-  CreditCard: () => null,
-  Receipt: () => null,
-  UserCheck: () => null,
-  Calendar: () => null,
-  Clock: () => null,
-}));
+vi.mock('lucide-react', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('lucide-react')>();
+  return {
+    ...actual,
+    FileText: () => null,
+    Package: () => null,
+    Truck: () => null,
+    CreditCard: () => null,
+    Receipt: () => null,
+    UserCheck: () => null,
+    Calendar: () => null,
+    Clock: () => null,
+  };
+});
 
 const basePedido: Pedido = {
   id: 'pedido-1',

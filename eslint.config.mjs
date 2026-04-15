@@ -1,16 +1,16 @@
-import { dirname } from "path";
-import { fileURLToPath } from "url";
-import { FlatCompat } from "@eslint/eslintrc";
+import { createRequire } from "node:module";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-const compat = new FlatCompat({
-  baseDirectory: __dirname,
-});
+// eslint-config-next 16.x ships native flat configs. Importing them directly
+// avoids FlatCompat/@eslint/eslintrc, which crashes with "Converting circular
+// structure to JSON" when it tries to validate eslint-plugin-react's flat
+// config (plugin.configs.flat.*.plugins.react references the plugin itself).
+const require = createRequire(import.meta.url);
+const nextCoreWebVitals = require("eslint-config-next/core-web-vitals");
+const nextTypescript = require("eslint-config-next/typescript");
 
 const eslintConfig = [
-  ...compat.extends("next/core-web-vitals", "next/typescript"),
+  ...nextCoreWebVitals,
+  ...nextTypescript,
   {
     ignores: [
       "node_modules/**",

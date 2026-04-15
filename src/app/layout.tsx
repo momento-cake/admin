@@ -33,7 +33,20 @@ export default function RootLayout({
         <AuthProvider>
           {children}
         </AuthProvider>
-        <Toaster position="top-right" richColors />
+        <Toaster
+          position="top-right"
+          richColors
+          closeButton
+          expand
+          visibleToasts={5}
+          duration={5000}
+          toastOptions={{
+            // Errors stay visible until dismissed; success/info use the default 5s
+            classNames: {
+              error: 'sonner-error-toast',
+            },
+          }}
+        />
       </body>
     </html>
   );

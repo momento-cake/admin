@@ -281,6 +281,18 @@
   animation: shimmer 1.5s ease-in-out infinite;
 }
 
+/* ── Sonner toast z-index & visibility safety ── */
+/* Ensure toasts always render above modals, sheets, and overlays.
+   Radix dialogs use z-50; our highest custom overlays stay well below 2147483000. */
+[data-sonner-toaster] {
+  z-index: 2147483000 !important;
+}
+
+/* Error toasts: slightly thicker border for accessibility */
+[data-sonner-toast][data-type="error"] {
+  border-width: 2px;
+}
+
 /* Status utility classes */
 .status-success {
   @apply bg-success/10 text-success;

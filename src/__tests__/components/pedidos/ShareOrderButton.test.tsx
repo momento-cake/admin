@@ -25,11 +25,15 @@ vi.mock('@/components/ui/button', () => ({
 }));
 
 // Mock lucide-react icons
-vi.mock('lucide-react', () => ({
-  Share2: () => <span data-testid="share2-icon" />,
-  Link: () => <span data-testid="link-icon" />,
-  MessageCircle: () => <span data-testid="message-circle-icon" />,
-}));
+vi.mock('lucide-react', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('lucide-react')>();
+  return {
+    ...actual,
+    Share2: () => <span data-testid="share2-icon" />,
+    Link: () => <span data-testid="link-icon" />,
+    MessageCircle: () => <span data-testid="message-circle-icon" />,
+  };
+});
 
 describe('ShareOrderButton', () => {
   const defaultProps = {

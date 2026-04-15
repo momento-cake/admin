@@ -7,12 +7,16 @@ vi.mock('next/navigation', () => ({
 }))
 
 // Mock lucide-react
-vi.mock('lucide-react', () => ({
-  Loader2: (props: any) => <svg data-testid="loader" {...props} />,
-  CheckCircle2: (props: any) => <svg {...props} />,
-  Calendar: (props: any) => <svg {...props} />,
-  Sparkles: (props: any) => <svg {...props} />,
-}))
+vi.mock('lucide-react', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('lucide-react')>()
+  return {
+    ...actual,
+    Loader2: (props: any) => <svg data-testid="loader" {...props} />,
+    CheckCircle2: (props: any) => <svg {...props} />,
+    Calendar: (props: any) => <svg {...props} />,
+    Sparkles: (props: any) => <svg {...props} />,
+  }
+})
 
 // Mock PublicPedidoView
 vi.mock('@/components/public/PublicPedidoView', () => ({

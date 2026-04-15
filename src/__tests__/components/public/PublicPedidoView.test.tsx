@@ -28,17 +28,21 @@ vi.mock('sonner', () => ({
 }))
 
 // Mock lucide-react icons
-vi.mock('lucide-react', () => ({
-  CheckCircle2: (props: any) => <svg data-testid="check-circle-icon" {...props} />,
-  Loader2: (props: any) => <svg data-testid="loader-icon" {...props} />,
-  Calendar: (props: any) => <svg data-testid="calendar-icon" {...props} />,
-  MapPin: (props: any) => <svg data-testid="map-pin-icon" {...props} />,
-  Store: (props: any) => <svg data-testid="store-icon" {...props} />,
-  Package: (props: any) => <svg data-testid="package-icon" {...props} />,
-  Truck: (props: any) => <svg data-testid="truck-icon" {...props} />,
-  Sparkles: (props: any) => <svg data-testid="sparkles-icon" {...props} />,
-  MessageSquare: (props: any) => <svg data-testid="message-square-icon" {...props} />,
-}))
+vi.mock('lucide-react', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('lucide-react')>()
+  return {
+    ...actual,
+    CheckCircle2: (props: any) => <svg data-testid="check-circle-icon" {...props} />,
+    Loader2: (props: any) => <svg data-testid="loader-icon" {...props} />,
+    Calendar: (props: any) => <svg data-testid="calendar-icon" {...props} />,
+    MapPin: (props: any) => <svg data-testid="map-pin-icon" {...props} />,
+    Store: (props: any) => <svg data-testid="store-icon" {...props} />,
+    Package: (props: any) => <svg data-testid="package-icon" {...props} />,
+    Truck: (props: any) => <svg data-testid="truck-icon" {...props} />,
+    Sparkles: (props: any) => <svg data-testid="sparkles-icon" {...props} />,
+    MessageSquare: (props: any) => <svg data-testid="message-square-icon" {...props} />,
+  }
+})
 
 // Helper to create mock pedido data
 function createMockPedido(overrides: Partial<PublicPedidoData> = {}): PublicPedidoData {
