@@ -43,6 +43,7 @@ export function PedidoForm({ mode = 'create' }: PedidoFormProps) {
   // State
   const [saving, setSaving] = useState(false)
   const [errors, setErrors] = useState<{ client?: string; items?: string }>({})
+  const [submitError, setSubmitError] = useState<string | null>(null)
 
   const handleSave = async () => {
     const newErrors: { client?: string; items?: string } = {}
@@ -60,21 +61,20 @@ export function PedidoForm({ mode = 'create' }: PedidoFormProps) {
     }
 
     setErrors({})
+    setSubmitError(null)
 
     // After validation, selectedClient is guaranteed non-null
     const client = selectedClient!
 
     setSaving(true)
     try {
-      // Get default freight settings
-      const settingsResponse = await fetch('/api/store-settings')
-      const settingsResult = await settingsResponse.json()
-      if (!settingsResult.success) throw new Error(settingsResult.error || 'Erro ao carregar configurações')
-      const storeSettings = settingsResult.data
-
+      // Freight (custoPorKm, address, distance) is configured later via
+      // FreteCalculator on the order detail page. Don't fetch store settings
+      // at create time — it requires settings:view which non-admin roles
+      // don't have, and would fail the submit with a silent 403.
       const entrega: PedidoEntrega = {
         tipo: entregaTipo,
-        custoPorKm: storeSettings.custoPorKm,
+        custoPorKm: 0,
         taxaExtra: 0,
         freteTotal: 0,
       }
@@ -111,8 +111,10 @@ export function PedidoForm({ mode = 'create' }: PedidoFormProps) {
 
       router.push('/orders')
     } catch (error) {
+      const message = formatErrorMessage(error)
+      setSubmitError(message)
       toast.error('Erro ao criar pedido', {
-        description: formatErrorMessage(error),
+        description: message,
       })
     } finally {
       setSaving(false)
@@ -229,6 +231,17 @@ export function PedidoForm({ mode = 'create' }: PedidoFormProps) {
           </div>
         </CardContent>
       </Card>
+
+      {/* Inline submit error (visible even when toasts are hidden) */}
+      {submitError && (
+        <div
+          role="alert"
+          className="rounded-md border border-red-500 bg-red-50 px-4 py-3 text-sm text-red-700"
+        >
+          <p className="font-medium">Erro ao criar pedido</p>
+          <p className="mt-1">{submitError}</p>
+        </div>
+      )}
 
       {/* Actions */}
       <div className="flex gap-3 justify-end">

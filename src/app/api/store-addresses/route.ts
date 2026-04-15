@@ -14,7 +14,12 @@ export async function GET(request: NextRequest) {
       return unauthorizedResponse();
     }
 
-    if (!canPerformActionFromRequest(auth, 'settings', 'view')) {
+    // Store addresses are operational data needed by anyone who can view
+    // orders. Allow either settings:view or orders:view.
+    if (
+      !canPerformActionFromRequest(auth, 'settings', 'view') &&
+      !canPerformActionFromRequest(auth, 'orders', 'view')
+    ) {
       return forbiddenResponse('Sem permissao para visualizar enderecos da loja');
     }
 
