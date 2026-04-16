@@ -1,26 +1,51 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Loader2, Save } from 'lucide-react'
+import {
+  Loader2,
+  Save,
+  ChevronLeft,
+  ChevronRight,
+  UserCheck,
+  Package,
+  Truck,
+  Calendar,
+  ClipboardCheck,
+} from 'lucide-react'
 import { PedidoItem, PedidoEntrega } from '@/types/pedido'
+import { Address } from '@/types/client'
 import { formatErrorMessage } from '@/lib/error-handler'
-import { ClienteSelector } from './ClienteSelector'
-import { PedidoItemsTable } from './PedidoItemsTable'
+import { StepIndicator } from './creation/StepIndicator'
+import { ClienteStep } from './creation/ClienteStep'
+import { ItensStep } from './creation/ItensStep'
+import { EntregaStep } from './creation/EntregaStep'
+import { DetalhesStep } from './creation/DetalhesStep'
+import { RevisaoStep } from './creation/RevisaoStep'
 
 interface PedidoFormProps {
   mode?: 'create' | 'edit'
 }
 
+const STEPS = [
+  { label: 'Cliente', icon: <UserCheck className="h-4 w-4" /> },
+  { label: 'Itens', icon: <Package className="h-4 w-4" /> },
+  { label: 'Entrega', icon: <Truck className="h-4 w-4" /> },
+  { label: 'Detalhes', icon: <Calendar className="h-4 w-4" /> },
+  { label: 'Revisão', icon: <ClipboardCheck className="h-4 w-4" /> },
+]
+
 export function PedidoForm({ mode = 'create' }: PedidoFormProps) {
   const router = useRouter()
+
+  // Step navigation
+  const [currentStep, setCurrentStep] = useState(0)
+  const [direction, setDirection] = useState<'forward' | 'backward'>('forward')
+  const [isAnimating, setIsAnimating] = useState(false)
+  const completedStepsRef = useRef(new Set<number>())
+  const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set())
 
   // Client
   const [selectedClient, setSelectedClient] = useState<{
@@ -34,55 +59,170 @@ export function PedidoForm({ mode = 'create' }: PedidoFormProps) {
 
   // Delivery
   const [entregaTipo, setEntregaTipo] = useState<'ENTREGA' | 'RETIRADA'>('RETIRADA')
+  const [clientAddresses, setClientAddresses] = useState<Address[]>([])
+  const [loadingClientAddresses, setLoadingClientAddresses] = useState(false)
+  const [storeAddresses, setStoreAddresses] = useState<
+    { id: string; nome: string; endereco?: string; cidade?: string; bairro?: string; numero?: string; estado?: string; cep?: string }[]
+  >([])
+  const [loadingStoreAddresses, setLoadingStoreAddresses] = useState(false)
+  const [selectedClientAddress, setSelectedClientAddress] = useState<Address | null>(null)
+  const [selectedStoreAddress, setSelectedStoreAddress] = useState<{
+    id: string
+    nome: string
+  } | null>(null)
 
   // Dates & notes
   const [dataEntrega, setDataEntrega] = useState('')
   const [observacoes, setObservacoes] = useState('')
   const [observacoesCliente, setObservacoesCliente] = useState('')
 
-  // State
+  // Submit state
   const [saving, setSaving] = useState(false)
-  const [errors, setErrors] = useState<{ client?: string; items?: string }>({})
   const [submitError, setSubmitError] = useState<string | null>(null)
 
-  const handleSave = async () => {
-    const newErrors: { client?: string; items?: string } = {}
-
-    if (!selectedClient) {
-      newErrors.client = 'Selecione um cliente'
-    }
-    if (items.length === 0) {
-      newErrors.items = 'Adicione pelo menos um item ao pedido'
-    }
-
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors)
+  // Fetch client addresses when client is selected
+  useEffect(() => {
+    if (!selectedClient?.id) {
+      setClientAddresses([])
+      setSelectedClientAddress(null)
       return
     }
 
-    setErrors({})
+    const loadClientAddresses = async () => {
+      setLoadingClientAddresses(true)
+      try {
+        const response = await fetch(`/api/clients/${selectedClient.id}`)
+        const data = await response.json()
+        if (data.success && data.data?.addresses) {
+          setClientAddresses(data.data.addresses)
+        } else {
+          setClientAddresses([])
+        }
+      } catch (err) {
+        console.error('Erro ao carregar endereços do cliente:', err)
+        setClientAddresses([])
+      } finally {
+        setLoadingClientAddresses(false)
+      }
+    }
+    loadClientAddresses()
+  }, [selectedClient?.id])
+
+  // Fetch store addresses when step 2 (Entrega) is first reached
+  const storeAddressesFetched = useRef(false)
+  useEffect(() => {
+    if (currentStep >= 2 && !storeAddressesFetched.current) {
+      storeAddressesFetched.current = true
+      const loadStoreAddresses = async () => {
+        setLoadingStoreAddresses(true)
+        try {
+          const response = await fetch('/api/store-addresses')
+          const data = await response.json()
+          if (data.success) {
+            setStoreAddresses(data.data || [])
+          }
+        } catch (err) {
+          console.error('Erro ao carregar endereços da loja:', err)
+        } finally {
+          setLoadingStoreAddresses(false)
+        }
+      }
+      loadStoreAddresses()
+    }
+  }, [currentStep])
+
+  // Step validation
+  const isStepValid = useCallback(
+    (step: number): boolean => {
+      switch (step) {
+        case 0:
+          return selectedClient !== null
+        case 1:
+          return items.length > 0
+        case 2:
+          return true // Delivery type is always chosen (default RETIRADA), address is optional
+        case 3:
+          return true // All fields optional
+        case 4:
+          return true // Review is always valid
+        default:
+          return false
+      }
+    },
+    [selectedClient, items.length]
+  )
+
+  // Update completed steps
+  useEffect(() => {
+    const newCompleted = new Set<number>()
+    for (let i = 0; i < currentStep; i++) {
+      if (isStepValid(i)) {
+        newCompleted.add(i)
+      }
+    }
+    completedStepsRef.current = newCompleted
+    setCompletedSteps(newCompleted)
+  }, [currentStep, isStepValid])
+
+  const goToStep = (step: number) => {
+    if (step === currentStep) return
+    setDirection(step > currentStep ? 'forward' : 'backward')
+    setIsAnimating(true)
+    setTimeout(() => {
+      setCurrentStep(step)
+      setIsAnimating(false)
+    }, 150)
+  }
+
+  const handleNext = () => {
+    if (currentStep < STEPS.length - 1 && isStepValid(currentStep)) {
+      goToStep(currentStep + 1)
+    }
+  }
+
+  const handlePrev = () => {
+    if (currentStep > 0) {
+      goToStep(currentStep - 1)
+    }
+  }
+
+  const handleStepClick = (step: number) => {
+    // Allow clicking completed steps or the current step
+    if (completedSteps.has(step) || step <= currentStep) {
+      goToStep(step)
+    }
+  }
+
+  const handleSave = async () => {
+    if (!selectedClient || items.length === 0) return
+
     setSubmitError(null)
-
-    // After validation, selectedClient is guaranteed non-null
-    const client = selectedClient!
-
     setSaving(true)
+
     try {
-      // Freight (custoPorKm, address, distance) is configured later via
-      // FreteCalculator on the order detail page. Don't fetch store settings
-      // at create time — it requires settings:view which non-admin roles
-      // don't have, and would fail the submit with a silent 403.
       const entrega: PedidoEntrega = {
         tipo: entregaTipo,
         custoPorKm: 0,
         taxaExtra: 0,
         freteTotal: 0,
+        ...(entregaTipo === 'ENTREGA' && selectedClientAddress
+          ? {
+              enderecoEntrega: selectedClientAddress,
+              enderecoEntregaClienteId: selectedClient.id,
+            }
+          : {}),
+        ...(entregaTipo === 'RETIRADA' && selectedStoreAddress
+          ? {
+              enderecoRetiradaId: selectedStoreAddress.id,
+              enderecoRetiradaNome: selectedStoreAddress.nome,
+            }
+          : {}),
       }
 
       const pedidoData = {
-        clienteId: client.id,
-        clienteNome: client.nome,
-        clienteTelefone: client.telefone,
+        clienteId: selectedClient.id,
+        clienteNome: selectedClient.nome,
+        clienteTelefone: selectedClient.telefone,
         entrega,
         orcamentos: [
           {
@@ -121,118 +261,107 @@ export function PedidoForm({ mode = 'create' }: PedidoFormProps) {
     }
   }
 
+  // Animation classes
+  const getAnimationClass = () => {
+    if (isAnimating) {
+      return direction === 'forward'
+        ? 'translate-x-8 opacity-0'
+        : '-translate-x-8 opacity-0'
+    }
+    return 'translate-x-0 opacity-100'
+  }
+
   return (
-    <div className="space-y-6 max-w-4xl">
-      {/* Client selection */}
-      <Card className={errors.client ? 'border-red-500' : ''}>
-        <CardHeader>
-          <CardTitle className="text-lg">Cliente</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div aria-required="true">
-            <ClienteSelector
-              selectedClient={selectedClient}
-              onSelect={(c) => { setSelectedClient(c); setErrors((e) => ({ ...e, client: undefined })) }}
-              onClear={() => setSelectedClient(null)}
-            />
-          </div>
-          {errors.client && (
-            <p className="text-xs text-red-500 mt-1">{errors.client}</p>
-          )}
-        </CardContent>
-      </Card>
+    <div className="max-w-4xl space-y-6">
+      {/* Step indicator */}
+      <StepIndicator
+        steps={STEPS}
+        currentStep={currentStep}
+        completedSteps={completedSteps}
+        onStepClick={handleStepClick}
+      />
 
-      {/* Items */}
-      <Card className={errors.items ? 'border-red-500' : ''}>
-        <CardHeader>
-          <CardTitle className="text-lg">Itens do Pedido</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div aria-required="true">
-            <PedidoItemsTable items={items} onChange={(newItems) => { setItems(newItems); if (newItems.length > 0) setErrors((e) => ({ ...e, items: undefined })) }} />
-          </div>
-          {errors.items && (
-            <p className="text-xs text-red-500 mt-1">{errors.items}</p>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Delivery/Pickup */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Entrega / Retirada</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div>
-              <Label>Tipo</Label>
-              <Select
-                value={entregaTipo}
-                onValueChange={(v) => setEntregaTipo(v as 'ENTREGA' | 'RETIRADA')}
-              >
-                <SelectTrigger className="w-full max-w-xs mt-1">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="RETIRADA">Retirada na Loja</SelectItem>
-                  <SelectItem value="ENTREGA">Entrega</SelectItem>
-                </SelectContent>
-              </Select>
+      {/* Step content */}
+      <div className="min-h-[400px]">
+        <div
+          className={`transition-all duration-200 ${getAnimationClass()}`}
+        >
+          {currentStep === 0 && (
+            <div className="p-6">
+              <ClienteStep
+                selectedClient={selectedClient}
+                onSelect={(c) => setSelectedClient(c)}
+                onClear={() => setSelectedClient(null)}
+              />
             </div>
+          )}
 
-            {entregaTipo === 'ENTREGA' && (
-              <p className="text-sm text-muted-foreground">
-                Configure o endereço de entrega e frete após criar o pedido.
-              </p>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+          {currentStep === 1 && (
+            <div className="p-6">
+              <ItensStep items={items} onChange={setItems} />
+            </div>
+          )}
 
-      {/* Dates & Notes */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Datas e Observações</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <Label htmlFor="dataEntrega">Data de Entrega/Retirada</Label>
-            <Input
-              id="dataEntrega"
-              type="date"
-              value={dataEntrega}
-              onChange={(e) => setDataEntrega(e.target.value)}
-              className="max-w-xs mt-1"
-            />
-          </div>
+          {currentStep === 2 && (
+            <div className="p-6">
+              <EntregaStep
+                entregaTipo={entregaTipo}
+                onTipoChange={(tipo) => {
+                  setEntregaTipo(tipo)
+                  // Reset address selection when switching type
+                  if (tipo === 'ENTREGA') {
+                    setSelectedStoreAddress(null)
+                  } else {
+                    setSelectedClientAddress(null)
+                  }
+                }}
+                selectedClientAddress={selectedClientAddress}
+                clientAddresses={clientAddresses}
+                loadingClientAddresses={loadingClientAddresses}
+                onSelectClientAddress={setSelectedClientAddress}
+                selectedStoreAddress={selectedStoreAddress}
+                storeAddresses={storeAddresses}
+                loadingStoreAddresses={loadingStoreAddresses}
+                onSelectStoreAddress={setSelectedStoreAddress}
+              />
+            </div>
+          )}
 
-          <div>
-            <Label htmlFor="observacoes">Observações Internas</Label>
-            <Textarea
-              id="observacoes"
-              value={observacoes}
-              onChange={(e) => setObservacoes(e.target.value)}
-              placeholder="Notas internas sobre o pedido (não visível para o cliente)"
-              rows={3}
-              className="mt-1"
-            />
-          </div>
+          {currentStep === 3 && (
+            <div className="p-6">
+              <DetalhesStep
+                dataEntrega={dataEntrega}
+                onDataEntregaChange={setDataEntrega}
+                observacoes={observacoes}
+                onObservacoesChange={setObservacoes}
+                observacoesCliente={observacoesCliente}
+                onObservacoesClienteChange={setObservacoesCliente}
+              />
+            </div>
+          )}
 
-          <div>
-            <Label htmlFor="observacoesCliente">Observações para o Cliente</Label>
-            <Textarea
-              id="observacoesCliente"
-              value={observacoesCliente}
-              onChange={(e) => setObservacoesCliente(e.target.value)}
-              placeholder="Notas visíveis na página pública do pedido"
-              rows={3}
-              className="mt-1"
-            />
-          </div>
-        </CardContent>
-      </Card>
+          {currentStep === 4 && selectedClient && (
+            <div className="p-6">
+              <RevisaoStep
+                client={selectedClient}
+                items={items}
+                entregaTipo={entregaTipo}
+                selectedAddress={
+                  entregaTipo === 'ENTREGA'
+                    ? selectedClientAddress
+                    : selectedStoreAddress
+                }
+                dataEntrega={dataEntrega}
+                observacoes={observacoes}
+                observacoesCliente={observacoesCliente}
+                onEditStep={goToStep}
+              />
+            </div>
+          )}
+        </div>
+      </div>
 
-      {/* Inline submit error (visible even when toasts are hidden) */}
+      {/* Inline submit error */}
       {submitError && (
         <div
           role="alert"
@@ -243,24 +372,49 @@ export function PedidoForm({ mode = 'create' }: PedidoFormProps) {
         </div>
       )}
 
-      {/* Actions */}
-      <div className="flex gap-3 justify-end">
-        <Button variant="outline" onClick={() => router.push('/orders')} disabled={saving}>
-          Cancelar
-        </Button>
-        <Button onClick={handleSave} disabled={saving || !selectedClient || items.length === 0}>
-          {saving ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              Salvando...
-            </>
+      {/* Navigation buttons */}
+      <div className="flex items-center justify-between pt-2">
+        <div>
+          {currentStep > 0 ? (
+            <Button variant="ghost" onClick={handlePrev} disabled={saving}>
+              <ChevronLeft className="h-4 w-4 mr-1" />
+              Anterior
+            </Button>
           ) : (
-            <>
-              <Save className="h-4 w-4 mr-2" />
-              Criar Pedido
-            </>
+            <Button variant="outline" onClick={() => router.push('/orders')} disabled={saving}>
+              Cancelar
+            </Button>
           )}
-        </Button>
+        </div>
+
+        <div>
+          {currentStep < STEPS.length - 1 ? (
+            <Button
+              onClick={handleNext}
+              disabled={!isStepValid(currentStep)}
+            >
+              Próximo
+              <ChevronRight className="h-4 w-4 ml-1" />
+            </Button>
+          ) : (
+            <Button
+              onClick={handleSave}
+              disabled={saving || !selectedClient || items.length === 0}
+            >
+              {saving ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Salvando...
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4 mr-2" />
+                  Criar Pedido
+                </>
+              )}
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   )
