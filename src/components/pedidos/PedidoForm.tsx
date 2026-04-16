@@ -70,6 +70,7 @@ export function PedidoForm({ mode = 'create' }: PedidoFormProps) {
     id: string
     nome: string
   } | null>(null)
+  const [newAddress, setNewAddress] = useState<Partial<Address> | null>(null)
 
   // Dates & notes
   const [dataEntrega, setDataEntrega] = useState('')
@@ -139,8 +140,16 @@ export function PedidoForm({ mode = 'create' }: PedidoFormProps) {
           return selectedClient !== null
         case 1:
           return items.length > 0
-        case 2:
-          return true // Delivery type is always chosen (default RETIRADA), address is optional
+        case 2: {
+          if (entregaTipo === 'ENTREGA') {
+            const hasNewAddr = !!(newAddress?.endereco?.trim())
+            return !!(hasNewAddr || selectedClientAddress)
+          }
+          if (entregaTipo === 'RETIRADA') {
+            return !!selectedStoreAddress
+          }
+          return false
+        }
         case 3:
           return true // All fields optional
         case 4:
@@ -149,7 +158,7 @@ export function PedidoForm({ mode = 'create' }: PedidoFormProps) {
           return false
       }
     },
-    [selectedClient, items.length]
+    [selectedClient, items.length, entregaTipo, newAddress, selectedClientAddress, selectedStoreAddress]
   )
 
   // Update completed steps
@@ -200,11 +209,29 @@ export function PedidoForm({ mode = 'create' }: PedidoFormProps) {
     setSaving(true)
 
     try {
+      // Determine delivery address
+      const hasNewAddr = !!(newAddress?.endereco?.trim())
+
       const entrega: PedidoEntrega = {
         tipo: entregaTipo,
         custoPorKm: 0,
         taxaExtra: 0,
         freteTotal: 0,
+        ...(entregaTipo === 'ENTREGA' && hasNewAddr && !selectedClientAddress
+          ? {
+              enderecoEntrega: {
+                id: newAddress?.id || crypto.randomUUID(),
+                label: newAddress?.label,
+                cep: newAddress?.cep,
+                estado: newAddress?.estado,
+                cidade: newAddress?.cidade,
+                bairro: newAddress?.bairro,
+                endereco: newAddress?.endereco,
+                numero: newAddress?.numero,
+                complemento: newAddress?.complemento,
+              } as Address,
+            }
+          : {}),
         ...(entregaTipo === 'ENTREGA' && selectedClientAddress
           ? {
               enderecoEntrega: selectedClientAddress,
@@ -261,6 +288,28 @@ export function PedidoForm({ mode = 'create' }: PedidoFormProps) {
     }
   }
 
+  // Determine the selected address for the review step
+  const getSelectedAddressForReview = (): Address | { id: string; nome: string } | null => {
+    if (entregaTipo === 'ENTREGA') {
+      if (selectedClientAddress) return selectedClientAddress
+      if (newAddress?.endereco?.trim()) {
+        return {
+          id: newAddress.id || 'new',
+          label: newAddress.label,
+          cep: newAddress.cep,
+          estado: newAddress.estado,
+          cidade: newAddress.cidade,
+          bairro: newAddress.bairro,
+          endereco: newAddress.endereco,
+          numero: newAddress.numero,
+          complemento: newAddress.complemento,
+        } as Address
+      }
+      return null
+    }
+    return selectedStoreAddress
+  }
+
   // Animation classes
   const getAnimationClass = () => {
     if (isAnimating) {
@@ -309,12 +358,15 @@ export function PedidoForm({ mode = 'create' }: PedidoFormProps) {
                     setSelectedStoreAddress(null)
                   } else {
                     setSelectedClientAddress(null)
+                    setNewAddress(null)
                   }
                 }}
                 selectedClientAddress={selectedClientAddress}
                 clientAddresses={clientAddresses}
                 loadingClientAddresses={loadingClientAddresses}
                 onSelectClientAddress={setSelectedClientAddress}
+                newAddress={newAddress}
+                onNewAddressChange={setNewAddress}
                 selectedStoreAddress={selectedStoreAddress}
                 storeAddresses={storeAddresses}
                 loadingStoreAddresses={loadingStoreAddresses}
@@ -338,11 +390,7 @@ export function PedidoForm({ mode = 'create' }: PedidoFormProps) {
                 client={selectedClient}
                 items={items}
                 entregaTipo={entregaTipo}
-                selectedAddress={
-                  entregaTipo === 'ENTREGA'
-                    ? selectedClientAddress
-                    : selectedStoreAddress
-                }
+                selectedAddress={getSelectedAddressForReview()}
                 dataEntrega={dataEntrega}
                 observacoes={observacoes}
                 observacoesCliente={observacoesCliente}

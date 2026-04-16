@@ -127,6 +127,8 @@ vi.mock('lucide-react', async (importOriginal) => {
     Pencil: () => <span>pencil</span>,
     RefreshCw: () => <span>refresh</span>,
     MapPin: () => <span>mappin</span>,
+    Plus: () => <span>plus</span>,
+    UserPlus: () => <span>userplus</span>,
   };
 });
 
@@ -155,7 +157,9 @@ describe('PedidoForm - Wizard', () => {
           ok: true,
           json: async () => ({
             success: true,
-            data: [],
+            data: [
+              { id: 'store-1', nome: 'Loja Principal', endereco: 'Rua A', numero: '1', bairro: 'Centro', cidade: 'SP' },
+            ],
           }),
         } as any;
       }
@@ -280,8 +284,15 @@ describe('PedidoForm - Wizard', () => {
     await user.click(screen.getByTestId('mock-add-item'));
     await clickNext(user);
 
-    // Step 2: Entrega (default RETIRADA, just continue)
+    // Step 2: Entrega (default RETIRADA) - need to select a store address
     expect(screen.getByText('Escolha como o pedido será entregue ao cliente')).toBeInTheDocument();
+
+    // Wait for store addresses to load
+    await waitFor(() => {
+      expect(screen.getByText('Loja Principal')).toBeInTheDocument();
+    });
+    // Select store address
+    await user.click(screen.getByTestId('store-card-store-1'));
     await clickNext(user);
 
     // Step 3: Detalhes (all optional, just continue)
@@ -318,7 +329,15 @@ describe('PedidoForm - Wizard', () => {
         return { ok: true, json: async () => ({ success: true, data: { addresses: [] } }) } as any;
       }
       if (typeof url === 'string' && url.includes('/api/store-addresses')) {
-        return { ok: true, json: async () => ({ success: true, data: [] }) } as any;
+        return {
+          ok: true,
+          json: async () => ({
+            success: true,
+            data: [
+              { id: 'store-1', nome: 'Loja Principal', endereco: 'Rua A', numero: '1', bairro: 'Centro', cidade: 'SP' },
+            ],
+          }),
+        } as any;
       }
       if (typeof url === 'string' && url.includes('/api/pedidos')) {
         return { ok: false, json: async () => ({ success: false, error: 'Test server error' }) } as any;
@@ -334,6 +353,12 @@ describe('PedidoForm - Wizard', () => {
     await clickNext(user);
     await user.click(screen.getByTestId('mock-add-item'));
     await clickNext(user);
+
+    // Step 2: Select store for RETIRADA
+    await waitFor(() => {
+      expect(screen.getByText('Loja Principal')).toBeInTheDocument();
+    });
+    await user.click(screen.getByTestId('store-card-store-1'));
     await clickNext(user);
     await clickNext(user);
 
@@ -439,11 +464,14 @@ describe('PedidoForm - Wizard', () => {
     await user.click(screen.getByTestId('mock-add-item'));
     await clickNext(user);
 
-    // Step 2: Switch to ENTREGA and select address
+    // Step 2: Switch to ENTREGA and select saved address
     expect(screen.getByText('Escolha como o pedido será entregue ao cliente')).toBeInTheDocument();
 
     // Click the ENTREGA toggle
     await user.click(screen.getByTestId('toggle-entrega'));
+
+    // Switch to saved addresses tab
+    await user.click(screen.getByTestId('tab-saved-addresses'));
 
     // Wait for client addresses to load and be displayed
     await waitFor(() => {

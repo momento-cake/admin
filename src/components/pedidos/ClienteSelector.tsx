@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { Search, Loader2, X, UserCheck } from 'lucide-react'
+import { Search, Loader2, X, UserCheck, UserPlus } from 'lucide-react'
 import { useDebounce } from '@/hooks/useDebounce'
 import { fetchClients } from '@/lib/clients'
 import { Client } from '@/types/client'
@@ -13,9 +13,10 @@ interface ClienteSelectorProps {
   selectedClient: { id: string; nome: string; telefone?: string } | null
   onSelect: (client: { id: string; nome: string; telefone?: string }) => void
   onClear: () => void
+  onCreateNew?: () => void
 }
 
-export function ClienteSelector({ selectedClient, onSelect, onClear }: ClienteSelectorProps) {
+export function ClienteSelector({ selectedClient, onSelect, onClear, onCreateNew }: ClienteSelectorProps) {
   const [searchInput, setSearchInput] = useState('')
   const [results, setResults] = useState<Client[]>([])
   const [loading, setLoading] = useState(false)
@@ -124,9 +125,24 @@ export function ClienteSelector({ selectedClient, onSelect, onClear }: ClienteSe
 
       {showResults && debouncedSearch.length >= 2 && results.length === 0 && !loading && (
         <Card className="absolute z-50 w-full mt-1 shadow-lg">
-          <p className="px-4 py-3 text-sm text-muted-foreground">
-            Nenhum cliente encontrado
-          </p>
+          <div className="px-4 py-3">
+            <p className="text-sm text-muted-foreground">
+              Nenhum cliente encontrado
+            </p>
+            {onCreateNew && (
+              <button
+                type="button"
+                className="mt-2 flex items-center gap-1.5 text-sm text-primary hover:underline"
+                onMouseDown={(e) => {
+                  e.preventDefault()
+                  onCreateNew()
+                }}
+              >
+                <UserPlus className="h-3.5 w-3.5" />
+                Cadastrar novo cliente
+              </button>
+            )}
+          </div>
         </Card>
       )}
     </div>

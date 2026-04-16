@@ -18,6 +18,14 @@ vi.mock('@/components/ui/card', () => ({
   CardContent: ({ children }: any) => <div>{children}</div>,
 }))
 
+vi.mock('@/components/ui/input', () => ({
+  Input: (props: any) => <input {...props} />,
+}))
+
+vi.mock('@/components/ui/label', () => ({
+  Label: ({ children, ...rest }: any) => <label {...rest}>{children}</label>,
+}))
+
 vi.mock('@/components/ui/skeleton', () => ({
   Skeleton: ({ className }: any) => <div data-testid="skeleton" className={className} />,
 }))
@@ -30,6 +38,7 @@ vi.mock('lucide-react', async (importOriginal) => {
     Store: () => <span data-testid="icon-store">store</span>,
     Check: () => <span data-testid="icon-check">check</span>,
     MapPin: () => <span data-testid="icon-mappin">mappin</span>,
+    Plus: () => <span data-testid="icon-plus">plus</span>,
   }
 })
 
@@ -87,6 +96,8 @@ function renderEntregaStep(overrides: Partial<Parameters<typeof EntregaStep>[0]>
     clientAddresses: [],
     loadingClientAddresses: false,
     onSelectClientAddress: vi.fn(),
+    newAddress: null,
+    onNewAddressChange: vi.fn(),
     selectedStoreAddress: null,
     storeAddresses: [],
     loadingStoreAddresses: false,
@@ -117,31 +128,55 @@ describe('EntregaStep', () => {
     expect(props.onTipoChange).toHaveBeenCalledWith('RETIRADA')
   })
 
-  it('shows client addresses when ENTREGA is selected', () => {
+  it('shows address tabs when ENTREGA is selected', () => {
+    renderEntregaStep({
+      entregaTipo: 'ENTREGA',
+    })
+    expect(screen.getByText('Endereço de entrega')).toBeInTheDocument()
+    expect(screen.getByTestId('tab-new-address')).toBeInTheDocument()
+    expect(screen.getByTestId('tab-saved-addresses')).toBeInTheDocument()
+  })
+
+  it('shows new address form by default in ENTREGA mode', () => {
+    renderEntregaStep({
+      entregaTipo: 'ENTREGA',
+    })
+    expect(screen.getByTestId('new-address-form')).toBeInTheDocument()
+  })
+
+  it('shows saved addresses when clicking saved tab', async () => {
+    const user = userEvent.setup()
     renderEntregaStep({
       entregaTipo: 'ENTREGA',
       clientAddresses: mockClientAddresses,
     })
-    expect(screen.getByText('Endereço de entrega')).toBeInTheDocument()
+
+    await user.click(screen.getByTestId('tab-saved-addresses'))
     expect(screen.getByText('Casa')).toBeInTheDocument()
     expect(screen.getByText('Trabalho')).toBeInTheDocument()
   })
 
-  it('shows empty state when ENTREGA is selected and no addresses', () => {
+  it('shows empty state in saved tab when no addresses', async () => {
+    const user = userEvent.setup()
     renderEntregaStep({
       entregaTipo: 'ENTREGA',
       clientAddresses: [],
     })
+
+    await user.click(screen.getByTestId('tab-saved-addresses'))
     expect(
       screen.getByText('Nenhum endereço cadastrado para este cliente')
     ).toBeInTheDocument()
   })
 
-  it('shows loading skeletons for client addresses', () => {
+  it('shows loading skeletons for client addresses in saved tab', async () => {
+    const user = userEvent.setup()
     renderEntregaStep({
       entregaTipo: 'ENTREGA',
       loadingClientAddresses: true,
     })
+
+    await user.click(screen.getByTestId('tab-saved-addresses'))
     const skeletons = screen.getAllByTestId('skeleton')
     expect(skeletons.length).toBeGreaterThan(0)
   })
@@ -152,8 +187,21 @@ describe('EntregaStep', () => {
       entregaTipo: 'ENTREGA',
       clientAddresses: mockClientAddresses,
     })
+
+    await user.click(screen.getByTestId('tab-saved-addresses'))
     await user.click(screen.getByTestId('address-card-addr-1'))
     expect(props.onSelectClientAddress).toHaveBeenCalledWith(mockClientAddresses[0])
+  })
+
+  it('calls onNewAddressChange when typing in the new address form', async () => {
+    const user = userEvent.setup()
+    const { props } = renderEntregaStep({
+      entregaTipo: 'ENTREGA',
+    })
+
+    const enderecoInput = screen.getByPlaceholderText('Rua, Avenida...')
+    await user.type(enderecoInput, 'R')
+    expect(props.onNewAddressChange).toHaveBeenCalled()
   })
 
   it('shows store addresses when RETIRADA is selected', () => {
@@ -189,13 +237,15 @@ describe('EntregaStep', () => {
     })
   })
 
-  it('shows check icon on selected client address', () => {
+  it('shows check icon on selected client address in saved tab', async () => {
+    const user = userEvent.setup()
     renderEntregaStep({
       entregaTipo: 'ENTREGA',
       clientAddresses: mockClientAddresses,
       selectedClientAddress: mockClientAddresses[0],
     })
-    // The selected card should have a check icon
+
+    await user.click(screen.getByTestId('tab-saved-addresses'))
     const checkIcons = screen.getAllByTestId('icon-check')
     expect(checkIcons.length).toBeGreaterThan(0)
   })
@@ -219,13 +269,13 @@ describe('EntregaStep', () => {
     expect(skeletons.length).toBeGreaterThan(0)
   })
 
-  it('does NOT show client addresses when RETIRADA is selected', () => {
+  it('does NOT show address section when RETIRADA is selected', () => {
     renderEntregaStep({
       entregaTipo: 'RETIRADA',
       clientAddresses: mockClientAddresses,
     })
     expect(screen.queryByText('Endereço de entrega')).not.toBeInTheDocument()
-    expect(screen.queryByText('Casa')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('new-address-form')).not.toBeInTheDocument()
   })
 
   it('does NOT show store addresses when ENTREGA is selected', () => {
@@ -235,5 +285,15 @@ describe('EntregaStep', () => {
     })
     expect(screen.queryByText('Endereço de retirada')).not.toBeInTheDocument()
     expect(screen.queryByText('Loja Centro')).not.toBeInTheDocument()
+  })
+
+  it('shows check icon on new address tab when address is filled', () => {
+    renderEntregaStep({
+      entregaTipo: 'ENTREGA',
+      newAddress: { endereco: 'Rua das Flores' },
+    })
+    // The new address tab should show a green check
+    const checkIcons = screen.getAllByTestId('icon-check')
+    expect(checkIcons.length).toBeGreaterThan(0)
   })
 })
