@@ -272,43 +272,39 @@ export function PedidoForm({ mode = 'create' }: PedidoFormProps) {
   }
 
   return (
-    <div className="max-w-4xl space-y-6">
-      {/* Step indicator */}
-      <StepIndicator
-        steps={STEPS}
-        currentStep={currentStep}
-        completedSteps={completedSteps}
-        onStepClick={handleStepClick}
-      />
+    <div className="w-full max-w-3xl mx-auto">
+      {/* Stepper card */}
+      <div className="rounded-2xl border border-border/60 bg-card shadow-sm overflow-hidden">
+        {/* Step indicator header */}
+        <div className="border-b border-border/40 bg-muted/30 px-4 py-5 sm:px-8 sm:py-6">
+          <StepIndicator
+            steps={STEPS}
+            currentStep={currentStep}
+            completedSteps={completedSteps}
+            onStepClick={handleStepClick}
+          />
+        </div>
 
-      {/* Step content */}
-      <div className="min-h-[400px]">
-        <div
-          className={`transition-all duration-200 ${getAnimationClass()}`}
-        >
-          {currentStep === 0 && (
-            <div className="p-6">
+        {/* Step content area */}
+        <div className="min-h-[360px] px-5 py-6 sm:px-8 sm:py-8">
+          <div className={`transition-all duration-200 ${getAnimationClass()}`}>
+            {currentStep === 0 && (
               <ClienteStep
                 selectedClient={selectedClient}
                 onSelect={(c) => setSelectedClient(c)}
                 onClear={() => setSelectedClient(null)}
               />
-            </div>
-          )}
+            )}
 
-          {currentStep === 1 && (
-            <div className="p-6">
+            {currentStep === 1 && (
               <ItensStep items={items} onChange={setItems} />
-            </div>
-          )}
+            )}
 
-          {currentStep === 2 && (
-            <div className="p-6">
+            {currentStep === 2 && (
               <EntregaStep
                 entregaTipo={entregaTipo}
                 onTipoChange={(tipo) => {
                   setEntregaTipo(tipo)
-                  // Reset address selection when switching type
                   if (tipo === 'ENTREGA') {
                     setSelectedStoreAddress(null)
                   } else {
@@ -324,11 +320,9 @@ export function PedidoForm({ mode = 'create' }: PedidoFormProps) {
                 loadingStoreAddresses={loadingStoreAddresses}
                 onSelectStoreAddress={setSelectedStoreAddress}
               />
-            </div>
-          )}
+            )}
 
-          {currentStep === 3 && (
-            <div className="p-6">
+            {currentStep === 3 && (
               <DetalhesStep
                 dataEntrega={dataEntrega}
                 onDataEntregaChange={setDataEntrega}
@@ -337,11 +331,9 @@ export function PedidoForm({ mode = 'create' }: PedidoFormProps) {
                 observacoesCliente={observacoesCliente}
                 onObservacoesClienteChange={setObservacoesCliente}
               />
-            </div>
-          )}
+            )}
 
-          {currentStep === 4 && selectedClient && (
-            <div className="p-6">
+            {currentStep === 4 && selectedClient && (
               <RevisaoStep
                 client={selectedClient}
                 items={items}
@@ -356,64 +348,67 @@ export function PedidoForm({ mode = 'create' }: PedidoFormProps) {
                 observacoesCliente={observacoesCliente}
                 onEditStep={goToStep}
               />
+            )}
+          </div>
+        </div>
+
+        {/* Inline submit error */}
+        {submitError && (
+          <div className="px-5 sm:px-8 pb-4">
+            <div
+              role="alert"
+              className="rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700"
+            >
+              <p className="font-medium">Erro ao criar pedido</p>
+              <p className="mt-1">{submitError}</p>
             </div>
-          )}
-        </div>
-      </div>
+          </div>
+        )}
 
-      {/* Inline submit error */}
-      {submitError && (
-        <div
-          role="alert"
-          className="rounded-md border border-red-500 bg-red-50 px-4 py-3 text-sm text-red-700"
-        >
-          <p className="font-medium">Erro ao criar pedido</p>
-          <p className="mt-1">{submitError}</p>
-        </div>
-      )}
+        {/* Navigation footer */}
+        <div className="border-t border-border/40 bg-muted/20 px-5 py-4 sm:px-8">
+          <div className="flex items-center justify-end gap-3">
+            {currentStep > 0 ? (
+              <Button variant="ghost" size="sm" onClick={handlePrev} disabled={saving}>
+                <ChevronLeft className="h-4 w-4 mr-1" />
+                Anterior
+              </Button>
+            ) : (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => router.push('/orders')}
+                disabled={saving}
+              >
+                Cancelar
+              </Button>
+            )}
 
-      {/* Navigation buttons */}
-      <div className="flex items-center justify-between pt-2">
-        <div>
-          {currentStep > 0 ? (
-            <Button variant="ghost" onClick={handlePrev} disabled={saving}>
-              <ChevronLeft className="h-4 w-4 mr-1" />
-              Anterior
-            </Button>
-          ) : (
-            <Button variant="outline" onClick={() => router.push('/orders')} disabled={saving}>
-              Cancelar
-            </Button>
-          )}
-        </div>
-
-        <div>
-          {currentStep < STEPS.length - 1 ? (
-            <Button
-              onClick={handleNext}
-              disabled={!isStepValid(currentStep)}
-            >
-              Próximo
-              <ChevronRight className="h-4 w-4 ml-1" />
-            </Button>
-          ) : (
-            <Button
-              onClick={handleSave}
-              disabled={saving || !selectedClient || items.length === 0}
-            >
-              {saving ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  Salvando...
-                </>
-              ) : (
-                <>
-                  <Save className="h-4 w-4 mr-2" />
-                  Criar Pedido
-                </>
-              )}
-            </Button>
-          )}
+            {currentStep < STEPS.length - 1 ? (
+              <Button onClick={handleNext} disabled={!isStepValid(currentStep)}>
+                Próximo
+                <ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
+            ) : (
+              <Button
+                onClick={handleSave}
+                disabled={saving || !selectedClient || items.length === 0}
+                className="min-w-[140px]"
+              >
+                {saving ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    Criando...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4 mr-2" />
+                    Criar Pedido
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
         </div>
       </div>
     </div>
