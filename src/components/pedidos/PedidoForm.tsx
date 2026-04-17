@@ -376,6 +376,7 @@ export function PedidoForm({ mode = 'create' }: PedidoFormProps) {
 
             {currentStep === 3 && (
               <DetalhesStep
+                entregaTipo={entregaTipo}
                 dataEntrega={dataEntrega}
                 onDataEntregaChange={setDataEntrega}
                 observacoes={observacoes}
