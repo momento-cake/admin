@@ -15,7 +15,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { Plus, Edit2, Trash2, MapPin, Loader2 } from 'lucide-react'
+import { Plus, Edit2, Trash2, MapPin, Loader2, Store } from 'lucide-react'
 import { StoreAddress } from '@/types/store-settings'
 import { StoreAddressForm } from './StoreAddressForm'
 import { useAuth } from '@/hooks/useAuth'
@@ -73,7 +73,6 @@ export function StoreAddressList() {
         if (!result.success) throw new Error(result.error || 'Erro ao atualizar endereço')
         toast.success('Endereço atualizado com sucesso!')
       } else {
-        // If this is the first address, force it as default
         const isFirstAddress = addresses.length === 0
         const response = await fetch('/api/store-addresses', {
           method: 'POST',
@@ -129,23 +128,26 @@ export function StoreAddressList() {
   }
 
   const formatAddressDisplay = (addr: StoreAddress) => {
-    const parts = []
+    const lineOne: string[] = []
     if (addr.endereco) {
       let street = addr.endereco
       if (addr.numero) street += ', ' + addr.numero
-      parts.push(street)
+      lineOne.push(street)
     }
-    if (addr.complemento) parts.push(addr.complemento)
-    if (addr.bairro) parts.push(addr.bairro)
+    if (addr.complemento) lineOne.push(addr.complemento)
+
+    const lineTwo: string[] = []
+    if (addr.bairro) lineTwo.push(addr.bairro)
     const cityState = [addr.cidade, addr.estado].filter(Boolean).join(' - ')
-    if (cityState) parts.push(cityState)
-    if (addr.cep) parts.push('CEP: ' + addr.cep)
-    return parts.join(', ')
+    if (cityState) lineTwo.push(cityState)
+    if (addr.cep) lineTwo.push('CEP ' + addr.cep)
+
+    return { lineOne: lineOne.join(', '), lineTwo: lineTwo.join(' · ') }
   }
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
+      <div className="flex items-center justify-center py-16">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     )
@@ -153,7 +155,7 @@ export function StoreAddressList() {
 
   return (
     <div className="space-y-4">
-      {!showForm && (
+      {!showForm && addresses.length > 0 && (
         <div className="flex justify-end">
           <Button onClick={() => setShowForm(true)}>
             <Plus className="h-4 w-4 mr-2" />
@@ -172,13 +174,15 @@ export function StoreAddressList() {
       )}
 
       {!showForm && addresses.length === 0 && (
-        <Card className="p-8 text-center">
-          <MapPin className="h-12 w-12 mx-auto text-muted-foreground/40 mb-4" />
-          <p className="text-sm font-medium text-muted-foreground">
+        <Card className="p-10 text-center border-dashed">
+          <div className="mx-auto mb-5 h-16 w-16 rounded-full bg-primary/10 text-primary flex items-center justify-center">
+            <Store className="h-7 w-7" />
+          </div>
+          <h3 className="text-base font-semibold text-foreground">
             Nenhum endereço cadastrado
-          </p>
-          <p className="text-xs text-muted-foreground mt-1 mb-4">
-            Adicione o primeiro endereço da loja para habilitar retirada nos pedidos.
+          </h3>
+          <p className="text-sm text-muted-foreground mt-1.5 mb-5 max-w-md mx-auto">
+            Adicione o primeiro endereço da loja para habilitar a opção de retirada no fluxo de pedidos.
           </p>
           <Button onClick={() => setShowForm(true)}>
             <Plus className="h-4 w-4 mr-2" />
@@ -188,42 +192,71 @@ export function StoreAddressList() {
       )}
 
       {!showForm && addresses.length > 0 && (
-        <div className="space-y-3">
-          {addresses.map((addr) => (
-            <Card key={addr.id} className="p-4">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                    <span className="font-medium">{addr.nome}</span>
-                    {addr.isDefault && (
-                      <Badge variant="secondary">Padrão</Badge>
+        <div className="grid gap-3">
+          {addresses.map((addr) => {
+            const { lineOne, lineTwo } = formatAddressDisplay(addr)
+            return (
+              <Card
+                key={addr.id}
+                className="relative p-5 transition hover:border-primary/30 hover:shadow-sm"
+              >
+                {addr.isDefault && (
+                  <Badge
+                    variant="secondary"
+                    className="absolute top-3 right-3"
+                  >
+                    Padrão
+                  </Badge>
+                )}
+
+                <div className="flex items-start gap-4">
+                  <div className="flex-shrink-0 h-10 w-10 rounded-md bg-primary/10 text-primary flex items-center justify-center">
+                    <MapPin className="h-5 w-5" />
+                  </div>
+
+                  <div className="flex-1 min-w-0 pr-16">
+                    <p className="font-medium text-foreground truncate">
+                      {addr.nome}
+                    </p>
+                    {lineOne ? (
+                      <p className="text-sm text-muted-foreground mt-0.5 truncate">
+                        {lineOne}
+                      </p>
+                    ) : (
+                      <p className="text-sm text-muted-foreground/70 italic mt-0.5">
+                        Endereço incompleto
+                      </p>
+                    )}
+                    {lineTwo && (
+                      <p className="text-xs text-muted-foreground mt-1 truncate">
+                        {lineTwo}
+                      </p>
                     )}
                   </div>
-                  <p className="text-sm text-muted-foreground pl-6">
-                    {formatAddressDisplay(addr) || 'Endereço incompleto'}
-                  </p>
                 </div>
-                <div className="flex gap-1 flex-shrink-0">
+
+                <div className="flex gap-1 mt-4 pt-3 border-t justify-end">
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => handleEdit(addr)}
                   >
-                    <Edit2 className="h-4 w-4" />
+                    <Edit2 className="h-4 w-4 mr-1.5" />
+                    Editar
                   </Button>
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => setDeletingId(addr.id)}
-                    className="text-destructive hover:text-destructive"
+                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="h-4 w-4 mr-1.5" />
+                    Remover
                   </Button>
                 </div>
-              </div>
-            </Card>
-          ))}
+              </Card>
+            )
+          })}
         </div>
       )}
 
