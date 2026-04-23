@@ -31,7 +31,8 @@ import {
   Settings,
   MapPin,
   ShoppingCart,
-  Plus
+  Plus,
+  LayoutGrid
 } from 'lucide-react'
 
 interface NavSubmenuItem {
@@ -154,6 +155,11 @@ const navigation: NavItem[] = [
         name: 'Todos os Pedidos',
         href: '/orders',
         icon: ShoppingCart
+      },
+      {
+        name: 'Quadro Kanban',
+        href: '/orders/kanban',
+        icon: LayoutGrid
       },
       {
         name: 'Novo Pedido',
