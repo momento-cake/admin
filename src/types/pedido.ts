@@ -233,6 +233,10 @@ export interface PedidoFilters {
   searchQuery?: string;
   status?: PedidoStatus;
   clienteId?: string;
+  /** Inclusive lower bound on `dataEntrega`, ISO YYYY-MM-DD. */
+  dateFrom?: string;
+  /** Inclusive upper bound on `dataEntrega`, ISO YYYY-MM-DD. */
+  dateTo?: string;
 }
 
 export interface PedidoQueryFilters extends PedidoFilters {

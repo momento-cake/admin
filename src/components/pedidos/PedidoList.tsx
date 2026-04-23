@@ -55,6 +55,10 @@ import { Pedido, PedidoStatus } from '@/types/pedido'
 import { formatPrice } from '@/lib/products'
 import { PedidoStatusBadge } from './PedidoStatusBadge'
 import { STATUS_THEME } from './statusTheme'
+import {
+  PedidoDateRangeFilter,
+  type PedidoDateFilterValue,
+} from './PedidoDateRangeFilter'
 
 const STATUS_TABS: Array<{ value: PedidoStatus | 'ALL'; label: string }> = [
   { value: 'ALL', label: 'Todos' },
@@ -90,6 +94,7 @@ export function PedidoList({
   const [error, setError] = useState<string | null>(null)
   const [searchInput, setSearchInput] = useState('')
   const [statusFilter, setStatusFilter] = useState<PedidoStatus | 'ALL'>('ALL')
+  const [dateFilter, setDateFilter] = useState<PedidoDateFilterValue>({ preset: null })
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [page, setPage] = useState(1)
   const [statusCounts, setStatusCounts] = useState<Record<PedidoStatus | 'ALL', number>>({
@@ -115,6 +120,8 @@ export function PedidoList({
       const params = new URLSearchParams()
       if (debouncedSearch) params.set('searchQuery', debouncedSearch)
       if (statusFilter !== 'ALL') params.set('status', statusFilter)
+      if (dateFilter.dateFrom) params.set('dateFrom', dateFilter.dateFrom)
+      if (dateFilter.dateTo) params.set('dateTo', dateFilter.dateTo)
       params.set('page', String(page))
       params.set('limit', String(perPage))
 
@@ -139,6 +146,8 @@ export function PedidoList({
     try {
       const params = new URLSearchParams()
       if (debouncedSearch) params.set('searchQuery', debouncedSearch)
+      if (dateFilter.dateFrom) params.set('dateFrom', dateFilter.dateFrom)
+      if (dateFilter.dateTo) params.set('dateTo', dateFilter.dateTo)
       params.set('limit', '500')
       params.set('page', '1')
 
@@ -172,17 +181,17 @@ export function PedidoList({
 
   useEffect(() => {
     setPage(1)
-  }, [debouncedSearch, statusFilter])
+  }, [debouncedSearch, statusFilter, dateFilter.dateFrom, dateFilter.dateTo])
 
   useEffect(() => {
     loadPedidos()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedSearch, statusFilter, page])
+  }, [debouncedSearch, statusFilter, dateFilter.dateFrom, dateFilter.dateTo, page])
 
   useEffect(() => {
     loadCounts()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedSearch])
+  }, [debouncedSearch, dateFilter.dateFrom, dateFilter.dateTo])
 
   const getActiveOrcamentoTotal = (pedido: Pedido): number => {
     const active = pedido.orcamentos.find((o) => o.isAtivo)
@@ -326,6 +335,8 @@ export function PedidoList({
             className="pl-10"
           />
         </div>
+
+        <PedidoDateRangeFilter value={dateFilter} onChange={setDateFilter} />
 
         <div className="inline-flex items-center rounded-lg border bg-card p-0.5 shadow-sm">
           <Button

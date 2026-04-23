@@ -8,6 +8,32 @@ const PEDIDOS_COLLECTION = 'pedidos';
 const COUNTER_COLLECTION = 'pedidoCounters';
 const COUNTER_DOC_ID = 'counter';
 
+function parseIsoDayStart(iso: string): number {
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(y, (m ?? 1) - 1, d ?? 1, 0, 0, 0, 0).getTime();
+}
+
+function parseIsoDayEnd(iso: string): number {
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(y, (m ?? 1) - 1, d ?? 1, 23, 59, 59, 999).getTime();
+}
+
+function extractTimestampMs(value: unknown): number | null {
+  if (!value) return null;
+  if (value instanceof Date) return value.getTime();
+  const v = value as { toDate?: () => Date; _seconds?: number; seconds?: number };
+  if (typeof v === 'object') {
+    if (typeof v.toDate === 'function') return v.toDate().getTime();
+    if (typeof v._seconds === 'number') return v._seconds * 1000;
+    if (typeof v.seconds === 'number') return v.seconds * 1000;
+  }
+  if (typeof value === 'string' || typeof value === 'number') {
+    const d = new Date(value);
+    return isNaN(d.getTime()) ? null : d.getTime();
+  }
+  return null;
+}
+
 // GET /api/pedidos - List pedidos with filters
 export async function GET(request: NextRequest) {
   try {
@@ -26,6 +52,8 @@ export async function GET(request: NextRequest) {
     const searchQuery = searchParams.get('searchQuery') || undefined;
     const status = searchParams.get('status') || undefined;
     const clienteId = searchParams.get('clienteId') || undefined;
+    const dateFrom = searchParams.get('dateFrom') || undefined;
+    const dateTo = searchParams.get('dateTo') || undefined;
     const limitStr = searchParams.get('limit') || '20';
     const pageStr = searchParams.get('page') || '1';
 
@@ -59,6 +87,18 @@ export async function GET(request: NextRequest) {
         (p.numeroPedido as string)?.toLowerCase().includes(searchLower) ||
         (p.clienteNome as string)?.toLowerCase().includes(searchLower)
       );
+    }
+
+    // Client-side dataEntrega range filter. Pedidos without dataEntrega are
+    // excluded whenever either bound is active.
+    if (dateFrom || dateTo) {
+      const fromMs = dateFrom ? parseIsoDayStart(dateFrom) : -Infinity;
+      const toMs = dateTo ? parseIsoDayEnd(dateTo) : Infinity;
+      pedidos = pedidos.filter((p: Record<string, unknown>) => {
+        const ms = extractTimestampMs(p.dataEntrega);
+        if (ms === null) return false;
+        return ms >= fromMs && ms <= toMs;
+      });
     }
 
     const total = pedidos.length;

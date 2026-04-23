@@ -15,6 +15,10 @@ import { formatPrice } from '@/lib/products'
 import { cn } from '@/lib/utils'
 import { KANBAN_COLUMN_ORDER } from './statusTheme'
 import { KanbanColumn } from './KanbanColumn'
+import {
+  PedidoDateRangeFilter,
+  type PedidoDateFilterValue,
+} from './PedidoDateRangeFilter'
 
 interface KanbanBoardProps {
   onPedidoView?: (pedido: Pedido) => void
@@ -27,6 +31,7 @@ export function KanbanBoard({ onPedidoView, onPedidoCreate, canUpdate = true }: 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [searchInput, setSearchInput] = useState('')
+  const [dateFilter, setDateFilter] = useState<PedidoDateFilterValue>({ preset: null })
   const [draggingId, setDraggingId] = useState<string | null>(null)
   const [dragOverStatus, setDragOverStatus] = useState<PedidoStatus | null>(null)
   const [updatingId, setUpdatingId] = useState<string | null>(null)
@@ -41,6 +46,8 @@ export function KanbanBoard({ onPedidoView, onPedidoCreate, canUpdate = true }: 
 
       const params = new URLSearchParams()
       if (debouncedSearch) params.set('searchQuery', debouncedSearch)
+      if (dateFilter.dateFrom) params.set('dateFrom', dateFilter.dateFrom)
+      if (dateFilter.dateTo) params.set('dateTo', dateFilter.dateTo)
       params.set('limit', '500')
       params.set('page', '1')
 
@@ -57,7 +64,7 @@ export function KanbanBoard({ onPedidoView, onPedidoCreate, canUpdate = true }: 
     } finally {
       setLoading(false)
     }
-  }, [debouncedSearch])
+  }, [debouncedSearch, dateFilter.dateFrom, dateFilter.dateTo])
 
   useEffect(() => {
     loadPedidos()
@@ -211,6 +218,8 @@ export function KanbanBoard({ onPedidoView, onPedidoCreate, canUpdate = true }: 
             className="pl-10"
           />
         </div>
+
+        <PedidoDateRangeFilter value={dateFilter} onChange={setDateFilter} />
 
         {/* View toggle */}
         <div className="inline-flex items-center rounded-lg border bg-card p-0.5 shadow-sm">
