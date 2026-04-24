@@ -5,6 +5,7 @@ import { formatPrice } from '@/lib/products'
 import { cn } from '@/lib/utils'
 import { Calendar, GripVertical, Package2, Phone, Truck, Store } from 'lucide-react'
 import { STATUS_THEME } from './statusTheme'
+import { PaymentStatusBadge } from './pagamentos/PaymentStatusBadge'
 
 interface KanbanCardProps {
   pedido: Pedido
@@ -90,15 +91,20 @@ export function KanbanCard({
       )}
 
       <div className="pl-4 pr-3 py-3 space-y-2.5">
-        {/* Header: numero + drag handle */}
+        {/* Header: numero + payment badge + drag handle */}
         <header className="flex items-start justify-between gap-2">
           <code className="text-[11px] font-mono tracking-tight text-muted-foreground bg-muted/60 px-1.5 py-0.5 rounded">
             {pedido.numeroPedido}
           </code>
-          <GripVertical
-            className="h-4 w-4 text-muted-foreground/40 group-hover:text-muted-foreground transition-colors shrink-0"
-            aria-hidden
-          />
+          <div className="flex items-center gap-1.5 shrink-0">
+            {pedido.statusPagamento && (
+              <PaymentStatusBadge status={pedido.statusPagamento} hideWhenPendente />
+            )}
+            <GripVertical
+              className="h-4 w-4 text-muted-foreground/40 group-hover:text-muted-foreground transition-colors"
+              aria-hidden
+            />
+          </div>
         </header>
 
         {/* Client name */}

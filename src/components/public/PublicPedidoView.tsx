@@ -119,6 +119,7 @@ function getStatusConfig(status: PedidoStatus): { bg: string; text: string; dot:
     RASCUNHO: { bg: 'bg-stone-100', text: 'text-stone-600', dot: 'bg-stone-400' },
     AGUARDANDO_APROVACAO: { bg: 'bg-amber-50', text: 'text-amber-700', dot: 'bg-amber-400' },
     CONFIRMADO: { bg: 'bg-emerald-50', text: 'text-emerald-700', dot: 'bg-emerald-400' },
+    AGUARDANDO_PAGAMENTO: { bg: 'bg-indigo-50', text: 'text-indigo-700', dot: 'bg-indigo-400' },
     EM_PRODUCAO: { bg: 'bg-violet-50', text: 'text-violet-700', dot: 'bg-violet-400' },
     PRONTO: { bg: 'bg-sky-50', text: 'text-sky-700', dot: 'bg-sky-400' },
     ENTREGUE: { bg: 'bg-emerald-50', text: 'text-emerald-700', dot: 'bg-emerald-400' },

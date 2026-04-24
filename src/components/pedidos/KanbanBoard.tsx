@@ -76,6 +76,7 @@ export function KanbanBoard({ onPedidoView, onPedidoCreate, canUpdate = true }: 
       RASCUNHO: [],
       AGUARDANDO_APROVACAO: [],
       CONFIRMADO: [],
+      AGUARDANDO_PAGAMENTO: [],
       EM_PRODUCAO: [],
       PRONTO: [],
       ENTREGUE: [],
@@ -265,6 +266,7 @@ export function KanbanBoard({ onPedidoView, onPedidoCreate, canUpdate = true }: 
           <span className="font-semibold tabular-nums">
             {(grouped.AGUARDANDO_APROVACAO.length +
               grouped.CONFIRMADO.length +
+              grouped.AGUARDANDO_PAGAMENTO.length +
               grouped.EM_PRODUCAO.length +
               grouped.PRONTO.length)}
           </span>

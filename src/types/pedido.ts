@@ -13,6 +13,7 @@ export type PedidoStatus =
   | 'RASCUNHO'
   | 'AGUARDANDO_APROVACAO'
   | 'CONFIRMADO'
+  | 'AGUARDANDO_PAGAMENTO'
   | 'EM_PRODUCAO'
   | 'PRONTO'
   | 'ENTREGUE'
@@ -30,6 +31,17 @@ export type DescontoTipo = 'valor' | 'percentual';
 
 export type NfStatus = 'PENDENTE' | 'EMITIDA' | 'CANCELADA';
 
+export type PagamentoMetodo =
+  | 'PIX'
+  | 'DINHEIRO'
+  | 'CARTAO_CREDITO'
+  | 'CARTAO_DEBITO'
+  | 'BOLETO'
+  | 'TRANSFERENCIA'
+  | 'OUTRO';
+
+export type StatusPagamento = 'PENDENTE' | 'PARCIAL' | 'PAGO' | 'VENCIDO';
+
 // ============================================================================
 // LABELS
 // ============================================================================
@@ -38,10 +50,28 @@ export const PEDIDO_STATUS_LABELS: Record<PedidoStatus, string> = {
   RASCUNHO: 'Rascunho',
   AGUARDANDO_APROVACAO: 'Aguardando Aprovação',
   CONFIRMADO: 'Confirmado',
+  AGUARDANDO_PAGAMENTO: 'Aguardando Pagamento',
   EM_PRODUCAO: 'Em Produção',
   PRONTO: 'Pronto',
   ENTREGUE: 'Entregue',
   CANCELADO: 'Cancelado',
+};
+
+export const PAGAMENTO_METODO_LABELS: Record<PagamentoMetodo, string> = {
+  PIX: 'PIX',
+  DINHEIRO: 'Dinheiro',
+  CARTAO_CREDITO: 'Cartão de Crédito',
+  CARTAO_DEBITO: 'Cartão de Débito',
+  BOLETO: 'Boleto',
+  TRANSFERENCIA: 'Transferência',
+  OUTRO: 'Outro',
+};
+
+export const STATUS_PAGAMENTO_LABELS: Record<StatusPagamento, string> = {
+  PENDENTE: 'Pendente',
+  PARCIAL: 'Parcial',
+  PAGO: 'Pago',
+  VENCIDO: 'Vencido',
 };
 
 export const ORCAMENTO_STATUS_LABELS: Record<OrcamentoStatus, string> = {
@@ -105,6 +135,23 @@ export interface PedidoPacote {
 }
 
 /**
+ * A single payment event recorded against a pedido.
+ * Multiple Pagamento records accumulate against the order total.
+ */
+export interface Pagamento {
+  id: string;
+  data: Timestamp;
+  valor: number;
+  metodo: PagamentoMetodo;
+  observacao?: string;
+  comprovanteUrl?: string | null;
+  comprovantePath?: string | null;
+  comprovanteTipo?: 'pdf' | 'image' | null;
+  createdAt: Timestamp;
+  createdBy: string;
+}
+
+/**
  * Delivery / pickup details for a pedido.
  */
 export interface PedidoEntrega {
@@ -157,6 +204,12 @@ export interface Pedido {
   observacoes?: string;
   observacoesCliente?: string;
 
+  // Payments
+  pagamentos: Pagamento[];
+  totalPago: number;
+  dataVencimento: Timestamp;
+  statusPagamento: StatusPagamento;
+
   // NF placeholder fields
   nfStatus?: NfStatus | null;
   nfProvider?: string | null;
@@ -202,12 +255,23 @@ export interface UpdatePedidoData {
   pacotes?: PedidoPacote[];
   entrega?: PedidoEntrega;
   dataEntrega?: Timestamp | null;
+  dataVencimento?: Timestamp;
   observacoes?: string;
   observacoesCliente?: string;
   nfStatus?: NfStatus | null;
   nfProvider?: string | null;
   nfExternalId?: string | null;
   nfEmittedAt?: Timestamp | null;
+}
+
+export interface CreatePagamentoData {
+  data: Date;
+  valor: number;
+  metodo: PagamentoMetodo;
+  observacao?: string;
+  comprovanteUrl?: string | null;
+  comprovantePath?: string | null;
+  comprovanteTipo?: 'pdf' | 'image' | null;
 }
 
 export interface CreateOrcamentoData {

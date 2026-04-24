@@ -27,6 +27,10 @@ import {
   Query,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import {
+  calcularTotalPedido,
+  resolvePaymentFields,
+} from '@/lib/payment-logic';
 
 const COLLECTION_NAME = 'pedidos';
 const COUNTER_COLLECTION = 'pedidoCounters';
@@ -43,6 +47,22 @@ function docToPedido(docSnapshot: DocumentSnapshot): Pedido {
   const data = docSnapshot.data();
   if (!data) throw new Error('Dados do documento indefinidos');
 
+  const partialPedido = {
+    id: docSnapshot.id,
+    orcamentos: data.orcamentos || [],
+    entrega: data.entrega,
+  } as Pedido;
+  const total = calcularTotalPedido(partialPedido);
+
+  const resolved = resolvePaymentFields({
+    pagamentos: data.pagamentos,
+    totalPago: data.totalPago,
+    dataVencimento: data.dataVencimento,
+    dataEntrega: data.dataEntrega,
+    createdAt: data.createdAt,
+    total,
+  });
+
   return {
     id: docSnapshot.id,
     numeroPedido: data.numeroPedido,
@@ -57,6 +77,11 @@ function docToPedido(docSnapshot: DocumentSnapshot): Pedido {
     dataEntrega: data.dataEntrega || undefined,
     observacoes: data.observacoes || undefined,
     observacoesCliente: data.observacoesCliente || undefined,
+    pagamentos: resolved.pagamentos,
+    totalPago: resolved.totalPago,
+    dataVencimento:
+      data.dataVencimento ?? Timestamp.fromDate(resolved.dataVencimentoDate),
+    statusPagamento: resolved.statusPagamento,
     nfStatus: data.nfStatus || null,
     nfProvider: data.nfProvider || null,
     nfExternalId: data.nfExternalId || null,
@@ -247,6 +272,15 @@ export async function createPedido(
 
       const numeroPedido = `PED-${String(nextNumber).padStart(4, '0')}`;
 
+      // Compute the default due date from delivery date (or +7d fallback)
+      const dataEntregaDate = data.dataEntrega?.toDate?.() ?? null;
+      const createdAtDate = now.toDate();
+      const dataVencimentoDate = dataEntregaDate ?? (() => {
+        const d = new Date(createdAtDate);
+        d.setDate(d.getDate() + 7);
+        return d;
+      })();
+
       const pedidoData = {
         numeroPedido,
         publicToken,
@@ -260,6 +294,10 @@ export async function createPedido(
         dataEntrega: data.dataEntrega || null,
         observacoes: data.observacoes || null,
         observacoesCliente: data.observacoesCliente || null,
+        pagamentos: [],
+        totalPago: 0,
+        dataVencimento: Timestamp.fromDate(dataVencimentoDate),
+        statusPagamento: 'PENDENTE',
         nfStatus: null,
         nfProvider: null,
         nfExternalId: null,

@@ -8,6 +8,11 @@ import {
 } from 'firebase/storage';
 import { storage } from './firebase';
 import { validateImageFile } from './validators/image';
+import {
+  validateReceiptFile,
+  getReceiptKind,
+  type ReceiptKind,
+} from './validators/receipt';
 
 /**
  * Generates a unique filename for storage.
@@ -261,5 +266,93 @@ export async function getImageUrl(storagePath: string): Promise<string> {
   } catch (error) {
     console.error('❌ Error getting image URL:', error);
     throw error instanceof Error ? error : new Error('Erro ao obter URL da imagem');
+  }
+}
+
+/**
+ * Result of a payment-receipt upload.
+ */
+export interface ReceiptUploadResult {
+  storagePath: string;
+  url: string;
+  mimeType: string;
+  kind: ReceiptKind;
+  fileSize: number;
+}
+
+/**
+ * Builds the canonical storage path for a payment receipt.
+ * Shape: pedidos/{pedidoId}/comprovantes/{pagamentoId}_{timestamp}.{ext}
+ */
+export function buildReceiptStoragePath(args: {
+  pedidoId: string;
+  pagamentoId: string;
+  file: File;
+}): string {
+  const name = args.file.name;
+  const dotIndex = name.lastIndexOf('.');
+  const ext =
+    dotIndex > 0 && dotIndex < name.length - 1
+      ? name.slice(dotIndex + 1).toLowerCase()
+      : 'bin';
+  const timestamp = Date.now();
+  return `pedidos/${args.pedidoId}/comprovantes/${args.pagamentoId}_${timestamp}.${ext}`;
+}
+
+/**
+ * Uploads a payment receipt (comprovante) to Firebase Storage.
+ * Accepts PDF + image MIME types. Rejects files > 5 MB.
+ */
+export async function uploadReceipt(args: {
+  file: File;
+  pedidoId: string;
+  pagamentoId: string;
+}): Promise<ReceiptUploadResult> {
+  const validation = validateReceiptFile(args.file);
+  if (!validation.isValid) {
+    throw new Error(validation.error ?? 'Arquivo inválido');
+  }
+
+  const kind = getReceiptKind(args.file.type);
+  if (!kind) {
+    throw new Error('Tipo de arquivo não suportado');
+  }
+
+  const storagePath = buildReceiptStoragePath(args);
+  const storageRef = ref(storage, storagePath);
+
+  const metadata: UploadMetadata = {
+    contentType: args.file.type,
+    customMetadata: {
+      originalName: args.file.name,
+      pedidoId: args.pedidoId,
+      pagamentoId: args.pagamentoId,
+    },
+  };
+
+  const snapshot = await uploadBytes(storageRef, args.file, metadata);
+  const url = await getDownloadURL(snapshot.ref);
+
+  return {
+    storagePath,
+    url,
+    mimeType: args.file.type,
+    kind,
+    fileSize: args.file.size,
+  };
+}
+
+/**
+ * Deletes a payment receipt from Firebase Storage.
+ * Safe to call even if the file no longer exists.
+ */
+export async function deleteReceipt(storagePath: string): Promise<void> {
+  try {
+    const storageRef = ref(storage, storagePath);
+    await deleteObject(storageRef);
+  } catch (error: unknown) {
+    const code = (error as { code?: string })?.code;
+    if (code === 'storage/object-not-found') return;
+    throw error instanceof Error ? error : new Error('Erro ao deletar comprovante');
   }
 }
