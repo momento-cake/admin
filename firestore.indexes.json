@@ -778,6 +778,24 @@
           "order": "ASCENDING"
         }
       ]
+    },
+    {
+      "collectionGroup": "pedidos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "isActive",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "statusPagamento",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "dataVencimento",
+          "order": "ASCENDING"
+        }
+      ]
     }
   ],
   "fieldOverrides": []

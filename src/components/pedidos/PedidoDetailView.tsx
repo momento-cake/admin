@@ -211,7 +211,6 @@ export function PedidoDetailView({ pedido, onUpdate }: PedidoDetailViewProps) {
               <TabsTrigger value="pagamento" className="gap-1 flex-shrink-0">
                 <CreditCard className="h-4 w-4" />
                 Pagamento
-                <Badge variant="secondary" className="text-[10px] ml-1 py-0 px-1.5">Em Breve</Badge>
               </TabsTrigger>
               <TabsTrigger value="nf" className="gap-1 flex-shrink-0">
                 <Receipt className="h-4 w-4" />
@@ -249,10 +248,7 @@ export function PedidoDetailView({ pedido, onUpdate }: PedidoDetailViewProps) {
 
         {/* Pagamento tab */}
         <TabsContent value="pagamento" className="mt-4">
-          <PaymentSection
-            pedidoId={pedido.id}
-            total={activeOrcamento?.total ?? 0}
-          />
+          <PaymentSection pedido={pedido} onUpdate={onUpdate} />
         </TabsContent>
 
         {/* NF tab */}

@@ -3,6 +3,9 @@ import { adminDb } from '@/lib/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { updatePedidoSchema } from '@/lib/validators/pedido';
 import { getAuthFromRequest, canPerformActionFromRequest, unauthorizedResponse, forbiddenResponse } from '@/lib/api-auth';
+import { calcularTotalPedido, roundCurrency } from '@/lib/payment-logic';
+import { withPaymentDefaults } from '@/lib/pedidos-server';
+import type { Pedido } from '@/types/pedido';
 
 const PEDIDOS_COLLECTION = 'pedidos';
 
@@ -29,9 +32,14 @@ export async function GET(
       return NextResponse.json({ success: false, error: 'Pedido não encontrado' }, { status: 404 });
     }
 
+    const pedido = withPaymentDefaults({
+      id: docSnapshot.id,
+      ...docSnapshot.data(),
+    } as Pedido & Record<string, unknown>);
+
     return NextResponse.json({
       success: true,
-      data: { id: docSnapshot.id, ...docSnapshot.data() },
+      data: pedido,
     });
   } catch (error) {
     console.error('❌ Erro ao buscar pedido:', error);
@@ -79,6 +87,31 @@ export async function PUT(
       return NextResponse.json({ success: false, error: 'Pedido não encontrado' }, { status: 404 });
     }
 
+    // Hard gate: cannot transition to ENTREGUE unless the pedido is fully paid.
+    if (validation.data.status === 'ENTREGUE') {
+      const existing = existingDoc.data() as Pedido & Record<string, unknown>;
+      const partial = {
+        id,
+        orcamentos: existing.orcamentos || [],
+        entrega: existing.entrega,
+      } as Pedido;
+      const total = calcularTotalPedido(partial);
+      const totalPago = roundCurrency(
+        typeof existing.totalPago === 'number' ? existing.totalPago : 0
+      );
+      if (total > 0 && totalPago < total) {
+        return NextResponse.json(
+          {
+            success: false,
+            error:
+              'Pedido tem saldo em aberto. Registre o pagamento antes de marcar como entregue.',
+            details: { total, totalPago, saldo: roundCurrency(total - totalPago) },
+          },
+          { status: 409 }
+        );
+      }
+    }
+
     const updatePayload: Record<string, unknown> = {
       ...validation.data,
       updatedAt: FieldValue.serverTimestamp(),
@@ -98,7 +131,10 @@ export async function PUT(
 
     return NextResponse.json({
       success: true,
-      data: { id: updatedDoc.id, ...updatedDoc.data() },
+      data: withPaymentDefaults({
+        id: updatedDoc.id,
+        ...updatedDoc.data(),
+      } as Pedido & Record<string, unknown>),
     });
   } catch (error) {
     console.error('❌ Erro ao atualizar pedido:', error);

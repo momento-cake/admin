@@ -54,6 +54,7 @@ import { formatErrorMessage, logError } from '@/lib/error-handler'
 import { Pedido, PedidoStatus } from '@/types/pedido'
 import { formatPrice } from '@/lib/products'
 import { PedidoStatusBadge } from './PedidoStatusBadge'
+import { PaymentStatusBadge } from './pagamentos/PaymentStatusBadge'
 import { STATUS_THEME } from './statusTheme'
 import {
   PedidoDateRangeFilter,
@@ -65,6 +66,7 @@ const STATUS_TABS: Array<{ value: PedidoStatus | 'ALL'; label: string }> = [
   { value: 'RASCUNHO', label: 'Rascunho' },
   { value: 'AGUARDANDO_APROVACAO', label: 'Aguardando' },
   { value: 'CONFIRMADO', label: 'Confirmado' },
+  { value: 'AGUARDANDO_PAGAMENTO', label: 'Aguard. Pagamento' },
   { value: 'EM_PRODUCAO', label: 'Em Produção' },
   { value: 'PRONTO', label: 'Pronto' },
   { value: 'ENTREGUE', label: 'Entregue' },
@@ -102,6 +104,7 @@ export function PedidoList({
     RASCUNHO: 0,
     AGUARDANDO_APROVACAO: 0,
     CONFIRMADO: 0,
+    AGUARDANDO_PAGAMENTO: 0,
     EM_PRODUCAO: 0,
     PRONTO: 0,
     ENTREGUE: 0,
@@ -161,6 +164,7 @@ export function PedidoList({
         RASCUNHO: 0,
         AGUARDANDO_APROVACAO: 0,
         CONFIRMADO: 0,
+        AGUARDANDO_PAGAMENTO: 0,
         EM_PRODUCAO: 0,
         PRONTO: 0,
         ENTREGUE: 0,
@@ -226,6 +230,7 @@ export function PedidoList({
     () =>
       statusCounts.AGUARDANDO_APROVACAO +
       statusCounts.CONFIRMADO +
+      statusCounts.AGUARDANDO_PAGAMENTO +
       statusCounts.EM_PRODUCAO +
       statusCounts.PRONTO,
     [statusCounts],
@@ -461,11 +466,19 @@ export function PedidoList({
                     aria-hidden
                   />
                   <div className="pl-4 pr-4 py-4 space-y-3">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-2">
                       <code className="text-xs font-mono bg-muted px-2 py-0.5 rounded">
                         {pedido.numeroPedido}
                       </code>
-                      <PedidoStatusBadge status={pedido.status} />
+                      <div className="flex items-center gap-1.5">
+                        <PedidoStatusBadge status={pedido.status} />
+                        {pedido.statusPagamento && (
+                          <PaymentStatusBadge
+                            status={pedido.statusPagamento}
+                            hideWhenPendente
+                          />
+                        )}
+                      </div>
                     </div>
                     <div>
                       <p className="font-semibold text-sm">{pedido.clienteNome}</p>
@@ -620,7 +633,15 @@ export function PedidoList({
                         </div>
                       </TableCell>
                       <TableCell>
-                        <PedidoStatusBadge status={pedido.status} />
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <PedidoStatusBadge status={pedido.status} />
+                          {pedido.statusPagamento && (
+                            <PaymentStatusBadge
+                              status={pedido.statusPagamento}
+                              hideWhenPendente
+                            />
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">

@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase-admin';
-import { FieldValue } from 'firebase-admin/firestore';
+import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { createPedidoSchema } from '@/lib/validators/pedido';
 import { getAuthFromRequest, canPerformActionFromRequest, unauthorizedResponse, forbiddenResponse } from '@/lib/api-auth';
+import { withPaymentDefaults } from '@/lib/pedidos-server';
+import type { Pedido } from '@/types/pedido';
 
 const PEDIDOS_COLLECTION = 'pedidos';
 const COUNTER_COLLECTION = 'pedidoCounters';
@@ -105,7 +107,9 @@ export async function GET(request: NextRequest) {
 
     // Pagination
     const startIndex = (page - 1) * limit;
-    const paginated = pedidos.slice(startIndex, startIndex + limit);
+    const paginated = pedidos
+      .slice(startIndex, startIndex + limit)
+      .map((p) => withPaymentDefaults(p as Pedido & Record<string, unknown>));
 
     console.log(`✅ Successfully fetched ${paginated.length} pedidos (total: ${total})`);
 
@@ -203,6 +207,11 @@ export async function POST(request: NextRequest) {
 
       const numeroPedido = `PED-${String(nextNumber).padStart(4, '0')}`;
 
+      // Default dataVencimento = dataEntrega ?? today + 7d
+      const dataEntregaMs = extractTimestampMs(data.dataEntrega);
+      const baseMs = dataEntregaMs ?? Date.now() + 7 * 24 * 60 * 60 * 1000;
+      const dataVencimento = Timestamp.fromDate(new Date(baseMs));
+
       const pedidoData = {
         numeroPedido,
         publicToken,
@@ -216,6 +225,10 @@ export async function POST(request: NextRequest) {
         dataEntrega: data.dataEntrega || null,
         observacoes: data.observacoes || null,
         observacoesCliente: data.observacoesCliente || null,
+        pagamentos: [],
+        totalPago: 0,
+        dataVencimento,
+        statusPagamento: 'PENDENTE',
         nfStatus: null,
         nfProvider: null,
         nfExternalId: null,

@@ -26,7 +26,8 @@ import { usePedidoOptional } from '@/contexts/PedidoContext'
 const STATUS_TRANSITIONS: Record<PedidoStatus, PedidoStatus[]> = {
   RASCUNHO: ['AGUARDANDO_APROVACAO', 'CANCELADO'],
   AGUARDANDO_APROVACAO: ['CONFIRMADO', 'RASCUNHO', 'CANCELADO'],
-  CONFIRMADO: ['EM_PRODUCAO', 'CANCELADO'],
+  CONFIRMADO: ['AGUARDANDO_PAGAMENTO', 'EM_PRODUCAO', 'CANCELADO'],
+  AGUARDANDO_PAGAMENTO: ['EM_PRODUCAO', 'CONFIRMADO', 'CANCELADO'],
   EM_PRODUCAO: ['PRONTO', 'CANCELADO'],
   PRONTO: ['ENTREGUE', 'CANCELADO'],
   ENTREGUE: [],
@@ -36,6 +37,7 @@ const STATUS_TRANSITIONS: Record<PedidoStatus, PedidoStatus[]> = {
 const TRANSITION_LABELS: Partial<Record<PedidoStatus, string>> = {
   AGUARDANDO_APROVACAO: 'Enviar para Aprovacao',
   CONFIRMADO: 'Confirmar Pedido',
+  AGUARDANDO_PAGAMENTO: 'Aguardar Pagamento',
   EM_PRODUCAO: 'Iniciar Producao',
   PRONTO: 'Marcar como Pronto',
   ENTREGUE: 'Marcar como Entregue',
