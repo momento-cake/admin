@@ -26,13 +26,23 @@ function buildOutboxRefMock(initial: OutboxState) {
     }),
   };
 
+  type TxSnapshot = {
+    exists: boolean;
+    data: () => OutboxState | undefined;
+    id: string;
+  };
+
   const transactionApi = {
-    get: vi.fn(async (_ref: unknown) => ({
-      exists: true,
-      data: () => ({ ...state }),
-      id: ref.id,
-    })),
-    update: vi.fn((_ref: unknown, data: Record<string, unknown>) => {
+    get: vi.fn(async (docRef: unknown): Promise<TxSnapshot> => {
+      void docRef;
+      return {
+        exists: true,
+        data: () => ({ ...state }),
+        id: 'outbox-1',
+      };
+    }),
+    update: vi.fn((docRef: unknown, data: Record<string, unknown>) => {
+      void docRef;
       state = { ...state, ...(data as Partial<OutboxState>) };
       writeLog.push({ kind: 'tx-update', data });
     }),
@@ -136,11 +146,14 @@ describe('processOutboxItem', () => {
   });
 
   it('skips when status is already non-pending (race lost)', async () => {
-    outbox.transactionApi.get = vi.fn(async () => ({
-      exists: true,
-      data: () => ({ ...outbox.state(), status: 'sending' }),
-      id: outbox.ref.id,
-    }));
+    outbox.transactionApi.get = vi.fn(async (ref: unknown) => {
+      void ref;
+      return {
+        exists: true,
+        data: () => ({ ...outbox.state(), status: 'sending' as const }),
+        id: outbox.ref.id,
+      };
+    });
 
     const result = await processOutboxItem(
       env.db as unknown as FirebaseFirestore.Firestore,
@@ -171,11 +184,14 @@ describe('processOutboxItem', () => {
   });
 
   it('returns "skipped" when the doc no longer exists', async () => {
-    outbox.transactionApi.get = vi.fn(async () => ({
-      exists: false,
-      data: () => undefined,
-      id: outbox.ref.id,
-    }));
+    outbox.transactionApi.get = vi.fn(async (ref: unknown) => {
+      void ref;
+      return {
+        exists: false,
+        data: () => undefined,
+        id: outbox.ref.id,
+      };
+    });
 
     const result = await processOutboxItem(
       env.db as unknown as FirebaseFirestore.Firestore,

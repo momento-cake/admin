@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { useFirestoreAuthState } from '../auth-state.js';
+import { createFirestoreAuthState } from '../auth-state.js';
 
 interface DocStore {
   creds?: Record<string, unknown>; // mirrors what was passed via .set as `creds: <obj>`
@@ -13,7 +13,8 @@ function buildDb(store: DocStore) {
       exists: store.creds !== undefined,
       data: () => (store.creds ? { creds: store.creds } : undefined),
     })),
-    set: vi.fn(async (data: { creds: Record<string, unknown> }, _opts?: { merge?: boolean }) => {
+    set: vi.fn(async (data: { creds: Record<string, unknown> }, opts?: { merge?: boolean }) => {
+      void opts;
       store.creds = data.creds as Record<string, unknown>;
     }),
   };
@@ -38,13 +39,16 @@ function buildDb(store: DocStore) {
     collection: vi.fn((name: string) => {
       if (name === 'whatsapp_sessions') {
         return {
-          doc: vi.fn((_instanceId: string) => ({
-            ...sessionDocRef,
-            collection: vi.fn((sub: string) => {
-              if (sub === 'keys') return keysCollection;
-              throw new Error(`Unexpected subcollection: ${sub}`);
-            }),
-          })),
+          doc: vi.fn((instanceId: string) => {
+            void instanceId;
+            return {
+              ...sessionDocRef,
+              collection: vi.fn((sub: string) => {
+                if (sub === 'keys') return keysCollection;
+                throw new Error(`Unexpected subcollection: ${sub}`);
+              }),
+            };
+          }),
         };
       }
       throw new Error(`Unexpected top collection: ${name}`);
@@ -52,7 +56,7 @@ function buildDb(store: DocStore) {
   };
 }
 
-describe('useFirestoreAuthState', () => {
+describe('createFirestoreAuthState', () => {
   let store: DocStore;
   let db: ReturnType<typeof buildDb>;
 
@@ -62,7 +66,7 @@ describe('useFirestoreAuthState', () => {
   });
 
   it('returns initial creds when no doc exists', async () => {
-    const { state } = await useFirestoreAuthState(
+    const { state } = await createFirestoreAuthState(
       db as unknown as FirebaseFirestore.Firestore,
       'primary',
     );
@@ -72,7 +76,7 @@ describe('useFirestoreAuthState', () => {
   });
 
   it('saveCreds writes serialized creds to Firestore', async () => {
-    const { state, saveCreds } = await useFirestoreAuthState(
+    const { state, saveCreds } = await createFirestoreAuthState(
       db as unknown as FirebaseFirestore.Firestore,
       'primary',
     );
@@ -85,7 +89,7 @@ describe('useFirestoreAuthState', () => {
   });
 
   it('round-trips creds (write then read returns equivalent shape)', async () => {
-    const { state, saveCreds } = await useFirestoreAuthState(
+    const { state, saveCreds } = await createFirestoreAuthState(
       db as unknown as FirebaseFirestore.Firestore,
       'primary',
     );
@@ -93,7 +97,7 @@ describe('useFirestoreAuthState', () => {
     await saveCreds();
 
     // Re-load:
-    const reloaded = await useFirestoreAuthState(
+    const reloaded = await createFirestoreAuthState(
       db as unknown as FirebaseFirestore.Firestore,
       'primary',
     );
@@ -101,7 +105,7 @@ describe('useFirestoreAuthState', () => {
   });
 
   it('keys.set writes key data, keys.get reads it back', async () => {
-    const { state } = await useFirestoreAuthState(
+    const { state } = await createFirestoreAuthState(
       db as unknown as FirebaseFirestore.Firestore,
       'primary',
     );
@@ -109,7 +113,7 @@ describe('useFirestoreAuthState', () => {
     // Baileys SignalKeyStore interface:
     await state.keys.set({
       'pre-key': {
-        '1': { keyId: 1, public: Buffer.from([1, 2, 3]), private: Buffer.from([4, 5, 6]) },
+        '1': { public: Buffer.from([1, 2, 3]), private: Buffer.from([4, 5, 6]) },
       },
     });
 
@@ -118,14 +122,14 @@ describe('useFirestoreAuthState', () => {
   });
 
   it('keys.set with null value deletes the key', async () => {
-    const { state } = await useFirestoreAuthState(
+    const { state } = await createFirestoreAuthState(
       db as unknown as FirebaseFirestore.Firestore,
       'primary',
     );
 
     await state.keys.set({
       'pre-key': {
-        '1': { keyId: 1, public: Buffer.from([1, 2, 3]), private: Buffer.from([4, 5, 6]) },
+        '1': { public: Buffer.from([1, 2, 3]), private: Buffer.from([4, 5, 6]) },
       },
     });
     await state.keys.set({ 'pre-key': { '1': null } });

@@ -23,7 +23,7 @@ import { Boom } from '@hapi/boom';
 
 import { initFirestore } from './firestore.js';
 import { acquireLease, LeaseHeldError } from './lease.js';
-import { useFirestoreAuthState } from './auth-state.js';
+import { createFirestoreAuthState } from './auth-state.js';
 import { handleIncomingMessage } from './inbound.js';
 import { subscribeToOutbox } from './outbound.js';
 import { clearQR, emitQR, heartbeat, updateStatus } from './status.js';
@@ -90,7 +90,7 @@ async function main(): Promise<void> {
   }
 
   // 2. Set up auth state and Baileys socket.
-  const { state, saveCreds } = await useFirestoreAuthState(db, instanceId);
+  const { state, saveCreds } = await createFirestoreAuthState(db, instanceId);
   const { version } = await fetchLatestBaileysVersion();
 
   let sock = makeWASocket({

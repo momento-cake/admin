@@ -43,7 +43,7 @@ export interface FirestoreAuthState {
   saveCreds: () => Promise<void>;
 }
 
-export async function useFirestoreAuthState(
+export async function createFirestoreAuthState(
   db: Firestore,
   instanceId: string,
 ): Promise<FirestoreAuthState> {

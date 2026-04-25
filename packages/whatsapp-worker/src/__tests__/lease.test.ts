@@ -14,10 +14,13 @@ function makeFirestoreMock(initial?: Record<string, unknown>) {
       exists: docState.data !== undefined,
       data: () => docState.data,
     })) as (ref: unknown) => Promise<DocSnapshot>,
-    set: vi.fn((_ref: unknown, value: Record<string, unknown>, _opts?: unknown) => {
+    set: vi.fn((ref: unknown, value: Record<string, unknown>, opts?: unknown) => {
+      void ref;
+      void opts;
       docState.data = { ...(docState.data ?? {}), ...value };
     }),
-    update: vi.fn((_ref: unknown, value: Record<string, unknown>) => {
+    update: vi.fn((ref: unknown, value: Record<string, unknown>) => {
+      void ref;
       docState.data = { ...(docState.data ?? {}), ...value };
     }),
   };
