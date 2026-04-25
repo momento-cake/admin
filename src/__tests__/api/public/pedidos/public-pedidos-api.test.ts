@@ -206,7 +206,7 @@ describe('Public Pedidos API', () => {
       expect(data.success).toBe(false);
     });
 
-    it('should return 200 and update status for AGUARDANDO_APROVACAO orders', async () => {
+    it('should return 200 and transition status to AGUARDANDO_PAGAMENTO for AGUARDANDO_APROVACAO orders', async () => {
       const pedidoData = createPedidoData({ status: 'AGUARDANDO_APROVACAO' });
       const mockDocRef = { id: 'pedido-1' };
       mockGet.mockResolvedValue({
@@ -234,10 +234,10 @@ describe('Public Pedidos API', () => {
 
       expect(response.status).toBe(200);
       expect(data.success).toBe(true);
-      expect(data.data.status).toBe('CONFIRMADO');
+      expect(data.data.status).toBe('AGUARDANDO_PAGAMENTO');
       expect(mockUpdate).toHaveBeenCalledWith(
         mockDocRef,
-        expect.objectContaining({ status: 'CONFIRMADO' })
+        expect.objectContaining({ status: 'AGUARDANDO_PAGAMENTO' })
       );
     });
 

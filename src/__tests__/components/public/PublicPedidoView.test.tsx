@@ -268,13 +268,13 @@ describe('PublicPedidoView', () => {
   })
 
   describe('Confirm Button (AGUARDANDO_APROVACAO)', () => {
-    it('shows "Confirmar Pedido" button for AGUARDANDO_APROVACAO status', () => {
+    it('shows the confirm-and-pay button for AGUARDANDO_APROVACAO status', () => {
       const pedido = createMockPedido({ status: 'AGUARDANDO_APROVACAO' })
       render(
         <PublicPedidoView pedido={pedido} token="test-token" onPedidoUpdate={mockOnPedidoUpdate} />
       )
 
-      expect(screen.getByRole('button', { name: /confirmar pedido/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /confirmar e ir para pagamento/i })).toBeInTheDocument()
     })
 
     it('does NOT show confirm button for CONFIRMADO status', () => {
@@ -283,7 +283,7 @@ describe('PublicPedidoView', () => {
         <PublicPedidoView pedido={pedido} token="test-token" onPedidoUpdate={mockOnPedidoUpdate} />
       )
 
-      expect(screen.queryByRole('button', { name: /confirmar pedido/i })).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: /confirmar e ir para pagamento/i })).not.toBeInTheDocument()
     })
 
     it('calls API and updates state on successful confirmation', async () => {
@@ -300,7 +300,7 @@ describe('PublicPedidoView', () => {
         <PublicPedidoView pedido={pedido} token="test-token-abc" onPedidoUpdate={mockOnPedidoUpdate} />
       )
 
-      const confirmButton = screen.getByRole('button', { name: /confirmar pedido/i })
+      const confirmButton = screen.getByRole('button', { name: /confirmar e ir para pagamento/i })
       await user.click(confirmButton)
 
       await waitFor(() => {
@@ -331,7 +331,7 @@ describe('PublicPedidoView', () => {
         <PublicPedidoView pedido={pedido} token="test-token" onPedidoUpdate={mockOnPedidoUpdate} />
       )
 
-      const confirmButton = screen.getByRole('button', { name: /confirmar pedido/i })
+      const confirmButton = screen.getByRole('button', { name: /confirmar e ir para pagamento/i })
       await user.click(confirmButton)
 
       // Should show loading text
@@ -364,7 +364,7 @@ describe('PublicPedidoView', () => {
         <PublicPedidoView pedido={pedido} token="test-token" onPedidoUpdate={mockOnPedidoUpdate} />
       )
 
-      const confirmButton = screen.getByRole('button', { name: /confirmar pedido/i })
+      const confirmButton = screen.getByRole('button', { name: /confirmar e ir para pagamento/i })
       await user.click(confirmButton)
 
       await waitFor(() => {
@@ -374,13 +374,13 @@ describe('PublicPedidoView', () => {
   })
 
   describe('Confirmed State Display', () => {
-    it('shows confirmed success banner for CONFIRMADO status', () => {
+    it('shows payment-confirmed success banner for CONFIRMADO status', () => {
       const pedido = createMockPedido({ status: 'CONFIRMADO' })
       render(
         <PublicPedidoView pedido={pedido} token="test-token" onPedidoUpdate={mockOnPedidoUpdate} />
       )
 
-      expect(screen.getByText(/pedido confirmado/i)).toBeInTheDocument()
+      expect(screen.getByText(/pagamento confirmado/i)).toBeInTheDocument()
     })
 
     it('shows green checkmark for CONFIRMADO status', () => {

@@ -1,9 +1,26 @@
 import { Timestamp } from 'firebase/firestore';
 import { Address } from '@/types/client';
+import type {
+  PedidoBilling as PaymentsPedidoBilling,
+  PedidoPaymentSession as PaymentsPedidoPaymentSession,
+} from '@/lib/payments/types';
 
 // Re-export store settings types so consumers can import from either file
 export type { StoreAddress, StoreSettings, StoreHours } from '@/types/store-settings';
 export { DIAS_SEMANA } from '@/types/store-settings';
+
+/**
+ * Customer billing snapshot captured during the public checkout (CPF/CNPJ etc.).
+ * Re-exported from `@/lib/payments/types` so Pedido consumers can refer to it
+ * via the same module that owns the rest of the Pedido shape.
+ */
+export type PedidoBilling = PaymentsPedidoBilling;
+
+/**
+ * In-flight payment session attached to a pedido (PIX or card via Asaas).
+ * Re-exported from `@/lib/payments/types` for the same reason as `PedidoBilling`.
+ */
+export type PedidoPaymentSession = PaymentsPedidoPaymentSession;
 
 // ============================================================================
 // ENUMS / TYPE UNIONS
@@ -215,6 +232,10 @@ export interface Pedido {
   nfProvider?: string | null;
   nfExternalId?: string | null;
   nfEmittedAt?: Timestamp | null;
+
+  // Customer self-service checkout
+  billing?: PedidoBilling;
+  paymentSession?: PedidoPaymentSession;
 
   // Metadata
   isActive: boolean;

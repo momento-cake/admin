@@ -17,7 +17,9 @@ const DIAS_SEMANA_DEFAULTS = [
 ];
 
 // POST /api/public/pedidos/[token]/confirmar - Confirm a pedido by public token (no auth required)
-// Only allows confirmation of orders with status AGUARDANDO_APROVACAO
+// Only allows confirmation of orders with status AGUARDANDO_APROVACAO. The
+// pedido transitions to AGUARDANDO_PAGAMENTO so the customer can complete the
+// online checkout (billing data + PIX/cartão) before we mark it CONFIRMADO.
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ token: string }> }
@@ -61,7 +63,7 @@ export async function POST(
       }
 
       transaction.update(docRef, {
-        status: 'CONFIRMADO',
+        status: 'AGUARDANDO_PAGAMENTO',
         updatedAt: FieldValue.serverTimestamp(),
       });
 
@@ -138,7 +140,7 @@ export async function POST(
       id: docRef.id,
       numeroPedido: data.numeroPedido,
       clienteNome: data.clienteNome,
-      status: 'CONFIRMADO',
+      status: 'AGUARDANDO_PAGAMENTO',
       orcamento: activeOrcamento || null,
       entrega: data.entrega,
       dataEntrega: data.dataEntrega || null,
