@@ -120,3 +120,9 @@ competitor/
 # Competitor test files
 tests/appmaya-*.spec.ts
 tests/competitor-*.spec.ts
+
+# Worker package build outputs and dependencies
+packages/*/dist/
+packages/*/node_modules/
+packages/*/coverage/
+packages/*/*.tsbuildinfo

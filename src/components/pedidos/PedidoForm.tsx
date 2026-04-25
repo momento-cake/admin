@@ -27,6 +27,11 @@ import { RevisaoStep } from './creation/RevisaoStep'
 
 interface PedidoFormProps {
   mode?: 'create' | 'edit'
+  initialClienteId?: string
+  initialClienteNome?: string
+  initialClienteTelefone?: string
+  onCreated?: (pedido: { id: string; numeroPedido: string }) => void
+  redirectOnSuccess?: boolean
 }
 
 const STEPS = [
@@ -37,7 +42,14 @@ const STEPS = [
   { label: 'Revisão', icon: <ClipboardCheck className="h-4 w-4" /> },
 ]
 
-export function PedidoForm({ mode = 'create' }: PedidoFormProps) {
+export function PedidoForm({
+  mode = 'create',
+  initialClienteId,
+  initialClienteNome,
+  initialClienteTelefone,
+  onCreated,
+  redirectOnSuccess = true,
+}: PedidoFormProps) {
   const router = useRouter()
 
   // Step navigation
@@ -52,7 +64,11 @@ export function PedidoForm({ mode = 'create' }: PedidoFormProps) {
     id: string
     nome: string
     telefone?: string
-  } | null>(null)
+  } | null>(
+    initialClienteId && initialClienteNome
+      ? { id: initialClienteId, nome: initialClienteNome, telefone: initialClienteTelefone }
+      : null
+  )
 
   // Items
   const [items, setItems] = useState<PedidoItem[]>([])
@@ -276,7 +292,13 @@ export function PedidoForm({ mode = 'create' }: PedidoFormProps) {
         description: `Pedido ${result.data.numeroPedido} criado`,
       })
 
-      router.push('/orders')
+      if (onCreated) {
+        onCreated({ id: result.data.id, numeroPedido: result.data.numeroPedido })
+      }
+
+      if (redirectOnSuccess) {
+        router.push('/orders')
+      }
     } catch (error) {
       const message = formatErrorMessage(error)
       setSubmitError(message)

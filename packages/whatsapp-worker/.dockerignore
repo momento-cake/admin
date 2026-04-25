@@ -1,0 +1,12 @@
+node_modules
+dist
+.env
+.env.*
+*.log
+coverage
+.vitest-cache
+.git
+src/__tests__
+*.tsbuildinfo
+README.md
+.DS_Store

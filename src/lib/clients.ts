@@ -13,6 +13,7 @@ import {
   DocumentSnapshot
 } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
+import { normalizePhone } from '@/lib/phone'
 import {
   Client,
   PersonalClient,
@@ -555,4 +556,52 @@ export async function fetchSpecialDatesForDashboard(): Promise<Client[]> {
     console.error('Error fetching clients for special dates dashboard:', error)
     throw new Error('Erro ao buscar clientes para o dashboard de datas especiais')
   }
+}
+
+/**
+ * Find an active client whose phone (top-level or in contactMethods) matches.
+ *
+ * Phone numbers in the clients collection are stored in many shapes (formatted,
+ * raw, with or without +55, on the top-level `phone` field or inside
+ * `contactMethods[].value` for type 'phone' or 'whatsapp'). To match reliably
+ * we fetch every active client, normalize each candidate value, and compare to
+ * the normalized target.
+ *
+ * If multiple clients carry the same phone, returns the most recently updated
+ * (falling back to createdAt). Callers should consider phone non-unique and
+ * surface ambiguity to the UI when relevant.
+ */
+export async function findClientByPhone(phone: string): Promise<Client | null> {
+  const target = normalizePhone(phone)
+  if (!target) return null
+
+  const clientsQuery = query(
+    collection(db, COLLECTION_NAME),
+    where('isActive', '==', true)
+  )
+
+  const snapshot = await getDocs(clientsQuery)
+  const clients = snapshot.docs.map(docToClient)
+
+  const phoneTypes: ContactMethod['type'][] = ['phone', 'whatsapp']
+
+  const matches = clients.filter((client) => {
+    if (client.phone && normalizePhone(client.phone) === target) return true
+    return client.contactMethods.some((cm) => {
+      if (!phoneTypes.includes(cm.type)) return false
+      return normalizePhone(cm.value) === target
+    })
+  })
+
+  if (matches.length === 0) return null
+  if (matches.length === 1) return matches[0]
+
+  const sortValue = (c: Client) => {
+    const ts = c.updatedAt ?? c.createdAt
+    return ts ? ts.seconds : 0
+  }
+
+  return matches.reduce((latest, candidate) =>
+    sortValue(candidate) > sortValue(latest) ? candidate : latest
+  )
 }

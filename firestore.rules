@@ -348,6 +348,55 @@ service cloud.firestore {
       }
     }
     
+    // WhatsApp collections - Inbox + chat-to-pedido feature
+    //
+    // The worker (packages/whatsapp-worker) uses the Firebase Admin SDK, which
+    // bypasses these rules entirely. Client-side access from the admin app is
+    // gated by 'whatsapp' feature permission via canPerformActionFromRequest()
+    // in API routes. These Firestore rules enforce only the coarse role-level
+    // access (admin and atendente).
+
+    // whatsapp_sessions: Baileys auth state. Sensitive (signal protocol keys).
+    // Worker writes via Admin SDK; clients have NO access.
+    match /whatsapp_sessions/{instanceId} {
+      allow read, write: if false;
+      match /keys/{keyId} {
+        allow read, write: if false;
+      }
+    }
+
+    // whatsapp_status: connection state + QR code for the settings page.
+    // Read by admin/atendente; written by worker (Admin SDK).
+    match /whatsapp_status/{instanceId} {
+      allow read: if isAdminOrAtendente();
+      allow write: if false;
+    }
+
+    // whatsapp_conversations: one doc per phone number.
+    // Read by admin/atendente. Update allowed for linking clients
+    // (clienteId, clienteNome) and resetting unreadCount; create/delete only via
+    // Admin SDK (worker upserts on incoming messages).
+    match /whatsapp_conversations/{conversationId} {
+      allow read: if isAdminOrAtendente();
+      allow update: if isAdminOrAtendente();
+      allow create, delete: if false;
+    }
+
+    // whatsapp_messages: flat collection of all messages, both directions.
+    // Read by admin/atendente. Worker writes via Admin SDK.
+    match /whatsapp_messages/{messageId} {
+      allow read: if isAdminOrAtendente();
+      allow write: if false;
+    }
+
+    // whatsapp_outbox: outgoing message queue.
+    // Admin/atendente create messages; worker drains via Admin SDK.
+    // No client-side updates (status transitions are worker-driven).
+    match /whatsapp_outbox/{outboxId} {
+      allow read, create: if isAdminOrAtendente();
+      allow update, delete: if false;
+    }
+
     // System collections (admin only)
     match /system/{document=**} {
       allow read, write: if isAdmin();
