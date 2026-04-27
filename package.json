@@ -2,6 +2,9 @@
   "name": "admin",
   "version": "0.1.0",
   "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "dev": "next dev --turbopack -p 4000",
     "dev:debug": "NODE_OPTIONS='--inspect' next dev --turbopack",
@@ -34,7 +37,8 @@
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:debug": "playwright test --debug",
     "test:e2e:headed": "playwright test --headed",
-    "test:e2e:ingredients": "playwright test tests/ingredients/"
+    "test:e2e:ingredients": "playwright test tests/ingredients/",
+    "whatsapp:worker:dev": "npm run dev -w @momentocake/whatsapp-worker"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.1",

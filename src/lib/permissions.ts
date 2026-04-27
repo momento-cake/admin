@@ -19,7 +19,8 @@ export type FeatureKey =
   | 'reports'
   | 'settings'
   | 'images'
-  | 'time_tracking';
+  | 'time_tracking'
+  | 'whatsapp';
 
 /**
  * Action types for granular permission control
@@ -70,6 +71,7 @@ export const FEATURE_METADATA: FeatureMetadata[] = [
   { key: 'reports', label: 'Relatórios', description: 'Relatórios e análises', availableActions: ['view'] },
   { key: 'settings', label: 'Configurações', description: 'Configurações do sistema', availableActions: ['view', 'update'] },
   { key: 'time_tracking', label: 'Controle de Ponto', description: 'Registro e gestão de ponto dos funcionários', availableActions: ['view', 'create', 'update', 'delete'] },
+  { key: 'whatsapp', label: 'WhatsApp', description: 'Conversas e atendimento via WhatsApp', availableActions: ['view', 'create', 'update', 'delete'] },
 ];
 
 /**
@@ -101,6 +103,7 @@ export const DEFAULT_ATENDENTE_PERMISSIONS: CustomPermissions = {
   images: { enabled: true, actions: ['view', 'create', 'update'] },
   orders: { enabled: true, actions: ['view', 'create', 'update'] },
   time_tracking: { enabled: true, actions: ['view', 'create', 'update'] },
+  whatsapp: { enabled: true, actions: ['view', 'create', 'update'] },
   // All other features are disabled by default for atendente
 };
 
@@ -120,7 +123,7 @@ export const DEFAULT_PRODUCAO_PERMISSIONS: CustomPermissions = {
 export const ALL_FEATURES: FeatureKey[] = [
   'dashboard', 'users', 'clients', 'ingredients', 'recipes',
   'products', 'packaging', 'images', 'orders', 'reports', 'settings',
-  'time_tracking'
+  'time_tracking', 'whatsapp'
 ];
 
 // ============================================================================
@@ -165,6 +168,8 @@ export const PATH_TO_FEATURE: Record<string, FeatureKey> = {
   '/ponto/espelho': 'time_tracking',
   '/ponto/admin': 'time_tracking',
   '/ponto/configuracoes': 'time_tracking',
+  '/whatsapp': 'whatsapp',
+  '/whatsapp/settings': 'whatsapp',
 };
 
 // ============================================================================

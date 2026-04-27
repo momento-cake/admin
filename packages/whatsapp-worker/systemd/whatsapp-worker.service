@@ -1,0 +1,22 @@
+[Unit]
+Description=WhatsApp Baileys Worker
+After=docker.service
+Requires=docker.service
+
+[Service]
+Restart=unless-stopped
+# RestartSec sits just above the 60s lease TTL so a scheduled restart never races
+# the worker against its own stale lock; see packages/whatsapp-worker/src/lease.ts.
+RestartSec=120
+ExecStartPre=-/usr/bin/docker rm -f whatsapp-worker
+ExecStart=/usr/bin/docker run --rm --name whatsapp-worker \
+  -v /opt/whatsapp-worker/service-account.json:/app/service-account.json:ro \
+  -e GOOGLE_APPLICATION_CREDENTIALS=/app/service-account.json \
+  -e FIREBASE_PROJECT_ID=momentocake-admin-dev \
+  -e WHATSAPP_INSTANCE_ID=primary \
+  -e LOG_LEVEL=info \
+  -e NODE_ENV=production \
+  whatsapp-worker:latest
+
+[Install]
+WantedBy=multi-user.target

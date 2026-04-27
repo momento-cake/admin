@@ -32,7 +32,8 @@ import {
   MapPin,
   ShoppingCart,
   Plus,
-  LayoutGrid
+  LayoutGrid,
+  MessageCircle
 } from 'lucide-react'
 
 interface NavSubmenuItem {
@@ -165,6 +166,24 @@ const navigation: NavItem[] = [
         name: 'Novo Pedido',
         href: '/orders/new',
         icon: Plus
+      }
+    ]
+  },
+  {
+    name: 'WhatsApp',
+    icon: MessageCircle,
+    feature: 'whatsapp',
+    hasSubmenu: true,
+    submenu: [
+      {
+        name: 'Conversas',
+        href: '/whatsapp',
+        icon: MessageCircle
+      },
+      {
+        name: 'Configuração',
+        href: '/whatsapp/settings',
+        icon: Settings
       }
     ]
   },
