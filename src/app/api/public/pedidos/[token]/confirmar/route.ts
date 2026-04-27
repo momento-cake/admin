@@ -1,8 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 
 const PEDIDOS_COLLECTION = 'pedidos';
+
+function rateLimited(retryAfterMs: number) {
+  return NextResponse.json(
+    {
+      success: false,
+      error: 'Muitas tentativas. Tente novamente em alguns instantes.',
+    },
+    {
+      status: 429,
+      headers: { 'Retry-After': String(Math.ceil(retryAfterMs / 1000)) },
+    },
+  );
+}
 const STORE_ADDRESSES_COLLECTION = 'storeAddresses';
 const STORE_HOURS_COLLECTION = 'storeHours';
 
@@ -33,6 +47,13 @@ export async function POST(
         { status: 400 }
       );
     }
+
+    const limit = checkRateLimit({
+      key: `confirmar:${getClientIp(request)}:${token}`,
+      max: 3,
+      windowMs: 60_000,
+    });
+    if (!limit.ok) return rateLimited(limit.retryAfterMs);
 
     const snapshot = await adminDb
       .collection(PEDIDOS_COLLECTION)

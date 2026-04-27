@@ -22,6 +22,7 @@ vi.mock('firebase-admin/firestore', () => ({
 }));
 
 import { POST } from '@/app/api/public/pedidos/[token]/confirmar/route';
+import { resetRateLimitForTesting } from '@/lib/rate-limit';
 
 function createParams(token: string) {
   return { params: Promise.resolve({ token }) };
@@ -53,6 +54,7 @@ const pedidoData = {
 describe('POST /api/public/pedidos/[token]/confirmar — checkout transition', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resetRateLimitForTesting();
 
     mockCollection.mockImplementation((name: string) => {
       if (name === 'pedidos') return { where: mockWhere };
@@ -100,5 +102,43 @@ describe('POST /api/public/pedidos/[token]/confirmar — checkout transition', (
       docRef,
       expect.objectContaining({ status: 'AGUARDANDO_PAGAMENTO' }),
     );
+  });
+
+  it('rate-limits to 3 requests per minute per ip+token', async () => {
+    const docRef = { id: 'p1' };
+    mockGet.mockResolvedValue({
+      empty: false,
+      docs: [{ id: 'p1', ref: docRef, data: () => pedidoData }],
+    });
+    mockRunTransaction.mockImplementation(async (cb: (t: any) => Promise<any>) => {
+      const transaction = {
+        get: vi.fn().mockResolvedValue({
+          exists: true,
+          data: () => pedidoData,
+        }),
+        update: mockUpdate,
+      };
+      return cb(transaction);
+    });
+
+    function makeReqWithIp(ip: string) {
+      return new NextRequest(
+        `http://localhost:4000/api/public/pedidos/${VALID_TOKEN}/confirmar`,
+        { method: 'POST', headers: { 'x-forwarded-for': ip } },
+      );
+    }
+    for (let i = 0; i < 3; i++) {
+      const res = await POST(makeReqWithIp('4.4.4.4'), createParams(VALID_TOKEN));
+      expect(res.status).toBe(200);
+    }
+    const blocked = await POST(makeReqWithIp('4.4.4.4'), createParams(VALID_TOKEN));
+    expect(blocked.status).toBe(429);
+    const body = await blocked.json();
+    expect(body.error).toMatch(/Muitas tentativas/i);
+    expect(blocked.headers.get('Retry-After')).toBeTruthy();
+
+    resetRateLimitForTesting();
+    const ok = await POST(makeReqWithIp('4.4.4.4'), createParams(VALID_TOKEN));
+    expect(ok.status).toBe(200);
   });
 });

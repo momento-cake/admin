@@ -52,6 +52,21 @@ export async function PATCH(
     }
 
     const pedidoDoc = snapshot.docs[0];
+    const data = pedidoDoc.data();
+
+    // Entrega is the customer's pre-confirmation choice. Once they confirm
+    // (status = AGUARDANDO_PAGAMENTO) or the pedido is confirmed (CONFIRMADO),
+    // the address is locked — otherwise a customer could redirect a paid
+    // delivery after the fact.
+    if (data.status !== 'AGUARDANDO_APROVACAO') {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Pedido já confirmado — endereço não pode mais ser alterado',
+        },
+        { status: 409 }
+      );
+    }
 
     await pedidoDoc.ref.update({
       entrega: validation.data,

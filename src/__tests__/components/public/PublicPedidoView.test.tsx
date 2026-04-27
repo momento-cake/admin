@@ -383,13 +383,19 @@ describe('PublicPedidoView', () => {
       expect(screen.getByText(/pagamento confirmado/i)).toBeInTheDocument()
     })
 
-    it('shows green checkmark for CONFIRMADO status', () => {
+    it('shows the confirmation success card with role=status for CONFIRMADO', () => {
       const pedido = createMockPedido({ status: 'CONFIRMADO' })
       render(
         <PublicPedidoView pedido={pedido} token="test-token" onPedidoUpdate={mockOnPedidoUpdate} />
       )
 
-      expect(screen.getByTestId('check-circle-icon')).toBeInTheDocument()
+      // The success card lives in PublicPaymentSuccess and is a live region.
+      // The previous design used CheckCircle2; the redesigned wax-seal uses
+      // the lucide `Check` icon inside a custom disc, so we assert on the
+      // user-visible behavior (live status + the success heading) instead.
+      const status = screen.getByRole('status')
+      expect(status).toBeInTheDocument()
+      expect(status.textContent).toMatch(/pagamento confirmado/i)
     })
 
     it('still shows all order details when confirmed', () => {

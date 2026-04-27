@@ -278,6 +278,12 @@ service cloud.firestore {
     }
 
     // Pedidos collection - Order management
+    // NOTE: Public-token customer access (PIX/card checkout) is intentionally
+    // bypassed via the Admin SDK in src/app/api/public/pedidos/**; the public
+    // token lives in the request body, so these rules CANNOT enforce it and
+    // MUST NOT be relied on for token-based access control. Any future
+    // client-side query against /pedidos MUST come from an authenticated
+    // admin/atendente user — never expose this collection to anon clients.
     match /pedidos/{pedidoId} {
       allow read: if isViewer();
       allow create: if isAdmin() || (isUserActive());

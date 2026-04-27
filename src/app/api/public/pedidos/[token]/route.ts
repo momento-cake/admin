@@ -125,6 +125,18 @@ export async function GET(
     const lastPagamento = pagamentos[pagamentos.length - 1];
     const paidAt = lastPagamento?.data ?? null;
 
+    // LGPD: never echo CPF/CNPJ back to the public client. The customer
+    // doesn't need their own document re-displayed; only the metadata
+    // (nome/email/telefone/confirmedAt) is useful for "your billing details
+    // on file" UX.
+    const rawBilling = data.billing as Record<string, unknown> | undefined;
+    let safeBilling: Record<string, unknown> | null = null;
+    if (rawBilling) {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { cpfCnpj, ...rest } = rawBilling;
+      safeBilling = rest;
+    }
+
     // Build public-safe response (exclude internal data)
     const publicPedido = {
       id: doc.id,
@@ -136,7 +148,7 @@ export async function GET(
       dataEntrega: data.dataEntrega || null,
       observacoesCliente: data.observacoesCliente || null,
       createdAt: data.createdAt,
-      billing: data.billing || null,
+      billing: safeBilling,
       paymentSession,
       paidAt,
       storeAddresses,

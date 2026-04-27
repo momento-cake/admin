@@ -19,6 +19,7 @@ vi.mock('firebase-admin/firestore', () => ({
 }));
 
 import { PATCH } from '@/app/api/public/pedidos/[token]/billing/route';
+import { resetRateLimitForTesting } from '@/lib/rate-limit';
 
 function makeReq(token: string, body: unknown) {
   return new NextRequest(`http://localhost:4000/api/public/pedidos/${token}/billing`, {
@@ -44,6 +45,7 @@ const VALID_BODY = {
 describe('PATCH /api/public/pedidos/[token]/billing', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resetRateLimitForTesting();
     mockWhere.mockImplementation(() => ({ where: mockWhere, limit: mockLimit, get: mockGet }));
   });
 
@@ -101,12 +103,18 @@ describe('PATCH /api/public/pedidos/[token]/billing', () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.success).toBe(true);
-    expect(body.data.billing.cpfCnpj).toBe(VALID_CPF);
+    // CPF is encrypted at rest (LGPD) — the response echoes the ciphertext,
+    // not the plaintext. Other fields stay in cleartext.
+    expect(body.data.billing.cpfCnpj).toMatch(/^enc:v1:/);
+    expect(body.data.billing.cpfCnpj).not.toBe(VALID_CPF);
     expect(body.data.billing.email).toBe('maria@example.com');
 
     expect(mockUpdate).toHaveBeenCalledTimes(1);
     const payload = mockUpdate.mock.calls[0][0];
-    expect(payload.billing.cpfCnpj).toBe(VALID_CPF);
+    expect(payload.billing.cpfCnpj).toMatch(/^enc:v1:/);
+    expect(payload.billing.cpfCnpj).not.toBe(VALID_CPF);
+    expect(payload.billing.nome).toBe('Maria Silva');
+    expect(payload.billing.email).toBe('maria@example.com');
     expect(payload.billing.confirmedAt).toBe('SERVER_TS');
     expect(payload.updatedAt).toBe('SERVER_TS');
   });
@@ -122,5 +130,44 @@ describe('PATCH /api/public/pedidos/[token]/billing', () => {
     );
     const res = await PATCH(req, createParams(VALID_TOKEN));
     expect(res.status).toBe(400);
+  });
+
+  it('rate-limits to 5 requests per minute per ip+token', async () => {
+    mockGet.mockResolvedValue({
+      empty: false,
+      docs: [
+        {
+          id: 'p1',
+          ref: { update: mockUpdate },
+          data: () => ({ status: 'AGUARDANDO_PAGAMENTO' }),
+        },
+      ],
+    });
+
+    function makeReqWithIp(ip: string) {
+      return new NextRequest(
+        `http://localhost:4000/api/public/pedidos/${VALID_TOKEN}/billing`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify(VALID_BODY),
+          headers: { 'content-type': 'application/json', 'x-forwarded-for': ip },
+        },
+      );
+    }
+
+    for (let i = 0; i < 5; i++) {
+      const res = await PATCH(makeReqWithIp('1.1.1.1'), createParams(VALID_TOKEN));
+      expect(res.status).toBe(200);
+    }
+    const blocked = await PATCH(makeReqWithIp('1.1.1.1'), createParams(VALID_TOKEN));
+    expect(blocked.status).toBe(429);
+    const body = await blocked.json();
+    expect(body.error).toMatch(/Muitas tentativas/i);
+    expect(blocked.headers.get('Retry-After')).toBeTruthy();
+
+    // Reset for testing simulates the window expiring.
+    resetRateLimitForTesting();
+    const ok = await PATCH(makeReqWithIp('1.1.1.1'), createParams(VALID_TOKEN));
+    expect(ok.status).toBe(200);
   });
 });

@@ -47,6 +47,8 @@ vi.mock('@/lib/pedido-payment-record', () => ({
 }));
 
 import { POST } from '@/app/api/public/pedidos/[token]/charge/card/route';
+import { encryptPii } from '@/lib/billing-encryption';
+import { resetRateLimitForTesting } from '@/lib/rate-limit';
 
 const VALID_TOKEN = 'valid-token-1234567890';
 const VALID_CARD_BODY = {
@@ -59,9 +61,11 @@ const VALID_CARD_BODY = {
   },
 };
 
+const PLAIN_CPF = '52998224725';
 const baseBilling = {
   nome: 'Maria Silva',
-  cpfCnpj: '52998224725',
+  // Stored encrypted at rest (LGPD). Routes decrypt before calling provider.
+  cpfCnpj: encryptPii(PLAIN_CPF),
   email: 'maria@example.com',
 };
 
@@ -106,6 +110,7 @@ function seedDoc(data: Record<string, unknown>, id = 'p1') {
 describe('POST /api/public/pedidos/[token]/charge/card', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resetRateLimitForTesting();
     mockWhere.mockImplementation(() => ({ where: mockWhere, limit: mockLimit, get: mockGet }));
     ensureCustomerMock.mockResolvedValue({ providerCustomerId: 'cus_card' });
     createCardChargeMock.mockResolvedValue({
@@ -199,6 +204,12 @@ describe('POST /api/public/pedidos/[token]/charge/card', () => {
     const cardArg = createCardChargeMock.mock.calls[0][1];
     expect(cardArg.remoteIp).toBe('203.0.113.5');
 
+    // LGPD: provider receives PLAINTEXT cpfCnpj on both ensureCustomer and the
+    // holder param of createCardCharge.
+    expect(ensureCustomerMock.mock.calls[0][0].cpfCnpj).toBe(PLAIN_CPF);
+    const holderArg = createCardChargeMock.mock.calls[0][2];
+    expect(holderArg.cpfCnpj).toBe(PLAIN_CPF);
+
     expect(recordChargeMock).not.toHaveBeenCalled();
   });
 
@@ -220,7 +231,7 @@ describe('POST /api/public/pedidos/[token]/charge/card', () => {
     });
     recordChargeMock.mockResolvedValue({
       kind: 'recorded',
-      eventId: 'card-pay_card',
+      eventId: 'immediate-card-pay_card',
       pagamentoId: 'pg-1',
       totalPago: 250,
       statusPagamento: 'PAGO',
@@ -242,5 +253,51 @@ describe('POST /api/public/pedidos/[token]/charge/card', () => {
     expect(event.chargeId).toBe('pay_card');
     expect(event.externalReference).toBe('p1');
     expect(event.paymentMethod).toBe('CARTAO_CREDITO');
+  });
+
+  it('rate-limits to 5 requests per minute per ip+token', async () => {
+    seedDoc(baseData());
+    for (let i = 0; i < 5; i++) {
+      const res = await POST(
+        makeReq(VALID_TOKEN, VALID_CARD_BODY, { 'x-forwarded-for': '3.3.3.3' }),
+        createParams(VALID_TOKEN),
+      );
+      expect(res.status).toBe(200);
+    }
+    const blocked = await POST(
+      makeReq(VALID_TOKEN, VALID_CARD_BODY, { 'x-forwarded-for': '3.3.3.3' }),
+      createParams(VALID_TOKEN),
+    );
+    expect(blocked.status).toBe(429);
+    expect(blocked.headers.get('Retry-After')).toBeTruthy();
+
+    resetRateLimitForTesting();
+    const ok = await POST(
+      makeReq(VALID_TOKEN, VALID_CARD_BODY, { 'x-forwarded-for': '3.3.3.3' }),
+      createParams(VALID_TOKEN),
+    );
+    expect(ok.status).toBe(200);
+  });
+
+  it('synthesized event id is prefixed with `immediate-card-` to avoid colliding with real webhook event ids', async () => {
+    createCardChargeMock.mockResolvedValue({
+      chargeId: 'pay_card_xyz',
+      status: 'CONFIRMED',
+      amount: 250,
+    });
+    recordChargeMock.mockResolvedValue({
+      kind: 'recorded',
+      eventId: 'immediate-card-pay_card_xyz',
+      pagamentoId: 'pg-1',
+      totalPago: 250,
+      statusPagamento: 'PAGO',
+      transitionedToConfirmado: true,
+    });
+
+    seedDoc(baseData());
+    await POST(makeReq(VALID_TOKEN, VALID_CARD_BODY), createParams(VALID_TOKEN));
+    const event = recordChargeMock.mock.calls[0][1];
+    expect(event.id).toBe('immediate-card-pay_card_xyz');
+    expect(event.id.startsWith('card-')).toBe(false);
   });
 });

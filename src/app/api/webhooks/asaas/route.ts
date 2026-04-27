@@ -5,6 +5,13 @@ import { recordChargeConfirmation } from '@/lib/pedido-payment-record';
 
 const PEDIDOS_COLLECTION = 'pedidos';
 
+type WebhookOutcome =
+  | 'recorded'
+  | 'idempotent'
+  | 'unknown_pedido'
+  | 'unhandled_status'
+  | 'parse_failed';
+
 // POST /api/webhooks/asaas
 // Asaas webhook receiver. The provider-layer `parseWebhook` is responsible for
 // (a) verifying the access-token header against `ASAAS_WEBHOOK_TOKEN` and
@@ -21,6 +28,12 @@ export async function POST(request: NextRequest) {
     const provider = getPaymentProvider();
     event = provider.parseWebhook(rawBody, request.headers);
     if (!event) {
+      console.info('[asaas-webhook]', {
+        event: undefined,
+        chargeId: undefined,
+        externalReference: undefined,
+        outcome: 'parse_failed' satisfies WebhookOutcome,
+      });
       return NextResponse.json(
         { success: false, error: 'Webhook não autenticado' },
         { status: 401 },
@@ -41,6 +54,12 @@ export async function POST(request: NextRequest) {
         '[asaas-webhook] event without externalReference — ignored',
         { eventId: event.id, chargeId: event.chargeId },
       );
+      console.info('[asaas-webhook]', {
+        event: event.id,
+        chargeId: event.chargeId,
+        externalReference: undefined,
+        outcome: 'unknown_pedido' satisfies WebhookOutcome,
+      });
       return NextResponse.json({
         success: true,
         ignored: 'no_external_reference',
@@ -56,6 +75,12 @@ export async function POST(request: NextRequest) {
         externalReference,
         eventId: event.id,
       });
+      console.info('[asaas-webhook]', {
+        event: event.id,
+        chargeId: event.chargeId,
+        externalReference,
+        outcome: 'unknown_pedido' satisfies WebhookOutcome,
+      });
       return NextResponse.json({
         success: true,
         ignored: 'unknown_pedido',
@@ -66,6 +91,13 @@ export async function POST(request: NextRequest) {
     if (result.kind === 'not_found') {
       // Lost between the .get() above and the transaction read. Treat like
       // unknown_pedido — the doc disappeared.
+      console.info('[asaas-webhook]', {
+        event: event.id,
+        chargeId: event.chargeId,
+        externalReference,
+        outcome: 'unknown_pedido' satisfies WebhookOutcome,
+        pedidoId: pedidoRef.id,
+      });
       return NextResponse.json({
         success: true,
         ignored: 'unknown_pedido',
@@ -73,9 +105,34 @@ export async function POST(request: NextRequest) {
     }
 
     if (result.kind === 'idempotent') {
+      console.info('[asaas-webhook]', {
+        event: event.id,
+        chargeId: event.chargeId,
+        externalReference,
+        outcome: 'idempotent' satisfies WebhookOutcome,
+        pedidoId: pedidoRef.id,
+      });
       return NextResponse.json({ success: true, idempotent: true });
     }
 
+    if (result.kind === 'unhandled_status') {
+      console.info('[asaas-webhook]', {
+        event: event.id,
+        chargeId: event.chargeId,
+        externalReference,
+        outcome: 'unhandled_status' satisfies WebhookOutcome,
+        pedidoId: pedidoRef.id,
+      });
+      return NextResponse.json({ success: true });
+    }
+
+    console.info('[asaas-webhook]', {
+      event: event.id,
+      chargeId: event.chargeId,
+      externalReference,
+      outcome: 'recorded' satisfies WebhookOutcome,
+      pedidoId: pedidoRef.id,
+    });
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('❌ Asaas webhook handling error:', error);

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Loader2, Receipt, AlertCircle } from 'lucide-react'
+import { Loader2, AlertCircle, ArrowRight } from 'lucide-react'
 import { formatCpfCnpj, formatPhone } from '@/lib/masks'
 import { billingSchema } from '@/lib/validators/billing'
 
@@ -34,11 +34,35 @@ function formatCurrency(value: number): string {
   return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
 
-const inputClass =
-  'w-full px-3.5 py-2.5 text-sm border border-[#d4c4a8]/40 rounded-xl bg-white text-[#2d2319] placeholder:text-[#a89b8a] focus:outline-none focus:ring-2 focus:ring-[#b8956a]/30 focus:border-[#b8956a]/50 transition-all'
-
-const inputClassError =
-  'w-full px-3.5 py-2.5 text-sm border border-red-300 rounded-xl bg-white text-[#2d2319] placeholder:text-[#a89b8a] focus:outline-none focus:ring-2 focus:ring-red-300/40 focus:border-red-400 transition-all'
+/**
+ * Stationery-style crest used at the top of each checkout card.
+ * A tiny ornament + a small caption, sitting above the title — gives the form
+ * the feel of a guestbook page or a tasting menu rather than a tax form.
+ */
+function CardCrest({ caption, monogram }: { caption: string; monogram: string }) {
+  return (
+    <div className="flex flex-col items-center text-center pt-7 pb-4 px-6">
+      <div className="relative">
+        <div className="w-12 h-12 rounded-full border border-[#d4c4a8]/50 flex items-center justify-center bg-gradient-to-b from-[#fffdf8] to-[#faf3e6] shadow-[0_2px_8px_-2px_rgba(184,149,106,0.25)]">
+          <span
+            className="text-[#8b7355] text-lg leading-none"
+            style={{ ...fontHeading, fontWeight: 600 }}
+          >
+            {monogram}
+          </span>
+        </div>
+        {/* tiny gold dot accent */}
+        <div className="absolute -right-1 -top-1 w-2.5 h-2.5 rounded-full bg-[#e8c87a] shadow-[0_0_0_2px_#fff]" />
+      </div>
+      <p
+        className="mt-3 text-[10px] text-[#a89b8a] tracking-[0.32em] uppercase"
+        style={fontBody}
+      >
+        {caption}
+      </p>
+    </div>
+  )
+}
 
 export function PublicBillingForm({
   token,
@@ -95,7 +119,6 @@ export function PublicBillingForm({
       )
       const json = await response.json().catch(() => ({}))
       if (!response.ok || !json?.success) {
-        // Surface field-level errors if backend provided them
         if (json?.details && typeof json.details === 'object') {
           const detailErrors: FieldErrors = {}
           for (const [key, msg] of Object.entries(json.details)) {
@@ -118,33 +141,48 @@ export function PublicBillingForm({
     }
   }
 
+  // Hairline ornament under the crest — pulled from PublicPedidoView's vocabulary.
+  const Hairline = () => (
+    <div
+      className="flex items-center justify-center gap-2 px-6 -mt-1 pb-4"
+      aria-hidden="true"
+    >
+      <div className="h-px w-10 bg-gradient-to-r from-transparent to-[#d4c4a8]/60" />
+      <div className="w-1 h-1 rounded-full bg-[#c9a96e]/70" />
+      <div className="h-px w-10 bg-gradient-to-l from-transparent to-[#d4c4a8]/60" />
+    </div>
+  )
+
   return (
-    <form onSubmit={handleSubmit} className="premium-card overflow-hidden" noValidate>
-      {/* Header */}
-      <div className="px-6 pt-6 pb-4">
-        <div className="flex items-center gap-2.5">
-          <Receipt className="w-4 h-4 text-[#b8956a]" />
-          <h3
-            className="text-base text-[#2d2319] tracking-wide"
-            style={{ ...fontHeading, fontWeight: 600 }}
-          >
-            Dados de Cobrança
-          </h3>
-        </div>
+    <form
+      onSubmit={handleSubmit}
+      className="premium-card overflow-hidden animate-page-turn"
+      noValidate
+    >
+      <CardCrest caption="Dados de Cobrança" monogram="✎" />
+
+      <div className="px-6">
+        <h3
+          className="text-center text-[22px] text-[#2d2319] leading-tight"
+          style={{ ...fontHeading, fontWeight: 600 }}
+        >
+          Quase lá
+        </h3>
         <p
-          className="text-[13px] text-[#8b7e6e] mt-2 leading-relaxed"
+          className="text-center text-[13px] text-[#8b7e6e] mt-1.5 leading-relaxed"
           style={fontBody}
         >
-          Precisamos destes dados para emitir o pagamento.
+          Precisamos destes dados para emitir a sua cobrança.
         </p>
       </div>
 
+      <Hairline />
+
       <div className="px-6 pb-6 space-y-4">
-        {/* Top error */}
         {topError && (
           <div
             role="alert"
-            className="flex items-start gap-2.5 p-3 rounded-xl bg-red-50 border border-red-200"
+            className="flex items-start gap-2.5 p-3 rounded-xl bg-red-50/80 border border-red-200"
           >
             <AlertCircle className="h-4 w-4 text-red-500 flex-shrink-0 mt-0.5" />
             <p className="text-[13px] text-red-700" style={fontBody}>
@@ -153,107 +191,138 @@ export function PublicBillingForm({
           </div>
         )}
 
-        {/* Nome */}
-        <div>
-          <label htmlFor="billing-nome" className="block text-[13px] font-medium text-[#5c4a2e] mb-1.5" style={fontBody}>
-            Nome completo
-          </label>
+        {/* Floating-label fields */}
+        <div className="relative">
           <input
             id="billing-nome"
             type="text"
             value={nome}
             onChange={(e) => setNome(e.target.value)}
-            className={errors.nome ? inputClassError : inputClass}
-            placeholder="Seu nome"
+            className={`gilded-input ${errors.nome ? 'has-error' : ''} ${nome ? 'is-filled' : ''}`}
+            placeholder=" "
             autoComplete="name"
             disabled={submitting}
             style={fontBody}
           />
+          <label
+            htmlFor="billing-nome"
+            className="gilded-label"
+            style={fontBody}
+          >
+            Nome completo
+          </label>
           {errors.nome && (
-            <p className="text-xs text-red-500 mt-1.5" style={fontBody}>
+            <p className="text-xs text-red-500 mt-1.5 ml-1" style={fontBody}>
               {errors.nome}
             </p>
           )}
         </div>
 
-        {/* CPF/CNPJ */}
-        <div>
-          <label htmlFor="billing-cpfCnpj" className="block text-[13px] font-medium text-[#5c4a2e] mb-1.5" style={fontBody}>
-            CPF ou CNPJ
-          </label>
+        <div className="relative">
           <input
             id="billing-cpfCnpj"
             type="text"
             inputMode="numeric"
             value={cpfCnpj}
             onChange={(e) => setCpfCnpj(formatCpfCnpj(e.target.value))}
-            className={errors.cpfCnpj ? inputClassError : inputClass}
-            placeholder="000.000.000-00"
+            className={`gilded-input tabular-nums ${errors.cpfCnpj ? 'has-error' : ''} ${cpfCnpj ? 'is-filled' : ''}`}
+            placeholder=" "
             autoComplete="off"
             maxLength={18}
             disabled={submitting}
             style={fontBody}
           />
+          <label
+            htmlFor="billing-cpfCnpj"
+            className="gilded-label"
+            style={fontBody}
+          >
+            CPF ou CNPJ
+          </label>
           {errors.cpfCnpj && (
-            <p className="text-xs text-red-500 mt-1.5" style={fontBody}>
+            <p className="text-xs text-red-500 mt-1.5 ml-1" style={fontBody}>
               {errors.cpfCnpj}
             </p>
           )}
         </div>
 
-        {/* Email */}
-        <div>
-          <label htmlFor="billing-email" className="block text-[13px] font-medium text-[#5c4a2e] mb-1.5" style={fontBody}>
-            E-mail
-          </label>
+        <div className="relative">
           <input
             id="billing-email"
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className={errors.email ? inputClassError : inputClass}
-            placeholder="email@exemplo.com"
+            className={`gilded-input ${errors.email ? 'has-error' : ''} ${email ? 'is-filled' : ''}`}
+            placeholder=" "
             autoComplete="email"
+            inputMode="email"
             disabled={submitting}
             style={fontBody}
           />
+          <label
+            htmlFor="billing-email"
+            className="gilded-label"
+            style={fontBody}
+          >
+            E-mail
+          </label>
           {errors.email && (
-            <p className="text-xs text-red-500 mt-1.5" style={fontBody}>
+            <p className="text-xs text-red-500 mt-1.5 ml-1" style={fontBody}>
               {errors.email}
             </p>
           )}
         </div>
 
-        {/* Telefone */}
-        <div>
-          <label htmlFor="billing-telefone" className="block text-[13px] font-medium text-[#5c4a2e] mb-1.5" style={fontBody}>
-            Telefone <span className="text-[#a89b8a] font-normal">(opcional)</span>
-          </label>
+        <div className="relative">
           <input
             id="billing-telefone"
             type="tel"
             value={telefone}
             onChange={(e) => setTelefone(formatPhone(e.target.value))}
-            className={errors.telefone ? inputClassError : inputClass}
-            placeholder="(11) 99999-9999"
+            className={`gilded-input tabular-nums ${errors.telefone ? 'has-error' : ''} ${telefone ? 'is-filled' : ''}`}
+            placeholder=" "
             autoComplete="tel"
+            inputMode="tel"
             maxLength={15}
             disabled={submitting}
             style={fontBody}
           />
+          <label
+            htmlFor="billing-telefone"
+            className="gilded-label"
+            style={fontBody}
+          >
+            Telefone <span className="lowercase tracking-normal">(opcional)</span>
+          </label>
           {errors.telefone && (
-            <p className="text-xs text-red-500 mt-1.5" style={fontBody}>
+            <p className="text-xs text-red-500 mt-1.5 ml-1" style={fontBody}>
               {errors.telefone}
             </p>
           )}
         </div>
 
+        {/* Amount preview pill */}
+        <div className="amount-glow rounded-2xl px-5 py-3.5 flex items-baseline justify-between border border-[#d4c4a8]/30">
+          <span
+            className="text-[11px] text-[#8b7e6e] tracking-[0.22em] uppercase"
+            style={fontBody}
+          >
+            A pagar
+          </span>
+          <span
+            className="text-xl tabular-nums gold-shimmer"
+            style={{ ...fontHeading, fontWeight: 700 }}
+          >
+            {formatCurrency(amount)}
+          </span>
+        </div>
+
         {/* Submit */}
-        <div className="pt-2">
+        <div className="pt-1">
           <button
             type="submit"
             disabled={submitting}
-            className="confirm-btn w-full py-4 text-white rounded-2xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2.5"
+            className="confirm-btn w-full py-4 text-white rounded-2xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2.5 min-h-[48px]"
             style={fontBody}
           >
             {submitting ? (
@@ -262,13 +331,26 @@ export function PublicBillingForm({
                 <span className="text-base font-semibold tracking-wide">Salvando...</span>
               </>
             ) : (
-              <span className="text-base font-semibold tracking-wide">
-                Continuar para Pagamento ({formatCurrency(amount)})
-              </span>
+              <>
+                <span className="text-base font-semibold tracking-wide">
+                  Continuar para Pagamento
+                </span>
+                <ArrowRight className="h-5 w-5" />
+              </>
             )}
           </button>
+          <div className="flex items-center justify-center gap-2 mt-3.5">
+            <span className="h-px w-6 bg-[#d4c4a8]/50" />
+            <p
+              className="text-[10px] text-[#a89b8a] tracking-[0.22em] uppercase"
+              style={fontBody}
+            >
+              feito com carinho
+            </p>
+            <span className="h-px w-6 bg-[#d4c4a8]/50" />
+          </div>
           <p
-            className="text-center text-[11px] text-[#a89b8a] mt-3 tracking-wide"
+            className="text-center text-[11px] text-[#a89b8a] mt-2 leading-relaxed px-4"
             style={fontBody}
           >
             Seus dados são usados apenas para emissão da cobrança.
@@ -278,4 +360,3 @@ export function PublicBillingForm({
     </form>
   )
 }
-

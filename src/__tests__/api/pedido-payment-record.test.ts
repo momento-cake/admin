@@ -207,6 +207,34 @@ describe('recordChargeConfirmation', () => {
     expect(stored.paymentSession.processedWebhookEventIds).toEqual(['evt-fail']);
   });
 
+  it('logs a structured status_mismatch warn when unhandled_status branch fires', async () => {
+    seedPedido('p1', { status: 'CONFIRMADO' });
+    const ref = adminDb.collection('pedidos').doc('p1');
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      const result = await recordChargeConfirmation(
+        ref as any,
+        makeEvent({
+          id: 'evt-mismatch',
+          type: 'PAYMENT_OVERDUE',
+          status: 'EXPIRED',
+        }),
+      );
+      expect(result.kind).toBe('unhandled_status');
+      expect(warnSpy).toHaveBeenCalledWith(
+        '[asaas-webhook] status_mismatch',
+        expect.objectContaining({
+          pedidoId: 'p1',
+          currentStatus: 'CONFIRMADO',
+          eventId: 'evt-mismatch',
+          eventType: 'PAYMENT_OVERDUE',
+        }),
+      );
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
   it('caps processedWebhookEventIds at 50 entries', async () => {
     const existing = Array.from({ length: 50 }, (_, i) => `e-${i}`);
     seedPedido('p1', {

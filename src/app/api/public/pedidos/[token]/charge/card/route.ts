@@ -5,9 +5,24 @@ import { getPaymentProvider } from '@/lib/payments/registry';
 import { roundCurrency } from '@/lib/payment-logic';
 import { recordChargeConfirmation } from '@/lib/pedido-payment-record';
 import { createCardChargeSchema } from '@/lib/validators/charge';
+import { decryptPii } from '@/lib/billing-encryption';
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import type { PedidoBilling, WebhookEvent } from '@/lib/payments/types';
 
 const PEDIDOS_COLLECTION = 'pedidos';
+
+function rateLimited(retryAfterMs: number) {
+  return NextResponse.json(
+    {
+      success: false,
+      error: 'Muitas tentativas. Tente novamente em alguns instantes.',
+    },
+    {
+      status: 429,
+      headers: { 'Retry-After': String(Math.ceil(retryAfterMs / 1000)) },
+    },
+  );
+}
 
 interface ActiveOrcamento {
   isAtivo?: boolean;
@@ -57,6 +72,13 @@ export async function POST(
         { status: 400 },
       );
     }
+
+    const limit = checkRateLimit({
+      key: `charge-card:${getClientIp(request)}:${token}`,
+      max: 5,
+      windowMs: 60_000,
+    });
+    if (!limit.ok) return rateLimited(limit.retryAfterMs);
 
     const body = await request.json().catch(() => null);
     if (!body) {
@@ -139,9 +161,12 @@ export async function POST(
     }
 
     const provider = getPaymentProvider();
+    // billing.cpfCnpj is stored encrypted at rest (LGPD). Decrypt before
+    // sending to the provider; legacy plaintext rows pass through unchanged.
+    const cpfCnpjPlain = decryptPii(billing.cpfCnpj);
     const customer = await provider.ensureCustomer({
       nome: billing.nome,
-      cpfCnpj: billing.cpfCnpj,
+      cpfCnpj: cpfCnpjPlain,
       email: billing.email,
       telefone: billing.telefone,
     });
@@ -161,7 +186,7 @@ export async function POST(
       { ...validation.data.card, remoteIp },
       {
         nome: billing.nome,
-        cpfCnpj: billing.cpfCnpj,
+        cpfCnpj: cpfCnpjPlain,
         email: billing.email,
         telefone: billing.telefone,
       },
@@ -186,8 +211,11 @@ export async function POST(
     let immediatelyConfirmed = false;
     if (result.status === 'CONFIRMED') {
       // Synthesize a webhook-like event so the same recording logic runs.
+      // Prefix `immediate-card-` distinguishes synthetic ids from real Asaas
+      // webhook event ids (`PAYMENT_<TYPE>:${chargeId}`), which guarantees
+      // they can never collide and break the idempotency dedup list.
       const syntheticEvent: WebhookEvent = {
-        id: `card-${result.chargeId}`,
+        id: `immediate-card-${result.chargeId}`,
         type: 'PAYMENT_CONFIRMED',
         chargeId: result.chargeId,
         externalReference: pedidoDoc.id,

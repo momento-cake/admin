@@ -80,7 +80,7 @@ export function PublicCheckoutFlow({
     return null
   }
 
-  // 3. Payment session already CONFIRMED but pedido not yet flipped → success screen
+  // 3. Payment session already CONFIRMED but pedido not yet flipped → success
   if (pedido.paymentSession?.status === 'CONFIRMED') {
     return (
       <PublicPaymentSuccess
@@ -135,27 +135,41 @@ export function PublicCheckoutFlow({
 
   return (
     <div className="space-y-4">
+      {/* Step caption — anchors the tabs as "Step 2" of the ritual */}
+      <div className="flex items-center justify-center gap-2" aria-hidden="true">
+        <span className="h-px w-8 bg-[#d4c4a8]/55" />
+        <p
+          className="text-[10px] text-[#a89b8a] tracking-[0.32em] uppercase"
+          style={fontBody}
+        >
+          Escolha como pagar
+        </p>
+        <span className="h-px w-8 bg-[#d4c4a8]/55" />
+      </div>
+
       <Tabs value={tab} onValueChange={(v) => setTab(v as 'pix' | 'card')}>
-        <TabsList className="grid grid-cols-2 w-full bg-[#faf7f2] border border-[#d4c4a8]/30 h-auto p-1 rounded-xl">
+        <TabsList
+          className="grid grid-cols-2 w-full bg-gradient-to-b from-[#fffdf8] to-[#faf3e6] border border-[#d4c4a8]/45 h-auto p-1 rounded-2xl shadow-[0_1px_3px_rgba(45,35,25,0.04)]"
+        >
           <TabsTrigger
             value="pix"
-            className="flex items-center justify-center gap-2 py-2.5 rounded-lg data-[state=active]:bg-white data-[state=active]:text-[#2d2319] data-[state=active]:shadow-sm text-[#8b7e6e]"
+            className="flex items-center justify-center gap-2 py-3 rounded-xl text-[#8b7e6e] data-[state=active]:bg-white data-[state=active]:text-[#2d2319] data-[state=active]:shadow-[0_2px_8px_-2px_rgba(184,149,106,0.25)] data-[state=active]:border data-[state=active]:border-[#d4c4a8]/50 transition-all"
             style={fontBody}
           >
             <QrCode className="h-4 w-4" />
-            <span className="text-sm font-medium">PIX</span>
+            <span className="text-sm font-medium tracking-wide">PIX</span>
           </TabsTrigger>
           <TabsTrigger
             value="card"
-            className="flex items-center justify-center gap-2 py-2.5 rounded-lg data-[state=active]:bg-white data-[state=active]:text-[#2d2319] data-[state=active]:shadow-sm text-[#8b7e6e]"
+            className="flex items-center justify-center gap-2 py-3 rounded-xl text-[#8b7e6e] data-[state=active]:bg-white data-[state=active]:text-[#2d2319] data-[state=active]:shadow-[0_2px_8px_-2px_rgba(184,149,106,0.25)] data-[state=active]:border data-[state=active]:border-[#d4c4a8]/50 transition-all"
             style={fontBody}
           >
             <CreditCard className="h-4 w-4" />
-            <span className="text-sm font-medium">Cartão de Crédito</span>
+            <span className="text-sm font-medium tracking-wide">Cartão de Crédito</span>
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="pix" className="mt-4">
+        <TabsContent value="pix" className="mt-4 focus-visible:outline-none">
           <PublicPixCharge
             token={token}
             amount={amountDue}
@@ -173,7 +187,7 @@ export function PublicCheckoutFlow({
           />
         </TabsContent>
 
-        <TabsContent value="card" className="mt-4">
+        <TabsContent value="card" className="mt-4 focus-visible:outline-none">
           <PublicCardCharge
             token={token}
             billing={{

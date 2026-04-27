@@ -375,4 +375,105 @@ describe('PublicPixCharge', () => {
       ).toBeInTheDocument()
     })
   })
+
+  it('renders a live mm:ss countdown that ticks every second', async () => {
+    // Switch to deterministic fake timers (no auto-advance) so we can pin
+    // "now" and assert the rendered countdown text precisely.
+    vi.useFakeTimers()
+    const fakeNow = new Date('2025-01-01T12:00:00Z').getTime()
+    vi.setSystemTime(fakeNow)
+
+    const expiresAt = new Date(fakeNow + 90_000).toISOString() // 90s in the future
+
+    render(
+      <PublicPixCharge
+        token="tok"
+        amount={100}
+        onPaid={vi.fn()}
+        existingSession={{
+          pixQrCodeBase64: FAKE_QR_BASE64,
+          pixCopyPaste: FAKE_COPY_PASTE,
+          expiresAt,
+          status: 'PENDING',
+        }}
+      />,
+    )
+
+    // Initial render: 01:30 (90 seconds)
+    expect(screen.getByText(/Expira em 01:30/i)).toBeInTheDocument()
+
+    // After 1s tick: 01:29
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1000)
+    })
+    expect(screen.getByText(/Expira em 01:29/i)).toBeInTheDocument()
+
+    // After another 5 seconds: 01:24
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5000)
+    })
+    expect(screen.getByText(/Expira em 01:24/i)).toBeInTheDocument()
+  })
+
+  it('transitions to expired UI once the countdown reaches zero', async () => {
+    vi.useFakeTimers()
+    const fakeNow = new Date('2025-01-01T12:00:00Z').getTime()
+    vi.setSystemTime(fakeNow)
+
+    const expiresAt = new Date(fakeNow + 5_000).toISOString() // 5s in the future
+
+    render(
+      <PublicPixCharge
+        token="tok"
+        amount={100}
+        onPaid={vi.fn()}
+        existingSession={{
+          pixQrCodeBase64: FAKE_QR_BASE64,
+          pixCopyPaste: FAKE_COPY_PASTE,
+          expiresAt,
+          status: 'PENDING',
+        }}
+      />,
+    )
+
+    // Active state initially — no regenerate button visible
+    expect(
+      screen.queryByRole('button', { name: /gerar novo código/i }),
+    ).not.toBeInTheDocument()
+
+    // Advance past the expiry. The interval ticks `now` upward; once
+    // `now >= expiresAt` the derived `expired` flips and the UI swaps.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(6000)
+    })
+
+    expect(
+      screen.getByRole('button', { name: /gerar novo código/i }),
+    ).toBeInTheDocument()
+  })
+
+  it('formats the countdown as "Xh Ym" when the remaining time is at least 1 hour', async () => {
+    vi.useFakeTimers()
+    const fakeNow = new Date('2025-01-01T12:00:00Z').getTime()
+    vi.setSystemTime(fakeNow)
+
+    // 1h 30m 45s in the future
+    const expiresAt = new Date(fakeNow + (1 * 3600 + 30 * 60 + 45) * 1000).toISOString()
+
+    render(
+      <PublicPixCharge
+        token="tok"
+        amount={100}
+        onPaid={vi.fn()}
+        existingSession={{
+          pixQrCodeBase64: FAKE_QR_BASE64,
+          pixCopyPaste: FAKE_COPY_PASTE,
+          expiresAt,
+          status: 'PENDING',
+        }}
+      />,
+    )
+
+    expect(screen.getByText(/Expira em 1h 30m/i)).toBeInTheDocument()
+  })
 })

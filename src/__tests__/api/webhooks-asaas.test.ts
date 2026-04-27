@@ -236,4 +236,101 @@ describe('POST /api/webhooks/asaas', () => {
     const stored = store.get('pedidos/p1')!;
     expect(stored.pagamentos).toHaveLength(1);
   });
+
+  describe('structured observability info logs', () => {
+    let infoSpy: ReturnType<typeof vi.spyOn>;
+    beforeEach(() => {
+      infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
+    });
+
+    function expectInfo(outcome: string, extra: Record<string, unknown> = {}) {
+      expect(infoSpy).toHaveBeenCalledWith(
+        '[asaas-webhook]',
+        expect.objectContaining({ outcome, ...extra }),
+      );
+    }
+
+    it('logs outcome=parse_failed when parseWebhook returns null', async () => {
+      parseWebhookMock.mockReturnValue(null);
+      await POST(makeReq('{}'));
+      expectInfo('parse_failed');
+    });
+
+    it('logs outcome=unknown_pedido when externalReference is missing', async () => {
+      parseWebhookMock.mockReturnValue({
+        id: 'evt-1',
+        type: 'PAYMENT_CONFIRMED',
+        chargeId: 'pay',
+        status: 'CONFIRMED',
+        amount: 200,
+      });
+      await POST(makeReq('{}'));
+      expectInfo('unknown_pedido', { event: 'evt-1', chargeId: 'pay' });
+    });
+
+    it('logs outcome=unknown_pedido when pedido does not exist', async () => {
+      parseWebhookMock.mockReturnValue({
+        id: 'evt-1',
+        type: 'PAYMENT_CONFIRMED',
+        chargeId: 'pay',
+        externalReference: 'missing',
+        status: 'CONFIRMED',
+        amount: 200,
+      });
+      await POST(makeReq('{}'));
+      expectInfo('unknown_pedido', {
+        event: 'evt-1',
+        externalReference: 'missing',
+      });
+    });
+
+    it('logs outcome=recorded on successful confirmation', async () => {
+      seedPedido('p1');
+      parseWebhookMock.mockReturnValue({
+        id: 'evt-rec',
+        type: 'PAYMENT_CONFIRMED',
+        chargeId: 'pay',
+        externalReference: 'p1',
+        status: 'CONFIRMED',
+        amount: 200,
+        paymentMethod: 'PIX',
+        paymentDate: new Date('2026-04-25T10:00:00Z'),
+      });
+      await POST(makeReq('{}'));
+      expectInfo('recorded', { pedidoId: 'p1', event: 'evt-rec' });
+    });
+
+    it('logs outcome=idempotent on replays', async () => {
+      seedPedido('p1');
+      const event = {
+        id: 'evt-dup',
+        type: 'PAYMENT_CONFIRMED',
+        chargeId: 'pay',
+        externalReference: 'p1',
+        status: 'CONFIRMED',
+        amount: 200,
+        paymentMethod: 'PIX',
+        paymentDate: new Date('2026-04-25T10:00:00Z'),
+      };
+      parseWebhookMock.mockReturnValue(event);
+      await POST(makeReq('{}'));
+      infoSpy.mockClear();
+      await POST(makeReq('{}'));
+      expectInfo('idempotent', { pedidoId: 'p1' });
+    });
+
+    it('logs outcome=unhandled_status on non-CONFIRMED events', async () => {
+      seedPedido('p1');
+      parseWebhookMock.mockReturnValue({
+        id: 'evt-fail',
+        type: 'OTHER',
+        chargeId: 'pay',
+        externalReference: 'p1',
+        status: 'FAILED',
+        amount: 200,
+      });
+      await POST(makeReq('{}'));
+      expectInfo('unhandled_status', { pedidoId: 'p1', event: 'evt-fail' });
+    });
+  });
 });

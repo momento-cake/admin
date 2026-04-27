@@ -83,6 +83,14 @@ export async function recordChargeConfirmation(
 
     if (event.status !== 'CONFIRMED') {
       transaction.update(pedidoRef, sessionPatch);
+      // Surface unhandled webhook deliveries so ops can correlate them with
+      // admin manual payments racing the webhook, expirations, refunds, etc.
+      console.warn('[asaas-webhook] status_mismatch', {
+        pedidoId: pedidoRef.id,
+        currentStatus: data.status,
+        eventId: event.id,
+        eventType: event.type,
+      });
       return {
         kind: 'unhandled_status' as const,
         status: event.status,

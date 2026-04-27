@@ -1,3 +1,4 @@
+import { timingSafeEqual } from 'node:crypto';
 import type { PaymentMethod, WebhookEvent } from '../types';
 import { normalizeAsaasStatus } from './normalize';
 
@@ -5,11 +6,19 @@ import { normalizeAsaasStatus } from './normalize';
  * Verify an Asaas webhook request by comparing the `asaas-access-token`
  * header against the configured token. Fails closed if no `expectedToken`
  * is configured — production must always have a token set.
+ *
+ * Uses `crypto.timingSafeEqual` so a network attacker cannot use response
+ * timing to recover the token byte-by-byte. `timingSafeEqual` THROWS on
+ * length mismatch, so we fast-fail when lengths differ before calling it.
  */
 export function verifyAsaasToken(headers: Headers, expectedToken?: string): boolean {
   if (!expectedToken) return false;
   const got = headers.get('asaas-access-token');
-  return got === expectedToken;
+  if (!got) return false;
+  const a = Buffer.from(got, 'utf8');
+  const b = Buffer.from(expectedToken, 'utf8');
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(a, b);
 }
 
 interface AsaasWebhookPayload {

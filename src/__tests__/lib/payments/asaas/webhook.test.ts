@@ -28,6 +28,26 @@ describe('verifyAsaasToken', () => {
     expect(verifyAsaasToken(makeHeaders({ 'asaas-access-token': 'x' }), undefined)).toBe(false);
     expect(verifyAsaasToken(makeHeaders({ 'asaas-access-token': 'x' }), '')).toBe(false);
   });
+
+  // Timing-safe comparison: tokens of different lengths must not throw and
+  // must fast-fail before reaching `crypto.timingSafeEqual` (which throws on
+  // length mismatch). Tokens of equal length but unequal contents are still
+  // rejected — this is the case where a constant-time compare actually matters.
+  it('rejects unequal tokens of different lengths without throwing', () => {
+    expect(() =>
+      verifyAsaasToken(makeHeaders({ 'asaas-access-token': 'short' }), TOKEN),
+    ).not.toThrow();
+    expect(verifyAsaasToken(makeHeaders({ 'asaas-access-token': 'short' }), TOKEN)).toBe(false);
+  });
+
+  it('rejects unequal tokens of identical length', () => {
+    const same = 'a'.repeat(TOKEN.length);
+    expect(verifyAsaasToken(makeHeaders({ 'asaas-access-token': same }), TOKEN)).toBe(false);
+  });
+
+  it('returns false when header is empty string', () => {
+    expect(verifyAsaasToken(makeHeaders({ 'asaas-access-token': '' }), TOKEN)).toBe(false);
+  });
 });
 
 describe('parseAsaasWebhook', () => {

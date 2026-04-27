@@ -9,8 +9,8 @@ describe('PublicBillingForm', () => {
     vi.stubGlobal('fetch', vi.fn())
   })
 
-  it('renders the four fields and submit button with amount', () => {
-    render(
+  it('renders the four fields, the amount preview, and the submit button', () => {
+    const { container } = render(
       <PublicBillingForm
         token="t"
         initial={{ nome: 'Maria' }}
@@ -24,9 +24,11 @@ describe('PublicBillingForm', () => {
     expect(screen.getByLabelText(/^e-mail$/i)).toBeInTheDocument()
     expect(screen.getByLabelText(/telefone/i)).toBeInTheDocument()
 
+    // The amount lives in a dedicated preview pill above the CTA.
+    expect(container.textContent).toMatch(/R\$/)
+
     const button = screen.getByRole('button', { name: /continuar para pagamento/i })
     expect(button).toBeInTheDocument()
-    expect(button.textContent).toMatch(/R\$/)
   })
 
   it('pre-fills the nome field from initial', () => {

@@ -179,6 +179,35 @@ describe('Public Pedidos API', () => {
       expect(data.success).toBe(true);
       expect(data.data.status).toBe('CONFIRMADO');
     });
+
+    it('LGPD: strips billing.cpfCnpj from the public response', async () => {
+      const pedidoData = createPedidoData({
+        status: 'AGUARDANDO_PAGAMENTO',
+        billing: {
+          nome: 'Maria',
+          cpfCnpj: 'enc:v1:DEADBEEF==',
+          email: 'maria@example.com',
+          telefone: '11999999999',
+          confirmedAt: { seconds: 1700000000, nanoseconds: 0 },
+        },
+      });
+      mockGet.mockResolvedValue({
+        empty: false,
+        docs: [createMockDoc('pedido-1', pedidoData)],
+      });
+
+      const request = new NextRequest('http://localhost:4000/api/public/pedidos/valid-token-123456');
+      const response = await GET(request, createParams('valid-token-123456'));
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data.data.billing).toBeDefined();
+      expect(data.data.billing.cpfCnpj).toBeUndefined();
+      expect(data.data.billing.nome).toBe('Maria');
+      expect(data.data.billing.email).toBe('maria@example.com');
+      expect(data.data.billing.telefone).toBe('11999999999');
+      expect(data.data.billing.confirmedAt).toBeDefined();
+    });
   });
 
   describe('POST /api/public/pedidos/[token]/confirmar', () => {
