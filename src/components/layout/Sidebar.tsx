@@ -5,8 +5,10 @@ import { usePathname } from 'next/navigation'
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { useAuth } from '@/hooks/useAuth'
 import { usePermissions } from '@/hooks/usePermissions'
+import { useWhatsAppConversations } from '@/hooks/useWhatsAppConversations'
 import { FeatureKey } from '@/lib/permissions'
 import { ROLE_LABELS } from '@/types'
 import {
@@ -270,6 +272,29 @@ const navigation: NavItem[] = [
   }
 ]
 
+/**
+ * Inline unread-count badge for the WhatsApp sidebar entry.
+ * Subscribes to the same conversations stream as the inbox; returns null
+ * when there are no unread messages so the parent layout collapses cleanly.
+ */
+function WhatsAppUnreadBadge() {
+  const { conversations } = useWhatsAppConversations()
+  const total = conversations.reduce(
+    (acc, conv) => acc + (conv.unreadCount && conv.unreadCount > 0 ? conv.unreadCount : 0),
+    0
+  )
+  if (!total) return null
+  return (
+    <Badge
+      data-testid="sidebar-whatsapp-unread"
+      className="ml-auto mr-1 h-5 min-w-[20px] rounded-full bg-[var(--destructive)] px-1.5 text-[10px] font-bold text-white shadow-sm hover:bg-[var(--destructive)]"
+      variant="default"
+    >
+      {total > 99 ? '99+' : total}
+    </Badge>
+  )
+}
+
 export function Sidebar() {
   const rawPathname = usePathname()
   // Normalize: strip trailing slash for consistent comparison with href values
@@ -353,15 +378,18 @@ export function Sidebar() {
                           : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
                       )}
                     >
-                      <div className="flex items-center">
+                      <div className="flex items-center min-w-0">
                         <Icon className="mr-3 h-5 w-5 flex-shrink-0" />
-                        {item.name}
+                        <span className="truncate">{item.name}</span>
                       </div>
-                      {expanded ? (
-                        <ChevronDown className="h-4 w-4" />
-                      ) : (
-                        <ChevronRight className="h-4 w-4" />
-                      )}
+                      <div className="flex items-center gap-1.5">
+                        {item.name === 'WhatsApp' && <WhatsAppUnreadBadge />}
+                        {expanded ? (
+                          <ChevronDown className="h-4 w-4" />
+                        ) : (
+                          <ChevronRight className="h-4 w-4" />
+                        )}
+                      </div>
                     </button>
                   ) : (
                     <Link

@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { MessageCircle } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useWhatsAppConversations } from '@/hooks/useWhatsAppConversations';
 import { formatPhoneForDisplay } from '@/lib/phone';
 import { cn } from '@/lib/utils';
@@ -36,21 +37,44 @@ function relativeTime(secondsSeconds: number | undefined): string {
   }
 }
 
+function ConversationListSkeleton() {
+  return (
+    <div className="space-y-1 px-2 py-2" aria-hidden="true">
+      {Array.from({ length: 6 }).map((_, idx) => (
+        <div
+          key={idx}
+          className="flex items-center gap-3 rounded-lg px-2 py-2.5"
+          style={{ opacity: 1 - idx * 0.12 }}
+        >
+          <Skeleton className="h-10 w-10 rounded-full" />
+          <div className="min-w-0 flex-1 space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <Skeleton className="h-3 w-32" />
+              <Skeleton className="h-2.5 w-10" />
+            </div>
+            <Skeleton className="h-2.5 w-44" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function ConversationList({ selectedId }: ConversationListProps) {
   const router = useRouter();
   const { conversations, isLoading, error } = useWhatsAppConversations();
 
   if (isLoading) {
     return (
-      <div data-testid="conversation-list-loading" className="p-4 text-sm text-muted-foreground">
-        Carregando conversas…
+      <div data-testid="conversation-list-loading">
+        <ConversationListSkeleton />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="p-4 text-sm text-red-600">
+      <div className="m-3 rounded-lg border border-red-200 bg-red-50/50 p-3 text-xs text-red-700">
         Erro ao carregar conversas: {error.message}
       </div>
     );
@@ -58,19 +82,31 @@ export function ConversationList({ selectedId }: ConversationListProps) {
 
   if (conversations.length === 0) {
     return (
-      <div className="flex h-full flex-col items-center justify-center p-6 text-center text-sm text-muted-foreground">
-        <MessageCircle className="mb-2 h-8 w-8 opacity-40" />
-        Nenhuma conversa por aqui ainda.
+      <div className="flex h-full flex-col items-center justify-center gap-3 px-6 py-10 text-center">
+        <div className="relative flex h-16 w-16 items-center justify-center">
+          <span className="absolute inset-0 rounded-full bg-[var(--secondary)]/20" />
+          <span className="absolute inset-2 rounded-full bg-[var(--secondary)]/30" />
+          <MessageCircle className="relative h-7 w-7 text-[var(--primary)]" />
+        </div>
+        <p className="text-sm font-medium text-foreground/90">
+          Nenhuma conversa por aqui ainda
+        </p>
+        <p className="max-w-[18rem] text-xs leading-relaxed text-muted-foreground">
+          Quando alguém escrever para o seu número WhatsApp Business, a conversa aparece aqui
+          automaticamente.
+        </p>
       </div>
     );
   }
 
   return (
-    <ul className="divide-y divide-border" role="list">
+    <ul className="flex flex-col gap-px py-1" role="list">
       {conversations.map((conv) => {
         const name = displayName(conv);
         const isSelected = selectedId === conv.id;
         const unread = conv.unreadCount && conv.unreadCount > 0 ? conv.unreadCount : null;
+        const preview = conv.lastMessagePreview || '—';
+        const isOutLast = conv.lastMessageDirection === 'out';
         return (
           <li key={conv.id}>
             <button
@@ -78,37 +114,88 @@ export function ConversationList({ selectedId }: ConversationListProps) {
               data-testid={`conversation-row-${conv.id}`}
               onClick={() => router.push(`/whatsapp?c=${conv.id}`)}
               className={cn(
-                'flex w-full items-center gap-3 px-3 py-3 text-left transition-colors hover:bg-muted/60',
-                isSelected && 'selected bg-muted'
+                'group relative flex w-full items-start gap-3 px-3 py-3 text-left transition-colors',
+                'hover:bg-[var(--muted)]/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]/40 focus-visible:ring-offset-0',
+                isSelected
+                  ? 'selected bg-[var(--secondary)]/15'
+                  : unread
+                    ? 'bg-amber-50/40'
+                    : ''
               )}
             >
-              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+              {/* Selected: gold left rail */}
+              <span
+                aria-hidden="true"
+                className={cn(
+                  'absolute inset-y-1 left-0 w-[3px] rounded-r-full transition-opacity',
+                  isSelected
+                    ? 'bg-[var(--secondary)] opacity-100'
+                    : 'opacity-0'
+                )}
+              />
+
+              {/* Avatar */}
+              <div
+                className={cn(
+                  'relative flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-sm font-semibold transition-colors',
+                  isSelected
+                    ? 'bg-[var(--primary)] text-[var(--primary-foreground)] shadow-sm'
+                    : 'bg-[var(--muted)] text-[var(--primary)]'
+                )}
+              >
                 {initialsFor(name)}
+                {/* Unread dot on avatar */}
+                {unread && (
+                  <span
+                    aria-hidden="true"
+                    className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 border-background bg-[var(--destructive)]"
+                  />
+                )}
               </div>
+
+              {/* Body */}
               <div className="min-w-0 flex-1">
                 <div className="flex items-baseline justify-between gap-2">
                   <span
                     className={cn(
-                      'truncate text-sm',
-                      unread ? 'font-semibold text-foreground' : 'text-foreground'
+                      'truncate text-sm leading-tight text-foreground',
+                      unread ? 'font-semibold' : 'font-medium'
                     )}
                   >
                     {name}
                   </span>
-                  <span className="flex-shrink-0 text-[10px] uppercase tracking-wide text-muted-foreground">
+                  <span
+                    className={cn(
+                      'flex-shrink-0 text-[10px] font-medium uppercase tracking-wider',
+                      unread ? 'text-[var(--destructive)]' : 'text-muted-foreground'
+                    )}
+                  >
                     {relativeTime(conv.lastMessageAt?.seconds)}
                   </span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="truncate text-xs text-muted-foreground">
-                    {conv.lastMessagePreview || '—'}
+                <div className="mt-0.5 flex items-center gap-2">
+                  <span
+                    className={cn(
+                      'block max-h-[2.4em] overflow-hidden text-xs leading-snug',
+                      unread ? 'text-foreground/80' : 'text-muted-foreground'
+                    )}
+                    style={{
+                      display: '-webkit-box',
+                      WebkitBoxOrient: 'vertical',
+                      WebkitLineClamp: 1,
+                    }}
+                  >
+                    {isOutLast && (
+                      <span className="mr-1 text-muted-foreground/70">Você:</span>
+                    )}
+                    {preview}
                   </span>
                   {unread ? (
                     <span
                       data-testid="unread-badge"
-                      className="ml-auto inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold text-primary-foreground"
+                      className="ml-auto inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[var(--destructive)] px-1 text-[10px] font-bold text-white shadow-sm"
                     >
-                      {unread}
+                      {unread > 99 ? '99+' : unread}
                     </span>
                   ) : null}
                 </div>
