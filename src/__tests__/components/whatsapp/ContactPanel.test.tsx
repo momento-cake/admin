@@ -23,6 +23,15 @@ vi.mock('@/components/whatsapp/CreatePedidoSheet', () => ({
     ) : null,
 }));
 
+// Radix Avatar's AvatarImage relies on a real image-load event that jsdom
+// does not fire. Stub the primitive with plain DOM elements so tests can
+// observe `<img>` directly.
+vi.mock('@/components/ui/avatar', () => ({
+  Avatar: ({ children, ...props }: any) => <div {...props}>{children}</div>,
+  AvatarFallback: ({ children, ...props }: any) => <div {...props}>{children}</div>,
+  AvatarImage: (props: any) => <img {...props} />,
+}));
+
 import { ContactPanel } from '@/components/whatsapp/ContactPanel';
 
 const mockFetch = vi.fn();
@@ -161,6 +170,77 @@ describe('ContactPanel', () => {
     expect(sheet).toBeInTheDocument();
     expect(sheet).toHaveTextContent('c1');
     expect(sheet).toHaveTextContent('Maria');
+  });
+
+  it('renders profile picture in unmatched view when profilePictureUrl is present', () => {
+    render(
+      <ContactPanel
+        conversation={baseConv({ profilePictureUrl: 'https://pps.whatsapp.net/v/u.jpg' })}
+      />
+    );
+    const img = screen.getByRole('img', { name: /WAName|whatsapp/i });
+    expect(img.getAttribute('src')).toBe('https://pps.whatsapp.net/v/u.jpg');
+  });
+
+  it('renders profile picture in linked client view when profilePictureUrl is present', async () => {
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          data: { id: 'c1', name: 'Maria Silva' },
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          data: { pedidos: [], total: 0, count: 0 },
+        }),
+      });
+
+    render(
+      <ContactPanel
+        conversation={baseConv({
+          clienteId: 'c1',
+          clienteNome: 'Maria Silva',
+          profilePictureUrl: 'https://pps.whatsapp.net/v/linked.jpg',
+        })}
+      />
+    );
+
+    const img = screen.getByRole('img', { name: /Maria Silva/i });
+    expect(img.getAttribute('src')).toBe('https://pps.whatsapp.net/v/linked.jpg');
+    await waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(2));
+  });
+
+  it('falls back to initials when profilePictureUrl is absent in linked view', async () => {
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          data: { id: 'c1', name: 'Maria Silva' },
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          data: { pedidos: [], total: 0, count: 0 },
+        }),
+      });
+
+    const { container } = render(
+      <ContactPanel
+        conversation={baseConv({ clienteId: 'c1', clienteNome: 'Maria Silva' })}
+      />
+    );
+    // No img tag rendered for the avatar — AvatarImage is only mounted when URL present.
+    expect(container.querySelector('img')).toBeNull();
+    // Initials rendered as fallback.
+    expect(screen.getByText('MS')).toBeInTheDocument();
+    await waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(2));
   });
 
   it('toasts error when link fails', async () => {

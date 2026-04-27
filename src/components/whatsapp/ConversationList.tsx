@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { MessageCircle } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useWhatsAppConversations } from '@/hooks/useWhatsAppConversations';
 import { formatPhoneForDisplay } from '@/lib/phone';
@@ -135,15 +136,29 @@ export function ConversationList({ selectedId }: ConversationListProps) {
               />
 
               {/* Avatar */}
-              <div
-                className={cn(
-                  'relative flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-sm font-semibold transition-colors',
-                  isSelected
-                    ? 'bg-[var(--primary)] text-[var(--primary-foreground)] shadow-sm'
-                    : 'bg-[var(--muted)] text-[var(--primary)]'
-                )}
-              >
-                {initialsFor(name)}
+              <div className="relative flex-shrink-0">
+                <Avatar
+                  className={cn(
+                    'h-10 w-10 transition-colors',
+                    isSelected
+                      ? 'shadow-sm ring-2 ring-[var(--primary)]/20'
+                      : ''
+                  )}
+                >
+                  {conv.profilePictureUrl && (
+                    <AvatarImage src={conv.profilePictureUrl} alt={name} />
+                  )}
+                  <AvatarFallback
+                    className={cn(
+                      'text-sm font-semibold',
+                      isSelected
+                        ? 'bg-[var(--primary)] text-[var(--primary-foreground)]'
+                        : 'bg-[var(--muted)] text-[var(--primary)]'
+                    )}
+                  >
+                    {initialsFor(name)}
+                  </AvatarFallback>
+                </Avatar>
                 {/* Unread dot on avatar */}
                 {unread && (
                   <span

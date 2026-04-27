@@ -13,6 +13,15 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: mockPush }),
 }));
 
+// Radix Avatar's AvatarImage relies on a real image-load event that jsdom
+// does not fire. Stub the primitive with plain DOM elements so tests can
+// observe `<img>` directly.
+vi.mock('@/components/ui/avatar', () => ({
+  Avatar: ({ children, ...props }: any) => <div {...props}>{children}</div>,
+  AvatarFallback: ({ children, ...props }: any) => <div {...props}>{children}</div>,
+  AvatarImage: (props: any) => <img {...props} />,
+}));
+
 import { ConversationList } from '@/components/whatsapp/ConversationList';
 
 const baseConv = (over: Partial<any> = {}) => ({
@@ -123,5 +132,39 @@ describe('ConversationList', () => {
     render(<ConversationList selectedId="5511999" />);
     const row = screen.getByTestId('conversation-row-5511999');
     expect(row.className).toMatch(/selected|bg-/);
+  });
+
+  it('renders profile picture when profilePictureUrl is present', () => {
+    useConversationsMock.mockReturnValue({
+      conversations: [
+        baseConv({
+          id: '5511999',
+          clienteNome: 'Maria',
+          profilePictureUrl: 'https://pps.whatsapp.net/v/photo.jpg',
+        }),
+      ],
+      isLoading: false,
+      error: null,
+    });
+    render(<ConversationList selectedId={null} />);
+    const row = screen.getByTestId('conversation-row-5511999');
+    const img = row.querySelector('img');
+    expect(img).not.toBeNull();
+    expect(img?.getAttribute('src')).toBe('https://pps.whatsapp.net/v/photo.jpg');
+    expect(img?.getAttribute('alt')).toBe('Maria');
+  });
+
+  it('falls back to initials when profilePictureUrl is absent', () => {
+    useConversationsMock.mockReturnValue({
+      conversations: [baseConv({ id: '5511999', clienteNome: 'Maria' })],
+      isLoading: false,
+      error: null,
+    });
+    render(<ConversationList selectedId={null} />);
+    const row = screen.getByTestId('conversation-row-5511999');
+    // No <img> rendered — Avatar fallback shows initials.
+    expect(row.querySelector('img')).toBeNull();
+    // Initials still rendered.
+    expect(row.textContent).toContain('M');
   });
 });

@@ -27,6 +27,42 @@ export interface IncomingMessage {
   timestamp: Date;
 }
 
+/**
+ * Mock-friendly subset of the Baileys WASocket — only the bits the inbound
+ * handler actually calls. Full type would drag in the entire Baileys SDK.
+ */
+export interface ProfilePictureCapableSocket {
+  profilePictureUrl(jid: string, type?: 'image' | 'preview'): Promise<string | undefined>;
+}
+
+/**
+ * WhatsApp signs profile-picture URLs with a ~24h TTL. We re-fetch every 20h
+ * to give a comfortable refresh margin without spamming the WA servers.
+ */
+const PROFILE_PHOTO_REFRESH_MS = 20 * 60 * 60 * 1000;
+
+/**
+ * Burst protection — multiple inbound messages from the same JID arriving in
+ * quick succession should not trigger multiple `profilePictureUrl` calls.
+ */
+const PROFILE_PHOTO_THROTTLE_MS = 60 * 1000;
+
+/**
+ * Module-local map of `jid -> last fetch attempt time (ms)`. Lives for the
+ * worker process lifetime; survives Firestore retries but resets on restart,
+ * which is fine — Firestore is the durable record.
+ */
+const lastProfilePhotoFetchByJid = new Map<string, number>();
+
+/**
+ * Test-only reset helper. Exported so unit tests can clear the in-memory
+ * throttle between cases without using `vi.useFakeTimers`. Not part of the
+ * public API; do not call from production code.
+ */
+export function __resetProfilePhotoThrottleForTests(): void {
+  lastProfilePhotoFetchByJid.clear();
+}
+
 const PREVIEW_MAX = 140;
 
 function buildPreview(msg: IncomingMessage): string {
@@ -120,10 +156,67 @@ function toMillis(value: unknown): number {
   return 0;
 }
 
+/**
+ * Decide whether to (re-)fetch a profile picture for this conversation.
+ *
+ * Combines two gates:
+ *  1. Stale-doc gate: no URL yet OR doc's `profilePictureRefreshedAt` older
+ *     than 20h.
+ *  2. Burst gate: in-memory `lastProfilePhotoFetchByJid` indicates we just
+ *     fetched within the last 60s — skip even if the doc is stale.
+ */
+function shouldRefreshProfilePhoto(
+  existing: { profilePictureUrl?: unknown; profilePictureRefreshedAt?: unknown } | undefined,
+  jid: string,
+  nowMs: number,
+): boolean {
+  const lastFetchMs = lastProfilePhotoFetchByJid.get(jid);
+  if (lastFetchMs !== undefined && nowMs - lastFetchMs < PROFILE_PHOTO_THROTTLE_MS) {
+    return false;
+  }
+
+  // No existing record or never fetched — needs initial fetch.
+  if (!existing) return true;
+  const refreshedAtMs = toMillis(existing.profilePictureRefreshedAt);
+  if (refreshedAtMs === 0) return true;
+  return nowMs - refreshedAtMs > PROFILE_PHOTO_REFRESH_MS;
+}
+
+/**
+ * Best-effort profile-picture fetch + cache. Never throws — Baileys returns
+ * undefined or rejects with a 404 for private/hidden accounts, both of which
+ * are normal and must not break message ingestion.
+ *
+ * Returns the patch to merge into the conversation doc. Always sets
+ * `profilePictureRefreshedAt` (so we don't immediately retry on the next
+ * message) and only sets `profilePictureUrl` when WhatsApp returned one.
+ */
+async function fetchProfilePhotoPatch(
+  sock: ProfilePictureCapableSocket,
+  jid: string,
+  now: Date,
+): Promise<Record<string, unknown>> {
+  lastProfilePhotoFetchByJid.set(jid, now.getTime());
+  try {
+    const url = await sock.profilePictureUrl(jid, 'image');
+    if (typeof url === 'string' && url.length > 0) {
+      return { profilePictureUrl: url, profilePictureRefreshedAt: now };
+    }
+    // No photo (private account, hidden, or no avatar set) — record the
+    // attempt so we don't retry immediately.
+    return { profilePictureRefreshedAt: now };
+  } catch {
+    // 404 / network errors — same handling. Stamp the timestamp to throttle
+    // future attempts; leave URL untouched.
+    return { profilePictureRefreshedAt: now };
+  }
+}
+
 export async function handleIncomingMessage(
   db: Firestore,
   msg: IncomingMessage,
   instanceId: string,
+  sock?: ProfilePictureCapableSocket,
 ): Promise<{ status: 'inserted' | 'duplicate' | 'invalid'; conversationId?: string }> {
   // 1. Dedupe.
   const dedupSnap = await db
@@ -147,6 +240,9 @@ export async function handleIncomingMessage(
   const convSnap = await convRef.get();
   const now = new Date();
   const preview = buildPreview(msg);
+  // JID for Baileys profile-picture lookup. Conversation IDs are bare phones;
+  // Baileys needs the full `<phone>@s.whatsapp.net` form.
+  const jid = `${normalized}@s.whatsapp.net`;
 
   if (!convSnap.exists) {
     // Try to auto-link client.
@@ -176,9 +272,21 @@ export async function handleIncomingMessage(
     };
     if (clienteId !== undefined) convDoc.clienteId = clienteId;
     if (clienteNome !== undefined) convDoc.clienteNome = clienteNome;
+
+    // Profile-picture fetch — first contact always needs a photo.
+    if (sock && shouldRefreshProfilePhoto(undefined, jid, now.getTime())) {
+      const photoPatch = await fetchProfilePhotoPatch(sock, jid, now);
+      Object.assign(convDoc, photoPatch);
+    }
+
     await convRef.set(convDoc);
   } else {
-    const existing = convSnap.data() as { unreadCount?: number; clienteId?: string };
+    const existing = convSnap.data() as {
+      unreadCount?: number;
+      clienteId?: string;
+      profilePictureUrl?: string;
+      profilePictureRefreshedAt?: unknown;
+    };
     const update: Record<string, unknown> = {
       lastMessageAt: msg.timestamp,
       lastMessagePreview: preview,
@@ -199,6 +307,13 @@ export async function handleIncomingMessage(
         // ignore
       }
     }
+
+    // Profile-picture refresh on stale URL (or no URL yet).
+    if (sock && shouldRefreshProfilePhoto(existing, jid, now.getTime())) {
+      const photoPatch = await fetchProfilePhotoPatch(sock, jid, now);
+      Object.assign(update, photoPatch);
+    }
+
     await convRef.update(update);
   }
 

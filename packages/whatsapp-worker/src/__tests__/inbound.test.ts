@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { handleIncomingMessage } from '../inbound.js';
+import { handleIncomingMessage, __resetProfilePhotoThrottleForTests } from '../inbound.js';
 import type { IncomingMessage } from '../inbound.js';
 
 interface MockState {
@@ -117,6 +117,7 @@ describe('handleIncomingMessage', () => {
       writeLog: [],
     };
     db = buildDb(state);
+    __resetProfilePhotoThrottleForTests();
   });
 
   function makeMsg(overrides?: Partial<IncomingMessage>): IncomingMessage {
@@ -287,5 +288,159 @@ describe('handleIncomingMessage', () => {
     );
     const conv = state.conversations.get('5511999999999');
     expect(conv?.clienteId).toBeUndefined();
+  });
+
+  describe('profile picture caching', () => {
+    it('fetches and stores profile picture URL on first message from a JID', async () => {
+      const profilePictureUrl = vi
+        .fn<(jid: string, type: 'image' | 'preview') => Promise<string | undefined>>()
+        .mockResolvedValue('https://pps.whatsapp.net/v/abc?token=xyz');
+      const sock = { profilePictureUrl };
+
+      await handleIncomingMessage(
+        db as unknown as FirebaseFirestore.Firestore,
+        makeMsg(),
+        'primary',
+        sock,
+      );
+
+      expect(profilePictureUrl).toHaveBeenCalledTimes(1);
+      // Baileys expects the full JID (`<phone>@s.whatsapp.net`), not the bare phone.
+      expect(profilePictureUrl).toHaveBeenCalledWith('5511999999999@s.whatsapp.net', 'image');
+      const conv = state.conversations.get('5511999999999');
+      expect(conv?.profilePictureUrl).toBe('https://pps.whatsapp.net/v/abc?token=xyz');
+      expect(conv?.profilePictureRefreshedAt).toBeInstanceOf(Date);
+    });
+
+    it('does not call profilePictureUrl twice within 60s for the same JID', async () => {
+      const profilePictureUrl = vi
+        .fn<(jid: string, type: 'image' | 'preview') => Promise<string | undefined>>()
+        .mockResolvedValue('https://pps.whatsapp.net/v/abc');
+      const sock = { profilePictureUrl };
+
+      await handleIncomingMessage(
+        db as unknown as FirebaseFirestore.Firestore,
+        makeMsg({ whatsappMessageId: 'WAMSG-A' }),
+        'primary',
+        sock,
+      );
+      await handleIncomingMessage(
+        db as unknown as FirebaseFirestore.Firestore,
+        makeMsg({ whatsappMessageId: 'WAMSG-B' }),
+        'primary',
+        sock,
+      );
+
+      // Throttle: only one call across both messages.
+      expect(profilePictureUrl).toHaveBeenCalledTimes(1);
+    });
+
+    it('re-fetches when stored URL is older than 20 hours', async () => {
+      const TWENTY_ONE_HOURS_AGO = new Date(Date.now() - 21 * 60 * 60 * 1000);
+      state.conversations.set('5511999999999', {
+        id: '5511999999999',
+        phone: '5511999999999',
+        unreadCount: 1,
+        profilePictureUrl: 'https://pps.whatsapp.net/v/old',
+        profilePictureRefreshedAt: TWENTY_ONE_HOURS_AGO,
+      });
+      const profilePictureUrl = vi
+        .fn<(jid: string, type: 'image' | 'preview') => Promise<string | undefined>>()
+        .mockResolvedValue('https://pps.whatsapp.net/v/new');
+      const sock = { profilePictureUrl };
+
+      await handleIncomingMessage(
+        db as unknown as FirebaseFirestore.Firestore,
+        makeMsg(),
+        'primary',
+        sock,
+      );
+
+      expect(profilePictureUrl).toHaveBeenCalledTimes(1);
+      const conv = state.conversations.get('5511999999999');
+      expect(conv?.profilePictureUrl).toBe('https://pps.whatsapp.net/v/new');
+    });
+
+    it('skips fetch when stored URL is fresher than 20 hours', async () => {
+      const ONE_HOUR_AGO = new Date(Date.now() - 60 * 60 * 1000);
+      state.conversations.set('5511999999999', {
+        id: '5511999999999',
+        phone: '5511999999999',
+        unreadCount: 1,
+        profilePictureUrl: 'https://pps.whatsapp.net/v/fresh',
+        profilePictureRefreshedAt: ONE_HOUR_AGO,
+      });
+      const profilePictureUrl = vi.fn();
+      const sock = { profilePictureUrl };
+
+      await handleIncomingMessage(
+        db as unknown as FirebaseFirestore.Firestore,
+        makeMsg(),
+        'primary',
+        sock,
+      );
+
+      expect(profilePictureUrl).not.toHaveBeenCalled();
+      const conv = state.conversations.get('5511999999999');
+      // URL untouched.
+      expect(conv?.profilePictureUrl).toBe('https://pps.whatsapp.net/v/fresh');
+    });
+
+    it('handles 404 (private account) gracefully — stores no URL but a fresh timestamp', async () => {
+      const profilePictureUrl = vi
+        .fn<(jid: string, type: 'image' | 'preview') => Promise<string | undefined>>()
+        .mockRejectedValue(Object.assign(new Error('not found'), { status: 404 }));
+      const sock = { profilePictureUrl };
+
+      const result = await handleIncomingMessage(
+        db as unknown as FirebaseFirestore.Firestore,
+        makeMsg(),
+        'primary',
+        sock,
+      );
+
+      // Message ingestion must NOT crash because of the photo failure.
+      expect(result.status).toBe('inserted');
+      const conv = state.conversations.get('5511999999999');
+      expect(conv).toBeDefined();
+      // No URL stored, but timestamp updated so we don't retry on the next message.
+      expect(conv?.profilePictureUrl).toBeUndefined();
+      expect(conv?.profilePictureRefreshedAt).toBeInstanceOf(Date);
+    });
+
+    it('does not crash when sock is undefined (back-compat test path)', async () => {
+      const result = await handleIncomingMessage(
+        db as unknown as FirebaseFirestore.Firestore,
+        makeMsg(),
+        'primary',
+        // no sock argument — old call signature.
+      );
+
+      expect(result.status).toBe('inserted');
+      const conv = state.conversations.get('5511999999999');
+      expect(conv).toBeDefined();
+      expect(conv?.profilePictureUrl).toBeUndefined();
+      // No fetch attempted, so no refresh timestamp either.
+      expect(conv?.profilePictureRefreshedAt).toBeUndefined();
+    });
+
+    it('treats undefined return from profilePictureUrl as "no photo"', async () => {
+      const profilePictureUrl = vi
+        .fn<(jid: string, type: 'image' | 'preview') => Promise<string | undefined>>()
+        .mockResolvedValue(undefined);
+      const sock = { profilePictureUrl };
+
+      await handleIncomingMessage(
+        db as unknown as FirebaseFirestore.Firestore,
+        makeMsg(),
+        'primary',
+        sock,
+      );
+
+      const conv = state.conversations.get('5511999999999');
+      expect(conv?.profilePictureUrl).toBeUndefined();
+      // Refreshed-at IS set so we skip re-trying for the throttle window.
+      expect(conv?.profilePictureRefreshedAt).toBeInstanceOf(Date);
+    });
   });
 });

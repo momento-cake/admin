@@ -13,6 +13,7 @@ import {
   UserPlus,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -382,9 +383,17 @@ function LinkedClientView({ conversation }: { conversation: WhatsAppConversation
       <Card className="overflow-hidden border-border/70">
         <CardContent className="space-y-3 px-4 py-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--primary)]/10 text-base font-semibold text-[var(--primary)]">
-              {initials || <User className="h-5 w-5" />}
-            </div>
+            <Avatar className="h-12 w-12">
+              {conversation.profilePictureUrl && (
+                <AvatarImage
+                  src={conversation.profilePictureUrl}
+                  alt={client?.name || conversation.clienteNome || 'Cliente vinculado'}
+                />
+              )}
+              <AvatarFallback className="bg-[var(--primary)]/10 text-base font-semibold text-[var(--primary)]">
+                {initials || <User className="h-5 w-5" />}
+              </AvatarFallback>
+            </Avatar>
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-semibold text-foreground">
                 {client?.name || conversation.clienteNome || 'Cliente vinculado'}
@@ -455,9 +464,17 @@ function UnmatchedView({ conversation }: { conversation: WhatsAppConversation })
       <CardContent className="space-y-4 px-4 py-5">
         {/* Welcoming framing */}
         <div className="flex items-start gap-3">
-          <div className="relative flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-[var(--secondary)]/20">
-            <Sparkles className="h-5 w-5 text-[var(--primary)]" />
-          </div>
+          <Avatar className="h-11 w-11 flex-shrink-0">
+            {conversation.profilePictureUrl && (
+              <AvatarImage
+                src={conversation.profilePictureUrl}
+                alt={conversation.whatsappName || 'Contato sem nome'}
+              />
+            )}
+            <AvatarFallback className="bg-[var(--secondary)]/20">
+              <Sparkles className="h-5 w-5 text-[var(--primary)]" />
+            </AvatarFallback>
+          </Avatar>
           <div className="flex-1 space-y-1">
             <p className="text-sm font-semibold text-foreground">Quem é essa pessoa?</p>
             <p className="text-xs leading-relaxed text-muted-foreground">

@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ChevronLeft, MessageCircle, User, Settings as SettingsIcon } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { ConversationList } from '@/components/whatsapp/ConversationList';
 import { MessageThread } from '@/components/whatsapp/MessageThread';
@@ -103,16 +104,21 @@ function ThreadHeader({
       >
         <ChevronLeft className="h-4 w-4" />
       </Button>
-      <div
-        className={cn(
-          'flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-xs font-semibold',
-          conversation.clienteId
-            ? 'bg-[var(--primary)] text-[var(--primary-foreground)]'
-            : 'bg-[var(--muted)] text-[var(--primary)]'
+      <Avatar className="h-9 w-9 flex-shrink-0">
+        {conversation.profilePictureUrl && (
+          <AvatarImage src={conversation.profilePictureUrl} alt={name} />
         )}
-      >
-        {initials || <User className="h-4 w-4" />}
-      </div>
+        <AvatarFallback
+          className={cn(
+            'text-xs font-semibold',
+            conversation.clienteId
+              ? 'bg-[var(--primary)] text-[var(--primary-foreground)]'
+              : 'bg-[var(--muted)] text-[var(--primary)]'
+          )}
+        >
+          {initials || <User className="h-4 w-4" />}
+        </AvatarFallback>
+      </Avatar>
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-semibold leading-tight">{name}</p>
         <p className="truncate text-[11px] text-muted-foreground">{subtitle}</p>
