@@ -649,4 +649,177 @@ describe('handleIncomingMessage', () => {
       expect(msgDoc.status).toBeUndefined();
     });
   });
+
+  describe('undefined-field rejection (regression guard for production bug)', () => {
+    /**
+     * Real Firestore Admin SDK rejects writes that contain `undefined` values
+     * unless `ignoreUndefinedProperties: true` is set on the Firestore instance.
+     * The production fix is in `src/firestore.ts` (a single global flag).
+     *
+     * To prove the handler relies on that flag — and would have crashed
+     * without it — these tests wrap our mock db in a strict shim that mirrors
+     * production behavior: any `undefined` field reaching `set()` / `update()`
+     * / `add()` throws the exact error message Firestore Admin emits. We then
+     * apply a `stripUndefined` proxy on top, simulating what
+     * `ignoreUndefinedProperties: true` does inside the real SDK before the
+     * write hits the wire. With the proxy in place, the handler succeeds for
+     * media-only / fromMe-without-text / decryption-failed messages. Without
+     * the proxy, the same call throws — proving the bug is real and the fix
+     * is necessary.
+     */
+
+    function deepHasUndefined(value: unknown): boolean {
+      if (value === undefined) return true;
+      if (value === null) return false;
+      if (Array.isArray(value)) return value.some(deepHasUndefined);
+      if (typeof value === 'object') {
+        for (const v of Object.values(value as Record<string, unknown>)) {
+          if (deepHasUndefined(v)) return true;
+        }
+      }
+      return false;
+    }
+
+    function stripUndefined<T>(value: T): T {
+      if (Array.isArray(value)) {
+        return value.map(stripUndefined) as unknown as T;
+      }
+      if (value && typeof value === 'object' && !(value instanceof Date)) {
+        const out: Record<string, unknown> = {};
+        for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+          if (v === undefined) continue;
+          out[k] = stripUndefined(v);
+        }
+        return out as unknown as T;
+      }
+      return value;
+    }
+
+    /**
+     * Wrap the existing buildDb with a strict shim. By default it throws on
+     * any undefined like real Firestore Admin. When `ignoreUndefined: true`,
+     * it transparently strips undefined fields first — what the SDK does when
+     * `ignoreUndefinedProperties: true` is enabled.
+     */
+    function buildStrictDb(s: MockState, ignoreUndefined: boolean) {
+      const inner = buildDb(s);
+      const guard = (data: unknown) => {
+        const sanitized = ignoreUndefined ? stripUndefined(data) : data;
+        if (deepHasUndefined(sanitized)) {
+          throw new Error(
+            'Value for argument "data" is not a valid Firestore document. Cannot use "undefined" as a Firestore value (found in field "text"). If you want to ignore undefined values, enable `ignoreUndefinedProperties`.',
+          );
+        }
+        return sanitized;
+      };
+      return {
+        collection: vi.fn((name: string) => {
+          const coll = inner.collection(name);
+          if (name === 'whatsapp_messages') {
+            const original = coll as { add: (d: Record<string, unknown>) => Promise<{ id: string }>; where: typeof coll.where };
+            return {
+              ...coll,
+              add: vi.fn(async (data: Record<string, unknown>) =>
+                original.add(guard(data) as Record<string, unknown>),
+              ),
+            };
+          }
+          if (name === 'whatsapp_conversations') {
+            return {
+              doc: vi.fn((id: string) => {
+                const ref = (coll as { doc: (i: string) => { get: () => Promise<unknown>; set: (d: Record<string, unknown>) => Promise<void>; update: (d: Record<string, unknown>) => Promise<void> } }).doc(id);
+                return {
+                  ...ref,
+                  set: vi.fn(async (data: Record<string, unknown>) =>
+                    ref.set(guard(data) as Record<string, unknown>),
+                  ),
+                  update: vi.fn(async (data: Record<string, unknown>) =>
+                    ref.update(guard(data) as Record<string, unknown>),
+                  ),
+                };
+              }),
+            };
+          }
+          return coll;
+        }),
+      };
+    }
+
+    it('writes a fromMe message doc successfully when text is undefined (media-only / decryption-failed)', async () => {
+      // Production scenario: a fromMe replay arrives from a linked device for
+      // a media-only message. Baileys' `msg.message.conversation` is
+      // undefined; the adapter passes `text: undefined` through. With the
+      // global `ignoreUndefinedProperties: true`, Firestore Admin strips the
+      // undefined before the write — handler must succeed and the doc must
+      // land WITHOUT a `text` field.
+      const strictDb = buildStrictDb(state, /* ignoreUndefined */ true);
+
+      const result = await handleIncomingMessage(
+        strictDb as unknown as FirebaseFirestore.Firestore,
+        makeMsg({
+          fromMe: true,
+          whatsappMessageId: 'WA-MEDIA-FROMME-001',
+          type: 'image',
+          text: undefined,
+          pushName: undefined,
+        }),
+        'primary',
+      );
+
+      expect(result.status).toBe('inserted');
+      const conv = state.conversations.get('5511999999999');
+      expect(conv).toBeDefined();
+      expect(conv?.lastMessageDirection).toBe('out');
+      expect(conv?.lastMessagePreview).toBe('[imagem]');
+      // `whatsappName` must not be on the doc (we don't adopt pushName on
+      // fromMe, and undefined gets stripped on inbound paths anyway).
+      expect(Object.prototype.hasOwnProperty.call(conv ?? {}, 'whatsappName')).toBe(false);
+
+      // Message doc landed and has no `text` field (it was stripped).
+      expect(state.messages.size).toBe(1);
+      const [msgDoc] = [...state.messages.values()];
+      expect(msgDoc.direction).toBe('out');
+      expect(msgDoc.status).toBe('sent');
+      expect(Object.prototype.hasOwnProperty.call(msgDoc, 'text')).toBe(false);
+    });
+
+    it('throws the production error today WITHOUT the ignoreUndefinedProperties strip (proves the bug)', async () => {
+      // Same scenario, but the strict mock does NOT simulate the global flag.
+      // This is what production was doing before this fix landed: the
+      // handler would build a doc with `text: undefined`, the Admin SDK
+      // would reject the entire write, and `failed to handle incoming
+      // message` would land in the error logs.
+      const strictDb = buildStrictDb(state, /* ignoreUndefined */ false);
+
+      await expect(
+        handleIncomingMessage(
+          strictDb as unknown as FirebaseFirestore.Firestore,
+          makeMsg({
+            fromMe: true,
+            whatsappMessageId: 'WA-MEDIA-FROMME-002',
+            type: 'image',
+            text: undefined,
+          }),
+          'primary',
+        ),
+      ).rejects.toThrow(/Cannot use "undefined" as a Firestore value/);
+    });
+
+    it('still writes an inbound text message with text present (regression guard)', async () => {
+      // The fix must not break the happy path: a normal incoming text message
+      // still writes `text` correctly through the strict (strip-enabled) mock.
+      const strictDb = buildStrictDb(state, /* ignoreUndefined */ true);
+
+      const result = await handleIncomingMessage(
+        strictDb as unknown as FirebaseFirestore.Firestore,
+        makeMsg({ text: 'Olá, gostaria de um bolo' }),
+        'primary',
+      );
+
+      expect(result.status).toBe('inserted');
+      const [msgDoc] = [...state.messages.values()];
+      expect(msgDoc.text).toBe('Olá, gostaria de um bolo');
+      expect(msgDoc.direction).toBe('in');
+    });
+  });
 });

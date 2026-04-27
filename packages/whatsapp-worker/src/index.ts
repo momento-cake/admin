@@ -205,6 +205,7 @@ async function main(): Promise<void> {
           db,
           event as unknown as HistorySyncEvent,
           instanceId,
+          sock,
         );
         logger.info(
           {
