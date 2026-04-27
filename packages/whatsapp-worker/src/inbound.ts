@@ -48,14 +48,97 @@ export interface IncomingMessage {
   text?: string;
   type: WhatsAppMessageType;
   timestamp: Date;
+  /**
+   * Raw `key.remoteJid` from Baileys (e.g. `5511999999999@s.whatsapp.net`,
+   * `5511999999999:42@s.whatsapp.net`, or `5511999999999@lid`). Used by the
+   * fromMe protocol-message filter to detect device-to-device sync chatter
+   * where WhatsApp uses the user's OWN JID as the remoteJid. Optional for
+   * back-compat with existing call sites and tests; when absent, the
+   * self-JID check is skipped.
+   */
+  remoteJid?: string;
+  /**
+   * True when the underlying Baileys `msg.message.protocolMessage` field is
+   * set. Baileys uses this for read receipts, ephemeral key updates, group
+   * invitations, and other non-user-visible protocol traffic — none of which
+   * should land in the admin inbox as outgoing messages. Optional for
+   * back-compat; when absent, the protocol-message check is treated as
+   * "no protocol message present".
+   */
+  hasProtocolMessage?: boolean;
 }
 
 /**
  * Mock-friendly subset of the Baileys WASocket — only the bits the inbound
  * handler actually calls. Full type would drag in the entire Baileys SDK.
+ *
+ * `user.id` is the worker's own paired-phone JID (Baileys exposes it as
+ * `sock.user.id`). It's used by the fromMe protocol-message filter to detect
+ * device-to-device sync messages, where WhatsApp uses the user's own JID as
+ * `remoteJid`. Optional because not all callers (notably tests) supply a
+ * paired socket; when absent, the self-JID check passes through.
  */
 export interface ProfilePictureCapableSocket {
   profilePictureUrl(jid: string, type?: 'image' | 'preview'): Promise<string | undefined>;
+  user?: { id?: string | null } | null;
+}
+
+/**
+ * Compares a remoteJid against the worker's own paired JID, tolerating the
+ * variations Baileys emits:
+ *
+ *  - `<digits>@s.whatsapp.net`           — bare phone JID
+ *  - `<digits>:<device>@s.whatsapp.net`  — phone with device suffix (multi-device)
+ *  - `<digits>@lid`                       — linked-device-only "private" JID
+ *
+ * We strip the `:device` suffix and the `@host` part before comparing —
+ * only the bare digit (or LID) prefix matters. That makes
+ * `5511999999999@s.whatsapp.net` match `5511999999999:42@s.whatsapp.net`
+ * AND `5511999999999@lid` (defensive: in practice Baileys emits one
+ * canonical form for `sock.user.id`, but device-sync chatter can carry the
+ * suffix variant for the same identity).
+ *
+ * Returns `false` (don't filter) when either input is missing or empty —
+ * test mode and other paths without a paired socket get the pre-fix
+ * behavior.
+ */
+export function isSelfJid(jid: string, ownJid?: string | null): boolean {
+  if (!jid || !ownJid) return false;
+  const left = extractJidPrefix(jid);
+  const right = extractJidPrefix(ownJid);
+  if (!left || !right) return false;
+  return left === right;
+}
+
+function extractJidPrefix(jid: string): string | undefined {
+  const at = jid.indexOf('@');
+  const head = at >= 0 ? jid.slice(0, at) : jid;
+  // Strip multi-device suffix: `5511999999999:42` -> `5511999999999`.
+  const beforeColon = head.split(':')[0];
+  if (!beforeColon) return undefined;
+  return beforeColon;
+}
+
+/**
+ * For a fromMe message, returns true when the message has actual user-visible
+ * content — non-empty text or a recognized media type. Returns false for
+ * `type: 'system'` with empty text, which is what device-sync / protocol
+ * messages collapse to in our adapter.
+ */
+function fromMeHasUserContent(msg: IncomingMessage): boolean {
+  if (msg.text && msg.text.length > 0) return true;
+  switch (msg.type) {
+    case 'image':
+    case 'audio':
+    case 'video':
+    case 'document':
+    case 'sticker':
+    case 'location':
+    case 'contact':
+      return true;
+    default:
+      return false;
+  }
 }
 
 /**
@@ -240,8 +323,56 @@ export async function handleIncomingMessage(
   msg: IncomingMessage,
   instanceId: string,
   sock?: ProfilePictureCapableSocket,
-): Promise<{ status: 'inserted' | 'duplicate' | 'invalid'; conversationId?: string }> {
+): Promise<{ status: 'inserted' | 'duplicate' | 'invalid' | 'skipped'; conversationId?: string }> {
   const fromMe = msg.fromMe === true;
+
+  // 0. fromMe protocol/device-sync filter.
+  //
+  //    WhatsApp's multi-device protocol uses `messages.upsert` for two
+  //    completely different things:
+  //      (a) actual user-typed messages we sent from another linked device
+  //          (phone, WA Web on another browser) — these we DO want to
+  //          mirror into the admin inbox.
+  //      (b) device-to-device coordination chatter — read receipts, key
+  //          rotations, ephemeral-mode flips, app-state syncs, etc. These
+  //          arrive as `fromMe: true` with `key.remoteJid` set to OUR own
+  //          JID (the user's own paired phone), and/or as
+  //          `msg.message.protocolMessage` payloads with no user content.
+  //          These are pure internal protocol traffic and must NEVER show up
+  //          in the inbox.
+  //
+  //    Production has been writing 7+ garbage `type: 'system'`, `text: ''`
+  //    rows whose `conversationId` is the user's own phone — exactly case
+  //    (b). This filter drops them silently before any Firestore work.
+  //
+  //    Behavior: for fromMe messages, all three checks below must pass for
+  //    the message to be ingested. Any failure means a silent skip — no log
+  //    noise, no write. Inbound (fromMe:false) is unaffected; the existing
+  //    type-detection in the adapter classifies inbound protocol noise as
+  //    `system` and the UI already renders the placeholder for those.
+  if (fromMe) {
+    // Check 1 — self-JID: if remoteJid points at the worker's own paired
+    // phone, this is device-sync chatter. Tolerate sock undefined (test
+    // mode) by treating the check as a pass-through; only the live worker
+    // process has access to `sock.user.id`.
+    if (msg.remoteJid && sock?.user?.id && isSelfJid(msg.remoteJid, sock.user.id)) {
+      return { status: 'skipped' };
+    }
+
+    // Check 2 — protocol message: Baileys' `protocolMessage` field is used
+    // for read receipts, ephemeral key updates, group invitations, etc.
+    // Never user-visible content.
+    if (msg.hasProtocolMessage === true) {
+      return { status: 'skipped' };
+    }
+
+    // Check 3 — has user content: text or recognized media. Catches
+    // `type: 'system'` collapses where neither condition 1 nor 2 fired but
+    // there's still nothing to display.
+    if (!fromMeHasUserContent(msg)) {
+      return { status: 'skipped' };
+    }
+  }
 
   // 1. Dedupe. Critical for the fromMe path: outbound.ts already writes a
   //    message doc with the same `whatsappMessageId` when the message went
