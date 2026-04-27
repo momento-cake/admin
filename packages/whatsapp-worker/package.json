@@ -18,6 +18,7 @@
     "@hapi/boom": "^10.0.1",
     "@whiskeysockets/baileys": "^6.7.18",
     "firebase-admin": "^12.7.0",
+    "node-cache": "^5.1.2",
     "pino": "^9.5.0",
     "qrcode": "^1.5.4"
   },

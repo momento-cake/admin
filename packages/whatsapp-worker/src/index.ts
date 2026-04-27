@@ -12,6 +12,7 @@
  */
 
 import { randomUUID } from 'node:crypto';
+import NodeCache from 'node-cache';
 import pino from 'pino';
 import { toDataURL as qrToDataURL } from 'qrcode';
 import makeWASocket, {
@@ -30,6 +31,8 @@ import { clearQR, emitQR, heartbeat, updateStatus } from './status.js';
 import { handleHistorySync } from './history.js';
 import type { HistorySyncEvent } from './history.js';
 import { subscribeToSyncJobs } from './sync-jobs.js';
+import { handleContactsUpsert } from './contacts.js';
+import type { ContactInput } from './contacts.js';
 import type { WhatsAppMessageType } from './types.js';
 
 const logger = pino({ level: process.env.LOG_LEVEL ?? 'info' });
@@ -38,6 +41,16 @@ const HEARTBEAT_INTERVAL_MS = 30_000;
 // Renew the lease at 20s — well below the 60s TTL so a single missed renewal still
 // leaves another full attempt before another worker could steal the lock.
 const LEASE_RENEW_INTERVAL_MS = 20_000;
+
+/**
+ * In-memory cache of MessageCounterError retry attempts per message id.
+ * Lives at module scope so it survives socket reconnects within the same
+ * worker process — Baileys uses it to enforce `maxMsgRetryCount` across
+ * reconnects so we don't double-retry the same message every time the
+ * socket flaps. Resets on worker restart, which is fine: the receiving
+ * peer eventually expires the retry window too.
+ */
+const msgRetryCounterCache = new NodeCache({ stdTTL: 10 * 60 });
 
 function envOrDefault(name: string, fallback: string): string {
   const value = process.env[name];
@@ -72,6 +85,85 @@ function jidToPhone(jid: string | null | undefined): string | undefined {
   return head.split(':')[0] || undefined;
 }
 
+/**
+ * Build the options object passed to `makeWASocket`. Extracted so the
+ * production config can be unit-tested without spinning up an actual socket.
+ *
+ * The block addresses the `MessageCounterError: Key used already or never
+ * filled` retry loop seen on fromMe messages from other linked devices. It
+ * works by:
+ *
+ *   - capping retries (`maxMsgRetryCount: 5`) so a wedged ratchet can't
+ *     spiral forever
+ *   - giving Baileys a persistent retry counter (`msgRetryCounterCache`)
+ *     that survives socket reconnects within the same process — without
+ *     this, every reconnect would re-issue retry receipts from zero
+ *   - `transactionOpts` to prevent concurrent SignalKeyStore writes from
+ *     corrupting state during rapid reconnects
+ *   - `getMessage` callback so Baileys can re-encrypt the original
+ *     plaintext on retry (without it the receiving peer can never decrypt
+ *     and the loop never converges)
+ *
+ * The remaining flags (`connectTimeoutMs`, `defaultQueryTimeoutMs`,
+ * `keepAliveIntervalMs`, `markOnlineOnConnect: false`) are stability/timeout
+ * settings recommended by the Baileys community for production deployments.
+ *
+ * Note: parameters are loosely typed (`unknown` / inferred) to keep the
+ * helper testable without dragging the entire Baileys SDK type surface
+ * through the caller. The shape is structurally compatible with what
+ * `makeWASocket` accepts at runtime.
+ */
+export function buildSocketOptions(
+  db: import('firebase-admin/firestore').Firestore,
+  authState: unknown,
+  baileysLogger: unknown,
+  version: [number, number, number],
+): Record<string, unknown> {
+  return {
+    version,
+    logger: baileysLogger,
+    printQRInTerminal: false,
+    auth: authState,
+    browser: ['Momento Cake', 'Chrome', '1.0'],
+    syncFullHistory: true,
+    // Retry-loop break: cap fromMe MessageCounterError retries.
+    msgRetryCounterCache,
+    maxMsgRetryCount: 5,
+    // Connection stability (production defaults).
+    connectTimeoutMs: 30_000,
+    defaultQueryTimeoutMs: 60_000,
+    keepAliveIntervalMs: 30_000,
+    markOnlineOnConnect: false,
+    // Signal-store transaction safety: prevent concurrent key writes from
+    // corrupting state during rapid reconnects.
+    transactionOpts: { maxCommitRetries: 10, delayBetweenTriesMs: 100 },
+    // getMessage callback — Baileys uses this to retrieve the original
+    // plaintext for re-encryption on retry. Without it, the receiving
+    // peer can't decrypt our retried message and the loop never converges.
+    // We look up by `whatsappMessageId` in our `whatsapp_messages`
+    // collection and return the cached text when available.
+    getMessage: async (key: { id?: string | null }): Promise<{ conversation: string } | undefined> => {
+      try {
+        const wid = key?.id;
+        if (!wid) return undefined;
+        const snap = await db
+          .collection('whatsapp_messages')
+          .where('whatsappMessageId', '==', wid)
+          .limit(1)
+          .get();
+        if (snap.empty) return undefined;
+        const data = snap.docs[0].data() as { text?: string };
+        if (typeof data.text === 'string' && data.text.length > 0) {
+          return { conversation: data.text };
+        }
+        return undefined;
+      } catch {
+        return undefined;
+      }
+    },
+  };
+}
+
 async function main(): Promise<void> {
   const instanceId = envOrDefault('WHATSAPP_INSTANCE_ID', 'primary');
   const workerId = randomUUID();
@@ -96,23 +188,13 @@ async function main(): Promise<void> {
   const { state, saveCreds } = await createFirestoreAuthState(db, instanceId);
   const { version } = await fetchLatestBaileysVersion();
 
-  // syncFullHistory: true asks the phone to ship the full chat history on
-  // first pair. This is the canonical Baileys way to populate the inbox with
-  // existing conversations after pairing — without it, only chats that
-  // receive a new message after pairing would ever appear. The trade-off is
-  // a slower / heavier first-pair sync (chunked over `messaging-history.set`
-  // events). Already-paired sessions are unaffected by this flag — the
-  // history snapshot is finalized on first pair and re-pairing is required
-  // to refresh it.
+  // Construct the socket options separately so the production config block
+  // (retry caps, transaction opts, getMessage, etc.) is independently
+  // unit-testable. See `buildSocketOptions` above for the full rationale.
   const buildSocket = () =>
-    makeWASocket({
-      version,
-      logger,
-      printQRInTerminal: false,
-      auth: state,
-      browser: ['Momento Cake', 'Chrome', '1.0'],
-      syncFullHistory: true,
-    });
+    makeWASocket(
+      buildSocketOptions(db, state, logger, version) as Parameters<typeof makeWASocket>[0],
+    );
 
   let sock = buildSocket();
 
@@ -257,6 +339,43 @@ async function main(): Promise<void> {
         }
       }
     });
+
+    // Baileys learns contact metadata (display names, push names, verified
+    // names) from various protocol channels — chat history, presence updates,
+    // app-state sync — and surfaces them via these two events. We use them to
+    // backfill `whatsappName` on existing conversation docs whose value is
+    // currently missing/empty (the common case when history-sync chunks
+    // didn't carry pushName for the chat). The handler never overwrites a
+    // non-empty existing name and never creates new conversation docs from
+    // contacts alone. Errors are swallowed — name backfill is non-critical
+    // and must not break message ingestion.
+    sock.ev.on('contacts.upsert', async (contacts) => {
+      try {
+        const result = await handleContactsUpsert(db, contacts as ContactInput[]);
+        if (result.updated > 0) {
+          logger.info(
+            { scanned: result.scanned, updated: result.updated },
+            'contacts.upsert backfilled whatsappName',
+          );
+        }
+      } catch (e) {
+        logger.error({ err: e }, 'contacts.upsert handler failed');
+      }
+    });
+
+    sock.ev.on('contacts.update', async (contacts) => {
+      try {
+        const result = await handleContactsUpsert(db, contacts as ContactInput[]);
+        if (result.updated > 0) {
+          logger.info(
+            { scanned: result.scanned, updated: result.updated },
+            'contacts.update backfilled whatsappName',
+          );
+        }
+      } catch (e) {
+        logger.error({ err: e }, 'contacts.update handler failed');
+      }
+    });
   };
 
   wireSocketHandlers();
@@ -293,7 +412,15 @@ async function main(): Promise<void> {
   process.on('SIGINT', () => void shutdown('SIGINT'));
 }
 
-main().catch((err) => {
-  logger.fatal({ err }, 'worker crashed');
-  process.exit(1);
-});
+// Only auto-run when this file is loaded as the entry point (i.e. via
+// `node dist/index.js` or `tsx watch src/index.ts`). When the module is
+// imported from a test (`buildSocketOptions` is exported above), skip
+// `main()` so we don't kick off a Firestore connection / lease acquisition
+// inside the test runner. Detecting the entry point via Vitest's worker
+// flag is more reliable across Node versions than `import.meta` tricks.
+if (!process.env.VITEST) {
+  main().catch((err) => {
+    logger.fatal({ err }, 'worker crashed');
+    process.exit(1);
+  });
+}
