@@ -61,9 +61,32 @@ function ConversationListSkeleton() {
   );
 }
 
+/**
+ * Sort placeholders to the bottom of the list, with real conversations
+ * preserving their incoming order (already sorted by `lastMessageAt desc`
+ * server-side).
+ *
+ * Placeholders have no messages — there is no meaningful timestamp to sort
+ * them by. Bucketing them after the real chats keeps the inbox feeling like
+ * an inbox: things that need attention are at the top.
+ */
+function partitionConversations(conversations: WhatsAppConversation[]): WhatsAppConversation[] {
+  const real: WhatsAppConversation[] = [];
+  const placeholders: WhatsAppConversation[] = [];
+  for (const c of conversations) {
+    if (c.placeholder) placeholders.push(c);
+    else real.push(c);
+  }
+  // Placeholders: sort alphabetically by display name so the section is
+  // browsable. Real conversations stay in server order.
+  placeholders.sort((a, b) => displayName(a).localeCompare(displayName(b), 'pt-BR'));
+  return [...real, ...placeholders];
+}
+
 export function ConversationList({ selectedId }: ConversationListProps) {
   const router = useRouter();
-  const { conversations, isLoading, error } = useWhatsAppConversations();
+  const { conversations: rawConversations, isLoading, error } = useWhatsAppConversations();
+  const conversations = partitionConversations(rawConversations);
 
   if (isLoading) {
     return (
@@ -105,14 +128,19 @@ export function ConversationList({ selectedId }: ConversationListProps) {
       {conversations.map((conv) => {
         const name = displayName(conv);
         const isSelected = selectedId === conv.id;
-        const unread = conv.unreadCount && conv.unreadCount > 0 ? conv.unreadCount : null;
-        const preview = conv.lastMessagePreview || '—';
+        const isPlaceholder = !!conv.placeholder;
+        // Suppress unread badge for placeholders — they have no messages, so
+        // any non-zero unreadCount on those rows is stale or vestigial.
+        const unread =
+          !isPlaceholder && conv.unreadCount && conv.unreadCount > 0 ? conv.unreadCount : null;
+        const preview = conv.lastMessagePreview || (isPlaceholder ? '' : '—');
         const isOutLast = conv.lastMessageDirection === 'out';
         return (
           <li key={conv.id}>
             <button
               type="button"
               data-testid={`conversation-row-${conv.id}`}
+              data-placeholder={isPlaceholder ? 'true' : undefined}
               onClick={() => router.push(`/whatsapp?c=${conv.id}`)}
               className={cn(
                 'group relative flex w-full items-start gap-3 px-3 py-3 text-left transition-colors',
@@ -121,7 +149,8 @@ export function ConversationList({ selectedId }: ConversationListProps) {
                   ? 'selected bg-[var(--secondary)]/15'
                   : unread
                     ? 'bg-amber-50/40'
-                    : ''
+                    : '',
+                isPlaceholder && !isSelected && 'opacity-70 hover:opacity-100'
               )}
             >
               {/* Selected: gold left rail */}
@@ -185,14 +214,18 @@ export function ConversationList({ selectedId }: ConversationListProps) {
                       unread ? 'text-[var(--destructive)]' : 'text-muted-foreground'
                     )}
                   >
-                    {relativeTime(conv.lastMessageAt?.seconds)}
+                    {isPlaceholder ? 'CRM' : relativeTime(conv.lastMessageAt?.seconds)}
                   </span>
                 </div>
                 <div className="mt-0.5 flex items-center gap-2">
                   <span
                     className={cn(
                       'block max-h-[2.4em] overflow-hidden text-xs leading-snug',
-                      unread ? 'text-foreground/80' : 'text-muted-foreground'
+                      isPlaceholder
+                        ? 'italic text-muted-foreground/80'
+                        : unread
+                          ? 'text-foreground/80'
+                          : 'text-muted-foreground'
                     )}
                     style={{
                       display: '-webkit-box',
@@ -200,10 +233,16 @@ export function ConversationList({ selectedId }: ConversationListProps) {
                       WebkitLineClamp: 1,
                     }}
                   >
-                    {isOutLast && (
-                      <span className="mr-1 text-muted-foreground/70">Você:</span>
+                    {isPlaceholder ? (
+                      'Sem mensagens ainda'
+                    ) : (
+                      <>
+                        {isOutLast && (
+                          <span className="mr-1 text-muted-foreground/70">Você:</span>
+                        )}
+                        {preview}
+                      </>
                     )}
-                    {preview}
                   </span>
                   {unread ? (
                     <span

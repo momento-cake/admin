@@ -27,6 +27,9 @@ import { createFirestoreAuthState } from './auth-state.js';
 import { handleIncomingMessage } from './inbound.js';
 import { subscribeToOutbox } from './outbound.js';
 import { clearQR, emitQR, heartbeat, updateStatus } from './status.js';
+import { handleHistorySync } from './history.js';
+import type { HistorySyncEvent } from './history.js';
+import { subscribeToSyncJobs } from './sync-jobs.js';
 import type { WhatsAppMessageType } from './types.js';
 
 const logger = pino({ level: process.env.LOG_LEVEL ?? 'info' });
@@ -93,15 +96,28 @@ async function main(): Promise<void> {
   const { state, saveCreds } = await createFirestoreAuthState(db, instanceId);
   const { version } = await fetchLatestBaileysVersion();
 
-  let sock = makeWASocket({
-    version,
-    logger,
-    printQRInTerminal: false,
-    auth: state,
-    browser: ['Momento Cake', 'Chrome', '1.0'],
-  });
+  // syncFullHistory: true asks the phone to ship the full chat history on
+  // first pair. This is the canonical Baileys way to populate the inbox with
+  // existing conversations after pairing — without it, only chats that
+  // receive a new message after pairing would ever appear. The trade-off is
+  // a slower / heavier first-pair sync (chunked over `messaging-history.set`
+  // events). Already-paired sessions are unaffected by this flag — the
+  // history snapshot is finalized on first pair and re-pairing is required
+  // to refresh it.
+  const buildSocket = () =>
+    makeWASocket({
+      version,
+      logger,
+      printQRInTerminal: false,
+      auth: state,
+      browser: ['Momento Cake', 'Chrome', '1.0'],
+      syncFullHistory: true,
+    });
+
+  let sock = buildSocket();
 
   let unsubOutbox: (() => void) | null = null;
+  let unsubSyncJobs: (() => void) | null = null;
   let shuttingDown = false;
 
   const heartbeatTimer: NodeJS.Timeout = setInterval(() => {
@@ -169,19 +185,39 @@ async function main(): Promise<void> {
 
         if (!shuttingDown) {
           // Spin up a fresh socket. State and event subscribers stay scoped to that socket.
-          sock = makeWASocket({
-            version,
-            logger,
-            printQRInTerminal: false,
-            auth: state,
-            browser: ['Momento Cake', 'Chrome', '1.0'],
-          });
+          sock = buildSocket();
           wireSocketHandlers();
           if (unsubOutbox) unsubOutbox();
           unsubOutbox = subscribeToOutbox(db, sock, (e) =>
             logger.error({ err: e }, 'outbox processing error'),
           );
+          if (unsubSyncJobs) unsubSyncJobs();
+          unsubSyncJobs = subscribeToSyncJobs(db, sock, instanceId, (e) =>
+            logger.error({ err: e }, 'sync job processing error'),
+          );
         }
+      }
+    });
+
+    sock.ev.on('messaging-history.set', async (event) => {
+      try {
+        const result = await handleHistorySync(
+          db,
+          event as unknown as HistorySyncEvent,
+          instanceId,
+        );
+        logger.info(
+          {
+            chatsUpserted: result.chatsUpserted,
+            messagesIngested: result.messagesIngested,
+            skipped: result.skipped,
+            isLatest: event.isLatest,
+            syncType: event.syncType,
+          },
+          'history sync chunk processed',
+        );
+      } catch (e) {
+        logger.error({ err: e }, 'history sync handler failed');
       }
     });
 
@@ -221,6 +257,9 @@ async function main(): Promise<void> {
   unsubOutbox = subscribeToOutbox(db, sock, (e) =>
     logger.error({ err: e }, 'outbox processing error'),
   );
+  unsubSyncJobs = subscribeToSyncJobs(db, sock, instanceId, (e) =>
+    logger.error({ err: e }, 'sync job processing error'),
+  );
 
   // Graceful shutdown.
   const shutdown = async (signal: string) => {
@@ -230,6 +269,7 @@ async function main(): Promise<void> {
     clearInterval(heartbeatTimer);
     clearInterval(leaseTimer);
     if (unsubOutbox) unsubOutbox();
+    if (unsubSyncJobs) unsubSyncJobs();
     try {
       await updateStatus(db, instanceId, { state: 'disconnected' });
     } catch {
