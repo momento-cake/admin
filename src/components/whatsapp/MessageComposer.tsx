@@ -1,11 +1,16 @@
 'use client';
 
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
-import { Loader2, Send } from 'lucide-react';
+import { AlertTriangle, Loader2, Send } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { useWhatsAppStatus } from '@/hooks/useWhatsAppStatus';
 import { cn } from '@/lib/utils';
 
@@ -14,7 +19,8 @@ interface MessageComposerProps {
 }
 
 const MAX_LENGTH = 4096;
-const COUNT_THRESHOLD = 3500;
+// Show counter only after 80% of the limit is used (per UX brief).
+const COUNT_THRESHOLD = Math.floor(MAX_LENGTH * 0.8);
 
 export function MessageComposer({ conversationId }: MessageComposerProps) {
   const [text, setText] = useState('');
@@ -76,18 +82,36 @@ export function MessageComposer({ conversationId }: MessageComposerProps) {
       onChange={(e) => setText(e.target.value)}
       onKeyDown={handleKeyDown}
       placeholder={
-        isConnected ? 'Digite uma mensagem…' : 'WhatsApp desconectado'
+        isConnected
+          ? 'Digite uma mensagem… (Enter envia, Shift+Enter quebra linha)'
+          : 'WhatsApp desconectado'
       }
       disabled={disabled}
       maxLength={MAX_LENGTH}
       rows={1}
-      className="min-h-10 resize-none"
+      className="min-h-10 resize-none border-border/70 bg-white shadow-inner shadow-black/[0.02] focus-visible:ring-[var(--ring)]/50"
     />
   );
 
   return (
-    <div className="border-t bg-background p-3">
-      <div className="flex items-end gap-2">
+    <div className="border-t border-border/70 bg-[var(--background)]">
+      {/* Disconnect banner — only when WA is not connected */}
+      {!isConnected && (
+        <div
+          role="status"
+          className="flex items-start gap-2.5 border-b border-amber-200/70 bg-amber-50/80 px-3 py-2 text-xs text-amber-900"
+        >
+          <AlertTriangle className="mt-px h-3.5 w-3.5 flex-shrink-0 text-amber-600" />
+          <div className="flex-1">
+            <p className="font-semibold">WhatsApp desconectado</p>
+            <p className="opacity-80">
+              Mensagens não serão enviadas até o aparelho voltar a aparecer como conectado.
+            </p>
+          </div>
+        </div>
+      )}
+
+      <div className="flex items-end gap-2 px-3 py-3">
         <div className="flex-1">
           {!isConnected ? (
             <TooltipProvider>
@@ -107,16 +131,26 @@ export function MessageComposer({ conversationId }: MessageComposerProps) {
           onClick={submit}
           disabled={!canSubmit}
           aria-label="Enviar mensagem"
+          className={cn(
+            'h-10 w-10 rounded-full p-0 shadow-sm transition-transform',
+            canSubmit && 'hover:-translate-y-px'
+          )}
         >
-          {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+          {sending ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Send className="h-4 w-4" />
+          )}
         </Button>
       </div>
       {trimmed.length >= COUNT_THRESHOLD ? (
         <p
           data-testid="char-count"
           className={cn(
-            'mt-1 text-right text-[11px]',
-            trimmed.length >= MAX_LENGTH ? 'text-red-600' : 'text-muted-foreground'
+            '-mt-1 px-3 pb-2 text-right text-[11px] tabular-nums',
+            trimmed.length >= MAX_LENGTH
+              ? 'font-semibold text-red-600'
+              : 'text-muted-foreground'
           )}
         >
           {trimmed.length}/{MAX_LENGTH}
