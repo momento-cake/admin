@@ -252,6 +252,69 @@ async function fetchProfilePhotoPatch(
 }
 
 /**
+ * Best-effort client lookup by phone — same logic as `inbound.ts`. Tries
+ * both the top-level `phone` field and `contactMethodValues` array. Returns
+ * the most recently-updated active match, or null.
+ *
+ * Limited to active clients to avoid linking soft-deleted records.
+ */
+async function findClientByPhone(
+  db: Firestore,
+  phone: string,
+): Promise<{ id: string; name?: string } | null> {
+  const matches: Array<{ id: string; data: Record<string, unknown> }> = [];
+
+  try {
+    const snap = await db
+      .collection('clients')
+      .where('phone', '==', phone)
+      .limit(10)
+      .get();
+    snap.docs.forEach((d) => matches.push({ id: d.id, data: d.data() as Record<string, unknown> }));
+  } catch {
+    // ignore — index may not exist
+  }
+
+  try {
+    const snap = await db
+      .collection('clients')
+      .where('contactMethodValues', 'array-contains', phone)
+      .limit(10)
+      .get();
+    snap.docs.forEach((d) => matches.push({ id: d.id, data: d.data() as Record<string, unknown> }));
+  } catch {
+    // ignore — field/index may not exist
+  }
+
+  const byId = new Map<string, Record<string, unknown>>();
+  for (const m of matches) {
+    if (!byId.has(m.id)) byId.set(m.id, m.data);
+  }
+  const active = [...byId.entries()].filter(([, d]) => d.isActive !== false);
+  if (active.length === 0) return null;
+
+  active.sort(([, a], [, b]) => {
+    const ta = clientUpdatedAtMillis(a.updatedAt);
+    const tb = clientUpdatedAtMillis(b.updatedAt);
+    return tb - ta;
+  });
+  const [id, data] = active[0];
+  return { id, name: typeof data.name === 'string' ? data.name : undefined };
+}
+
+function clientUpdatedAtMillis(value: unknown): number {
+  if (!value) return 0;
+  if (value instanceof Date) return value.getTime();
+  if (typeof value === 'object' && value !== null && typeof (value as { toMillis?: () => number }).toMillis === 'function') {
+    return (value as { toMillis: () => number }).toMillis();
+  }
+  if (typeof value === 'object' && value !== null && typeof (value as { toDate?: () => Date }).toDate === 'function') {
+    return (value as { toDate: () => Date }).toDate().getTime();
+  }
+  return 0;
+}
+
+/**
  * Upsert the `whatsapp_conversations/{phone}` doc for a single chat.
  *
  * If the doc already has a `lastMessageAt`, we treat the live `inbound.ts` /
@@ -282,10 +345,30 @@ async function upsertChat(
   const chatTsMillis = toMillis(chat.conversationTimestamp);
   const chatTs = chatTsMillis !== null ? new Date(chatTsMillis) : null;
 
-  // Prefer message-level pushName over chat.name — chat.name is unreliable for
-  // unsaved contacts (often the phone number or empty), whereas pushName is
-  // the contact's self-reported display name.
-  const resolvedName = resolvedPushName || chat.name || undefined;
+  // Resolve name. Order:
+  //   1. message-level pushName from this snapshot
+  //   2. chat.name (often the phone number or empty for unsaved contacts —
+  //      kept as a weak hint)
+  //   3. matched client name from `clients` collection — the production
+  //      escape hatch for the 175 chats whose history-sync chunks never
+  //      shipped pushName. Looked up lazily, so we only pay the Firestore
+  //      cost when the first two sources came up empty.
+  // chat.name is checked here but applied below conditionally to keep the
+  // strict "client lookup beats chat.name when pushName is missing" order.
+  let resolvedName = resolvedPushName ?? undefined;
+  let matchedClient: { id: string; name?: string } | null = null;
+  if (!resolvedName) {
+    try {
+      matchedClient = await findClientByPhone(db, phone);
+    } catch {
+      // ignore — best-effort
+    }
+    if (matchedClient?.name) {
+      resolvedName = matchedClient.name;
+    } else if (chat.name && chat.name.trim().length > 0) {
+      resolvedName = chat.name;
+    }
+  }
 
   if (!snap.exists) {
     // Brand-new conversation discovered via history sync.
@@ -302,6 +385,10 @@ async function upsertChat(
     };
     if (resolvedName) doc.whatsappName = resolvedName;
     if (chatTs) doc.lastMessageAt = chatTs;
+    if (matchedClient) {
+      doc.clienteId = matchedClient.id;
+      if (matchedClient.name) doc.clienteNome = matchedClient.name;
+    }
 
     // Profile-picture fetch — first time we've seen this chat, always try.
     if (sock && jid && shouldRefreshProfilePhoto(undefined, jid, now.getTime())) {
@@ -326,6 +413,13 @@ async function upsertChat(
     // Only fill in when the existing value is missing/empty — never stomp on
     // a fresher name set by inbound.ts.
     update.whatsappName = resolvedName;
+  }
+  // Backfill clienteId / clienteNome when the conversation isn't linked yet.
+  // We may have already done a client lookup above (when no pushName was
+  // available) — reuse that result rather than querying twice.
+  if (!existing?.clienteId && matchedClient) {
+    update.clienteId = matchedClient.id;
+    if (matchedClient.name) update.clienteNome = matchedClient.name;
   }
   // Only set lastMessageAt if the existing row never had one (e.g. a
   // placeholder row created by Strategy B).

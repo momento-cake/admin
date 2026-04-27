@@ -434,10 +434,24 @@ export async function handleIncomingMessage(
       updatedAt: now,
       instanceId,
     };
-    // pushName on a fromMe message is OUR own display name, not the contact's
-    // — only adopt it for inbound messages. Inbound preserves the original
-    // behavior of setting the field even when pushName is undefined.
-    if (!fromMe) convDoc.whatsappName = msg.pushName;
+    // Resolve whatsappName for new conversations:
+    //   1. inbound pushName (the contact's self-reported display name)
+    //   2. matched client name from `clients` collection (best fallback when
+    //      WhatsApp didn't ship a pushName for this chat — common during
+    //      history sync, where chunks routinely omit pushName)
+    //   3. leave undefined and let `contacts.upsert` / future inbound traffic
+    //      fill it in
+    // Skipped entirely for fromMe — pushName on our own messages is OUR
+    // display name, not the contact's, and the client name is still
+    // appropriate but we choose to defer to the inbound path instead of
+    // setting it during a fromMe write.
+    if (!fromMe) {
+      const inboundName = msg.pushName && msg.pushName.trim().length > 0
+        ? msg.pushName
+        : undefined;
+      const fallbackName = inboundName ?? clienteNome;
+      if (fallbackName !== undefined) convDoc.whatsappName = fallbackName;
+    }
     if (clienteId !== undefined) convDoc.clienteId = clienteId;
     if (clienteNome !== undefined) convDoc.clienteNome = clienteNome;
 
@@ -453,6 +467,7 @@ export async function handleIncomingMessage(
     const existing = convSnap.data() as {
       unreadCount?: number;
       clienteId?: string;
+      whatsappName?: string;
       profilePictureUrl?: string;
       profilePictureRefreshedAt?: unknown;
     };
@@ -468,20 +483,40 @@ export async function handleIncomingMessage(
       update.unreadCount = (existing?.unreadCount ?? 0) + 1;
       // Same reasoning as the create path — only adopt pushName from the
       // contact's messages, not from our own fromMe replays.
-      if (msg.pushName) update.whatsappName = msg.pushName;
+      if (msg.pushName && msg.pushName.trim().length > 0) {
+        update.whatsappName = msg.pushName;
+      }
     }
     // If conversation was previously unlinked, attempt to link now. Runs for
     // both directions — a fromMe message in a yet-unlinked conversation
     // should still resolve the client.
+    let matchedClientName: string | undefined;
     if (!existing?.clienteId) {
       try {
         const match = await findClientByPhone(db, normalized);
         if (match) {
           update.clienteId = match.id;
-          if (match.name) update.clienteNome = match.name;
+          if (match.name) {
+            update.clienteNome = match.name;
+            matchedClientName = match.name;
+          }
         }
       } catch {
         // ignore
+      }
+    }
+    // whatsappName fallback from clients collection — fill in only when the
+    // existing value is missing/empty AND the inbound message didn't provide
+    // one. Skipped on fromMe (we don't touch whatsappName from fromMe
+    // replays at all).
+    if (!fromMe) {
+      const existingName = typeof existing?.whatsappName === 'string'
+        ? existing.whatsappName.trim()
+        : '';
+      const willSetFromPush = typeof update.whatsappName === 'string'
+        && (update.whatsappName as string).trim().length > 0;
+      if (!existingName && !willSetFromPush && matchedClientName) {
+        update.whatsappName = matchedClientName;
       }
     }
 

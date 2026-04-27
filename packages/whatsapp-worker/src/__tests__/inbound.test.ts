@@ -1006,6 +1006,167 @@ describe('handleIncomingMessage', () => {
     });
   });
 
+  describe('clients-collection fallback for whatsappName', () => {
+    /**
+     * Production scenario: a live inbound message lands without a pushName
+     * (Baileys sometimes omits it for the first message in a conversation
+     * or for certain protocol flavors). Without a fallback, the conversation
+     * is created with whatsappName=undefined. The fallback uses the matched
+     * client's name from the `clients` collection.
+     */
+
+    it('uses client name as whatsappName when inbound pushName is missing', async () => {
+      state.clients.push({
+        id: 'client-1',
+        phone: '5511999999999',
+        name: 'Maria from CRM',
+        isActive: true,
+        updatedAt: new Date('2025-12-01'),
+      });
+
+      await handleIncomingMessage(
+        db as unknown as FirebaseFirestore.Firestore,
+        makeMsg({ pushName: undefined }),
+        'primary',
+      );
+
+      const conv = state.conversations.get('5511999999999');
+      expect(conv?.whatsappName).toBe('Maria from CRM');
+      expect(conv?.clienteId).toBe('client-1');
+    });
+
+    it('uses client name when pushName is empty/whitespace', async () => {
+      state.clients.push({
+        id: 'client-1',
+        phone: '5511999999999',
+        name: 'Maria from CRM',
+        isActive: true,
+        updatedAt: new Date('2025-12-01'),
+      });
+
+      await handleIncomingMessage(
+        db as unknown as FirebaseFirestore.Firestore,
+        makeMsg({ pushName: '   ' }),
+        'primary',
+      );
+
+      const conv = state.conversations.get('5511999999999');
+      expect(conv?.whatsappName).toBe('Maria from CRM');
+    });
+
+    it('prefers pushName over client name when both are present', async () => {
+      state.clients.push({
+        id: 'client-1',
+        phone: '5511999999999',
+        name: 'CRM Stale',
+        isActive: true,
+        updatedAt: new Date('2025-12-01'),
+      });
+
+      await handleIncomingMessage(
+        db as unknown as FirebaseFirestore.Firestore,
+        makeMsg({ pushName: 'Fresh PushName' }),
+        'primary',
+      );
+
+      const conv = state.conversations.get('5511999999999');
+      expect(conv?.whatsappName).toBe('Fresh PushName');
+    });
+
+    it('leaves whatsappName undefined when neither pushName nor client match', async () => {
+      await handleIncomingMessage(
+        db as unknown as FirebaseFirestore.Firestore,
+        makeMsg({ pushName: undefined }),
+        'primary',
+      );
+
+      const conv = state.conversations.get('5511999999999');
+      expect(conv?.whatsappName).toBeUndefined();
+    });
+
+    it('fills whatsappName on update path via client lookup when existing is missing', async () => {
+      state.conversations.set('5511999999999', {
+        id: '5511999999999',
+        phone: '5511999999999',
+        // No whatsappName, no clienteId.
+        unreadCount: 0,
+      });
+      state.clients.push({
+        id: 'client-2',
+        phone: '5511999999999',
+        name: 'João',
+        isActive: true,
+        updatedAt: new Date('2025-12-01'),
+      });
+
+      await handleIncomingMessage(
+        db as unknown as FirebaseFirestore.Firestore,
+        makeMsg({ pushName: undefined }),
+        'primary',
+      );
+
+      const conv = state.conversations.get('5511999999999');
+      expect(conv?.whatsappName).toBe('João');
+      expect(conv?.clienteId).toBe('client-2');
+    });
+
+    it('does NOT overwrite existing whatsappName via client lookup on update path', async () => {
+      state.conversations.set('5511999999999', {
+        id: '5511999999999',
+        phone: '5511999999999',
+        whatsappName: 'Already Set',
+        unreadCount: 0,
+      });
+      state.clients.push({
+        id: 'client-2',
+        phone: '5511999999999',
+        name: 'Different Client Name',
+        isActive: true,
+        updatedAt: new Date('2025-12-01'),
+      });
+
+      await handleIncomingMessage(
+        db as unknown as FirebaseFirestore.Firestore,
+        makeMsg({ pushName: undefined }),
+        'primary',
+      );
+
+      const conv = state.conversations.get('5511999999999');
+      expect(conv?.whatsappName).toBe('Already Set');
+      // But the client backfill still happens on clienteId.
+      expect(conv?.clienteId).toBe('client-2');
+    });
+
+    it('does not set whatsappName on fromMe even when client matches (defer to inbound)', async () => {
+      // fromMe replays should not write whatsappName, even via the client
+      // fallback path — the inbound path is the source of truth and we don't
+      // want a fromMe replay racing ahead.
+      state.clients.push({
+        id: 'client-1',
+        phone: '5511999999999',
+        name: 'Maria from CRM',
+        isActive: true,
+        updatedAt: new Date('2025-12-01'),
+      });
+
+      await handleIncomingMessage(
+        db as unknown as FirebaseFirestore.Firestore,
+        makeMsg({
+          fromMe: true,
+          whatsappMessageId: 'WA-FROMME-CRM-001',
+          pushName: undefined,
+        }),
+        'primary',
+      );
+
+      const conv = state.conversations.get('5511999999999');
+      expect(conv?.whatsappName).toBeUndefined();
+      // But clienteId/clienteNome still get set via auto-link.
+      expect(conv?.clienteId).toBe('client-1');
+      expect(conv?.clienteNome).toBe('Maria from CRM');
+    });
+  });
+
   describe('isSelfJid helper', () => {
     it('matches identical bare JIDs', () => {
       expect(isSelfJid('5511555555555@s.whatsapp.net', '5511555555555@s.whatsapp.net')).toBe(true);

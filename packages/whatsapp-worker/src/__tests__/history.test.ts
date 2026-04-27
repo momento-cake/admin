@@ -683,6 +683,268 @@ describe('handleHistorySync', () => {
     });
   });
 
+  describe('clients collection fallback for whatsappName', () => {
+    /**
+     * Production scenario: history-sync chunks ship without pushName (very
+     * common — Baileys often omits it for unsaved/historical chats), so the
+     * snapshot's `messages[]` provides nothing for `buildPushNameByJid`.
+     * Without a fallback, the conversation gets created with no name. The
+     * fallback queries the admin-side `clients` collection and uses the
+     * matched client's name.
+     */
+
+    it('uses client name when no pushName is present in the snapshot', async () => {
+      state.clients.push({
+        id: 'client-1',
+        phone: '5511999999999',
+        name: 'Maria from CRM',
+        isActive: true,
+        updatedAt: new Date('2025-12-01'),
+      });
+
+      const event = makeEvent({
+        chats: [{ id: '5511999999999@s.whatsapp.net' }],
+        // No messages → no pushName extracted.
+      });
+
+      await handleHistorySync(
+        db as unknown as FirebaseFirestore.Firestore,
+        event,
+        'primary',
+      );
+
+      const conv = state.conversations.get('5511999999999');
+      expect(conv?.whatsappName).toBe('Maria from CRM');
+      // Also writes clienteId/clienteNome since we did the lookup anyway.
+      expect(conv?.clienteId).toBe('client-1');
+      expect(conv?.clienteNome).toBe('Maria from CRM');
+    });
+
+    it('prefers pushName over client name when both are available', async () => {
+      state.clients.push({
+        id: 'client-1',
+        phone: '5511999999999',
+        name: 'CRM Name (older/stale)',
+        isActive: true,
+        updatedAt: new Date('2025-01-01'),
+      });
+
+      const event = makeEvent({
+        chats: [{ id: '5511999999999@s.whatsapp.net' }],
+        messages: [
+          {
+            key: { remoteJid: '5511999999999@s.whatsapp.net', fromMe: false, id: 'M1' },
+            message: { conversation: 'oi' },
+            messageTimestamp: 1735000000,
+            pushName: 'WhatsApp Name (fresher)',
+          },
+        ],
+      });
+
+      await handleHistorySync(
+        db as unknown as FirebaseFirestore.Firestore,
+        event,
+        'primary',
+      );
+
+      const conv = state.conversations.get('5511999999999');
+      expect(conv?.whatsappName).toBe('WhatsApp Name (fresher)');
+    });
+
+    it('uses client name when pushName is empty/whitespace', async () => {
+      state.clients.push({
+        id: 'client-1',
+        phone: '5511999999999',
+        name: 'Maria from CRM',
+        isActive: true,
+        updatedAt: new Date('2025-12-01'),
+      });
+
+      const event = makeEvent({
+        chats: [{ id: '5511999999999@s.whatsapp.net' }],
+        messages: [
+          {
+            key: { remoteJid: '5511999999999@s.whatsapp.net', fromMe: false, id: 'M1' },
+            message: { conversation: 'oi' },
+            messageTimestamp: 1735000000,
+            pushName: '   ', // whitespace-only — buildPushNameByJid drops it
+          },
+        ],
+      });
+
+      await handleHistorySync(
+        db as unknown as FirebaseFirestore.Firestore,
+        event,
+        'primary',
+      );
+
+      const conv = state.conversations.get('5511999999999');
+      expect(conv?.whatsappName).toBe('Maria from CRM');
+    });
+
+    it('client name beats chat.name (chat.name is the unreliable phone-number string)', async () => {
+      state.clients.push({
+        id: 'client-1',
+        phone: '5511999999999',
+        name: 'Maria from CRM',
+        isActive: true,
+        updatedAt: new Date('2025-12-01'),
+      });
+
+      const event = makeEvent({
+        chats: [{ id: '5511999999999@s.whatsapp.net', name: '5511999999999' }],
+        // No messages → no pushName.
+      });
+
+      await handleHistorySync(
+        db as unknown as FirebaseFirestore.Firestore,
+        event,
+        'primary',
+      );
+
+      const conv = state.conversations.get('5511999999999');
+      expect(conv?.whatsappName).toBe('Maria from CRM');
+    });
+
+    it('falls back to chat.name when no pushName AND no client match', async () => {
+      const event = makeEvent({
+        chats: [{ id: '5511999999999@s.whatsapp.net', name: 'Chat Name Fallback' }],
+      });
+
+      await handleHistorySync(
+        db as unknown as FirebaseFirestore.Firestore,
+        event,
+        'primary',
+      );
+
+      const conv = state.conversations.get('5511999999999');
+      expect(conv?.whatsappName).toBe('Chat Name Fallback');
+    });
+
+    it('leaves whatsappName undefined when no pushName, no client match, and no chat.name', async () => {
+      const event = makeEvent({
+        chats: [{ id: '5511999999999@s.whatsapp.net' }],
+      });
+
+      await handleHistorySync(
+        db as unknown as FirebaseFirestore.Firestore,
+        event,
+        'primary',
+      );
+
+      const conv = state.conversations.get('5511999999999');
+      expect(conv?.whatsappName).toBeUndefined();
+    });
+
+    it('also fills whatsappName via client lookup on update path when existing value is empty', async () => {
+      state.conversations.set('5511999999999', {
+        id: '5511999999999',
+        phone: '5511999999999',
+        whatsappName: '',
+      });
+      state.clients.push({
+        id: 'client-1',
+        phone: '5511999999999',
+        name: 'Maria from CRM',
+        isActive: true,
+        updatedAt: new Date('2025-12-01'),
+      });
+
+      const event = makeEvent({
+        chats: [{ id: '5511999999999@s.whatsapp.net' }],
+      });
+
+      await handleHistorySync(
+        db as unknown as FirebaseFirestore.Firestore,
+        event,
+        'primary',
+      );
+
+      const conv = state.conversations.get('5511999999999');
+      expect(conv?.whatsappName).toBe('Maria from CRM');
+      expect(conv?.clienteId).toBe('client-1');
+    });
+
+    it('does not overwrite an existing non-empty whatsappName via client lookup', async () => {
+      state.conversations.set('5511999999999', {
+        id: '5511999999999',
+        phone: '5511999999999',
+        whatsappName: 'Existing Name',
+      });
+      state.clients.push({
+        id: 'client-1',
+        phone: '5511999999999',
+        name: 'Different CRM Name',
+        isActive: true,
+        updatedAt: new Date('2025-12-01'),
+      });
+
+      const event = makeEvent({
+        chats: [{ id: '5511999999999@s.whatsapp.net' }],
+      });
+
+      await handleHistorySync(
+        db as unknown as FirebaseFirestore.Firestore,
+        event,
+        'primary',
+      );
+
+      const conv = state.conversations.get('5511999999999');
+      expect(conv?.whatsappName).toBe('Existing Name');
+      // But still backfills clienteId since the conversation wasn't linked.
+      expect(conv?.clienteId).toBe('client-1');
+    });
+
+    it('matches via contactMethodValues array-contains', async () => {
+      state.clients.push({
+        id: 'client-2',
+        phone: 'something-else',
+        contactMethodValues: ['5511999999999'],
+        name: 'Carlos',
+        isActive: true,
+        updatedAt: new Date('2025-12-01'),
+      });
+
+      const event = makeEvent({
+        chats: [{ id: '5511999999999@s.whatsapp.net' }],
+      });
+
+      await handleHistorySync(
+        db as unknown as FirebaseFirestore.Firestore,
+        event,
+        'primary',
+      );
+
+      const conv = state.conversations.get('5511999999999');
+      expect(conv?.whatsappName).toBe('Carlos');
+      expect(conv?.clienteId).toBe('client-2');
+    });
+
+    it('skips inactive clients in the fallback', async () => {
+      state.clients.push({
+        id: 'inactive-client',
+        phone: '5511999999999',
+        name: 'Soft Deleted',
+        isActive: false,
+        updatedAt: new Date('2024-01-01'),
+      });
+
+      const event = makeEvent({
+        chats: [{ id: '5511999999999@s.whatsapp.net' }],
+      });
+
+      await handleHistorySync(
+        db as unknown as FirebaseFirestore.Firestore,
+        event,
+        'primary',
+      );
+
+      const conv = state.conversations.get('5511999999999');
+      expect(conv?.whatsappName).toBeUndefined();
+      expect(conv?.clienteId).toBeUndefined();
+    });
+  });
+
   describe('profile picture backfill', () => {
     it('calls sock.profilePictureUrl once per JID and writes URL + timestamp on create', async () => {
       const profilePictureUrl = vi
