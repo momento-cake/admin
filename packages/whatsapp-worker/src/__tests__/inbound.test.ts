@@ -443,4 +443,210 @@ describe('handleIncomingMessage', () => {
       expect(conv?.profilePictureRefreshedAt).toBeInstanceOf(Date);
     });
   });
+
+  describe('fromMe — messages sent from another linked device', () => {
+    it('writes an outgoing message and updates the conversation tail to direction=out', async () => {
+      const result = await handleIncomingMessage(
+        db as unknown as FirebaseFirestore.Firestore,
+        makeMsg({
+          fromMe: true,
+          whatsappMessageId: 'WA-FROM-PHONE-001',
+          text: 'Confirmando seu pedido!',
+        }),
+        'primary',
+      );
+
+      expect(result.status).toBe('inserted');
+
+      // Conversation tail reflects an outgoing message.
+      const conv = state.conversations.get('5511999999999');
+      expect(conv).toBeDefined();
+      expect(conv?.lastMessageDirection).toBe('out');
+      expect(conv?.lastMessagePreview).toContain('Confirmando');
+      expect(conv?.lastMessageAt).toBeInstanceOf(Date);
+
+      // Message doc has direction=out and status=sent.
+      expect(state.messages.size).toBe(1);
+      const [msgDoc] = [...state.messages.values()];
+      expect(msgDoc.direction).toBe('out');
+      expect(msgDoc.status).toBe('sent');
+      expect(msgDoc.conversationId).toBe('5511999999999');
+      expect(msgDoc.whatsappMessageId).toBe('WA-FROM-PHONE-001');
+      // authorUserId left undefined — we don't know which device sent it.
+      expect(msgDoc.authorUserId).toBeUndefined();
+    });
+
+    it('does NOT increment unreadCount on existing conversation', async () => {
+      state.conversations.set('5511999999999', {
+        id: '5511999999999',
+        phone: '5511999999999',
+        unreadCount: 5,
+      });
+
+      await handleIncomingMessage(
+        db as unknown as FirebaseFirestore.Firestore,
+        makeMsg({ fromMe: true, whatsappMessageId: 'WA-FROM-PHONE-002' }),
+        'primary',
+      );
+
+      const conv = state.conversations.get('5511999999999');
+      // Unread count untouched — the user pre-read what they sent themselves.
+      expect(conv?.unreadCount).toBe(5);
+    });
+
+    it('initializes unreadCount=0 when fromMe creates a brand-new conversation', async () => {
+      // User starts a fresh chat from their phone — no prior conversation
+      // doc exists in the admin inbox.
+      const result = await handleIncomingMessage(
+        db as unknown as FirebaseFirestore.Firestore,
+        makeMsg({
+          fromMe: true,
+          from: '5511777777777',
+          whatsappMessageId: 'WA-NEW-CHAT-001',
+          text: 'Oi! Tudo bem?',
+        }),
+        'primary',
+      );
+
+      expect(result.status).toBe('inserted');
+      const conv = state.conversations.get('5511777777777');
+      expect(conv).toBeDefined();
+      expect(conv?.phone).toBe('5511777777777');
+      expect(conv?.unreadCount).toBe(0);
+      expect(conv?.lastMessageDirection).toBe('out');
+      expect(conv?.lastMessagePreview).toContain('Oi');
+    });
+
+    it('does NOT update whatsappName on existing conversation (pushName is OUR name on fromMe)', async () => {
+      state.conversations.set('5511999999999', {
+        id: '5511999999999',
+        phone: '5511999999999',
+        whatsappName: 'Maria (real contact name)',
+        unreadCount: 0,
+      });
+
+      await handleIncomingMessage(
+        db as unknown as FirebaseFirestore.Firestore,
+        makeMsg({
+          fromMe: true,
+          whatsappMessageId: 'WA-FROM-PHONE-003',
+          // pushName here would be the user's own display name (e.g.,
+          // "Momento Cake Admin"), NOT the contact's. Must be ignored.
+          pushName: 'Momento Cake',
+        }),
+        'primary',
+      );
+
+      const conv = state.conversations.get('5511999999999');
+      expect(conv?.whatsappName).toBe('Maria (real contact name)');
+    });
+
+    it('does NOT set whatsappName when fromMe creates a new conversation', async () => {
+      await handleIncomingMessage(
+        db as unknown as FirebaseFirestore.Firestore,
+        makeMsg({
+          fromMe: true,
+          from: '5511666666666',
+          whatsappMessageId: 'WA-NEW-NO-NAME-001',
+          pushName: 'Momento Cake', // our own name, must not stick
+        }),
+        'primary',
+      );
+
+      const conv = state.conversations.get('5511666666666');
+      expect(conv).toBeDefined();
+      expect(conv?.whatsappName).toBeUndefined();
+    });
+
+    it('dedupes by whatsappMessageId — outbound.ts already wrote this message', async () => {
+      // Simulate the case where the admin sent through the outbox path:
+      // outbound.ts has already written a message doc with the same ID.
+      state.messages.set('msg_existing', {
+        id: 'msg_existing',
+        whatsappMessageId: 'WA-FROM-OUR-OUTBOX-123',
+        conversationId: '5511999999999',
+        direction: 'out',
+        status: 'sent',
+      });
+
+      const result = await handleIncomingMessage(
+        db as unknown as FirebaseFirestore.Firestore,
+        makeMsg({
+          fromMe: true,
+          whatsappMessageId: 'WA-FROM-OUR-OUTBOX-123',
+        }),
+        'primary',
+      );
+
+      expect(result.status).toBe('duplicate');
+      // No duplicate message doc, no conversation mutation from this replay.
+      expect(state.messages.size).toBe(1);
+      expect(state.conversations.size).toBe(0);
+    });
+
+    it('drops fromMe messages from group JIDs (current behavior — phone fails normalization)', async () => {
+      // Group JIDs come through as `<group-id>@g.us`. The index.ts adapter
+      // strips them via jidToPhone, leaving something like `1234-5678` which
+      // fails BR phone normalization. The handler returns 'invalid' and
+      // writes nothing. fromMe-in-a-group would need a different conversation
+      // model anyway — out of scope for this fix.
+      const result = await handleIncomingMessage(
+        db as unknown as FirebaseFirestore.Firestore,
+        makeMsg({
+          fromMe: true,
+          // What jidToPhone('1203630-987654@g.us') returns: '1203630-987654'.
+          from: '1203630-987654',
+          whatsappMessageId: 'WA-GROUP-FROMME-001',
+        }),
+        'primary',
+      );
+
+      expect(result.status).toBe('invalid');
+      expect(state.conversations.size).toBe(0);
+      expect(state.messages.size).toBe(0);
+    });
+
+    it('still fires profile-photo fetch for the contact regardless of fromMe', async () => {
+      const profilePictureUrl = vi
+        .fn<(jid: string, type: 'image' | 'preview') => Promise<string | undefined>>()
+        .mockResolvedValue('https://pps.whatsapp.net/v/contact-photo');
+      const sock = { profilePictureUrl };
+
+      await handleIncomingMessage(
+        db as unknown as FirebaseFirestore.Firestore,
+        makeMsg({
+          fromMe: true,
+          whatsappMessageId: 'WA-FROMME-PHOTO-001',
+        }),
+        'primary',
+        sock,
+      );
+
+      // remoteJid = contact's JID (NOT ours) for both fromMe and !fromMe in
+      // 1:1, so the photo fetch targets the contact correctly.
+      expect(profilePictureUrl).toHaveBeenCalledWith('5511999999999@s.whatsapp.net', 'image');
+      const conv = state.conversations.get('5511999999999');
+      expect(conv?.profilePictureUrl).toBe('https://pps.whatsapp.net/v/contact-photo');
+    });
+
+    it('keeps inbound (!fromMe) behavior unchanged', async () => {
+      // Regression guard: explicit fromMe=false (or absent) takes the original
+      // path with unread bump and pushName adoption.
+      await handleIncomingMessage(
+        db as unknown as FirebaseFirestore.Firestore,
+        makeMsg({ fromMe: false, pushName: 'Maria Silva' }),
+        'primary',
+      );
+
+      const conv = state.conversations.get('5511999999999');
+      expect(conv?.lastMessageDirection).toBe('in');
+      expect(conv?.unreadCount).toBe(1);
+      expect(conv?.whatsappName).toBe('Maria Silva');
+
+      const [msgDoc] = [...state.messages.values()];
+      expect(msgDoc.direction).toBe('in');
+      // No status field on inbound — that's set by delivery/read receipts later.
+      expect(msgDoc.status).toBeUndefined();
+    });
+  });
 });

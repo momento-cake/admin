@@ -224,7 +224,11 @@ async function main(): Promise<void> {
     sock.ev.on('messages.upsert', async ({ messages, type }) => {
       if (type !== 'notify') return;
       for (const msg of messages) {
-        if (msg.key.fromMe) continue;
+        // Note: fromMe messages (sent from another linked device — phone, WA
+        // Web on another browser) are NOT filtered here. They flow into the
+        // inbound handler which writes them as outgoing messages so the admin
+        // inbox stays in sync with what the user sends from anywhere. The
+        // outbound path's own writes are deduped via whatsappMessageId.
         const from = jidToPhone(msg.key.remoteJid);
         if (!from) continue;
         const wid = msg.key.id;
@@ -236,6 +240,7 @@ async function main(): Promise<void> {
             {
               whatsappMessageId: wid,
               from,
+              fromMe: msg.key.fromMe ?? false,
               pushName: msg.pushName ?? undefined,
               text: inferText(msg),
               type: inferType(msg),

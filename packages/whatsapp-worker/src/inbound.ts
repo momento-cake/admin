@@ -5,9 +5,21 @@
  *  1. Dedupe via `whatsapp_messages.whatsappMessageId` — if seen, no-op.
  *  2. Normalize the sender phone (conversationId == normalized phone).
  *  3. Upsert `whatsapp_conversations/{conversationId}` (create or update),
- *     bumping `unreadCount`, `lastMessageAt`, `lastMessagePreview`,
- *     `lastMessageDirection: 'in'`. Optionally auto-link an active client by phone.
+ *     bumping `lastMessageAt`, `lastMessagePreview`, `lastMessageDirection`.
+ *     Optionally auto-link an active client by phone.
  *  4. Append a `whatsapp_messages` doc.
+ *
+ * Handles two flavors:
+ *  - `fromMe: false` (default): a message the contact sent us. Writes
+ *    `direction: 'in'`, increments `unreadCount`, may update `whatsappName`
+ *    from `pushName`.
+ *  - `fromMe: true`: a message we sent from another linked device (phone,
+ *    WA Web on another browser). Writes `direction: 'out'` with
+ *    `status: 'sent'`, leaves `unreadCount` and `whatsappName` untouched —
+ *    `pushName` on a fromMe message is OUR own name, not the contact's.
+ *    Outbound.ts already writes for messages sent through our admin's send
+ *    path; the dedup-by-`whatsappMessageId` step makes this a no-op when
+ *    that's the case.
  *
  * Pure logic — no Baileys imports here. Caller adapts Baileys'
  * `messages.upsert` shape into our `IncomingMessage` interface and calls in.
@@ -19,8 +31,19 @@ import type { WhatsAppMessageType } from './types.js';
 
 export interface IncomingMessage {
   whatsappMessageId: string;
-  /** Sender phone in any format — will be normalized. */
+  /**
+   * The OTHER party's phone in any format — will be normalized. For fromMe
+   * messages this is the contact we're chatting with (NOT us); the WhatsApp
+   * `remoteJid` is the contact regardless of `fromMe` in 1:1 chats.
+   */
   from: string;
+  /**
+   * True when this message was sent by us from another linked device (phone,
+   * WA Web on another browser). When true, the handler writes
+   * `direction: 'out'` and skips unreadCount/whatsappName updates. Defaults
+   * to false for back-compat with existing call sites.
+   */
+  fromMe?: boolean;
   pushName?: string;
   text?: string;
   type: WhatsAppMessageType;
@@ -218,7 +241,13 @@ export async function handleIncomingMessage(
   instanceId: string,
   sock?: ProfilePictureCapableSocket,
 ): Promise<{ status: 'inserted' | 'duplicate' | 'invalid'; conversationId?: string }> {
-  // 1. Dedupe.
+  const fromMe = msg.fromMe === true;
+
+  // 1. Dedupe. Critical for the fromMe path: outbound.ts already writes a
+  //    message doc with the same `whatsappMessageId` when the message went
+  //    through our admin's send path. The fromMe replay we get here from
+  //    `messages.upsert` (delivered to all linked devices) must be a no-op
+  //    in that case.
   const dedupSnap = await db
     .collection('whatsapp_messages')
     .where('whatsappMessageId', '==', msg.whatsappMessageId)
@@ -228,7 +257,9 @@ export async function handleIncomingMessage(
     return { status: 'duplicate' };
   }
 
-  // 2. Normalize phone.
+  // 2. Normalize phone (the OTHER party — for fromMe in a 1:1 chat, that's
+  //    the contact we're talking to, NOT us). Group/broadcast JIDs fail
+  //    normalization here and bail out — same behavior as before this change.
   const normalized = normalizePhone(msg.from);
   if (!normalized) {
     return { status: 'invalid' };
@@ -240,6 +271,7 @@ export async function handleIncomingMessage(
   const convSnap = await convRef.get();
   const now = new Date();
   const preview = buildPreview(msg);
+  const direction: 'in' | 'out' = fromMe ? 'out' : 'in';
   // JID for Baileys profile-picture lookup. Conversation IDs are bare phones;
   // Baileys needs the full `<phone>@s.whatsapp.net` form.
   const jid = `${normalized}@s.whatsapp.net`;
@@ -261,19 +293,25 @@ export async function handleIncomingMessage(
     const convDoc: Record<string, unknown> = {
       phone: normalized,
       phoneRaw: msg.from,
-      whatsappName: msg.pushName,
       lastMessageAt: msg.timestamp,
       lastMessagePreview: preview,
-      lastMessageDirection: 'in',
-      unreadCount: 1,
+      lastMessageDirection: direction,
+      // unreadCount: only count incoming messages. The user pre-read anything
+      // they sent themselves from another device.
+      unreadCount: fromMe ? 0 : 1,
       createdAt: now,
       updatedAt: now,
       instanceId,
     };
+    // pushName on a fromMe message is OUR own display name, not the contact's
+    // — only adopt it for inbound messages. Inbound preserves the original
+    // behavior of setting the field even when pushName is undefined.
+    if (!fromMe) convDoc.whatsappName = msg.pushName;
     if (clienteId !== undefined) convDoc.clienteId = clienteId;
     if (clienteNome !== undefined) convDoc.clienteNome = clienteNome;
 
-    // Profile-picture fetch — first contact always needs a photo.
+    // Profile-picture fetch — first contact always needs a photo. The contact
+    // is `remoteJid` regardless of fromMe, so this fires for both directions.
     if (sock && shouldRefreshProfilePhoto(undefined, jid, now.getTime())) {
       const photoPatch = await fetchProfilePhotoPatch(sock, jid, now);
       Object.assign(convDoc, photoPatch);
@@ -290,12 +328,20 @@ export async function handleIncomingMessage(
     const update: Record<string, unknown> = {
       lastMessageAt: msg.timestamp,
       lastMessagePreview: preview,
-      lastMessageDirection: 'in',
-      unreadCount: (existing?.unreadCount ?? 0) + 1,
+      lastMessageDirection: direction,
       updatedAt: now,
     };
-    if (msg.pushName) update.whatsappName = msg.pushName;
-    // If conversation was previously unlinked, attempt to link now.
+    // unreadCount: only bump on inbound. A fromMe replay from another linked
+    // device doesn't add unread badges — the user already saw what they sent.
+    if (!fromMe) {
+      update.unreadCount = (existing?.unreadCount ?? 0) + 1;
+      // Same reasoning as the create path — only adopt pushName from the
+      // contact's messages, not from our own fromMe replays.
+      if (msg.pushName) update.whatsappName = msg.pushName;
+    }
+    // If conversation was previously unlinked, attempt to link now. Runs for
+    // both directions — a fromMe message in a yet-unlinked conversation
+    // should still resolve the client.
     if (!existing?.clienteId) {
       try {
         const match = await findClientByPhone(db, normalized);
@@ -308,7 +354,8 @@ export async function handleIncomingMessage(
       }
     }
 
-    // Profile-picture refresh on stale URL (or no URL yet).
+    // Profile-picture refresh on stale URL (or no URL yet). Same JID logic for
+    // both directions.
     if (sock && shouldRefreshProfilePhoto(existing, jid, now.getTime())) {
       const photoPatch = await fetchProfilePhotoPatch(sock, jid, now);
       Object.assign(update, photoPatch);
@@ -318,15 +365,22 @@ export async function handleIncomingMessage(
   }
 
   // 4. Append message doc.
-  await db.collection('whatsapp_messages').add({
+  const messageDoc: Record<string, unknown> = {
     conversationId,
     whatsappMessageId: msg.whatsappMessageId,
-    direction: 'in',
+    direction,
     type: msg.type,
     text: msg.text,
     timestamp: msg.timestamp,
     createdAt: now,
-  });
+  };
+  if (fromMe) {
+    // The message is already on WhatsApp's network (we received it via
+    // `messages.upsert` from a linked device replay), so it's confirmed sent.
+    // `authorUserId` is left undefined — we don't know which device sent it.
+    messageDoc.status = 'sent';
+  }
+  await db.collection('whatsapp_messages').add(messageDoc);
 
   return { status: 'inserted', conversationId };
 }

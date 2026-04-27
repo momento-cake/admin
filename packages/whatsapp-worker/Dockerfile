@@ -6,7 +6,8 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 # Install build deps that some native modules might need (kept minimal — Baileys is pure JS).
-RUN apk add --no-cache python3 make g++
+# `git` is required when any npm dep resolves to a git URL.
+RUN apk add --no-cache python3 make g++ git
 
 COPY package.json package-lock.json* ./
 # `npm ci` requires a lockfile; if not present (first build), fall back to install.
