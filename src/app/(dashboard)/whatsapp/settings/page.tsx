@@ -17,6 +17,7 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { WhatsAppStatusBadge } from '@/components/whatsapp/WhatsAppStatusBadge';
+import { SyncClientsCard } from '@/components/whatsapp/SyncClientsCard';
 import { useWhatsAppStatus } from '@/hooks/useWhatsAppStatus';
 import { formatPhoneForDisplay } from '@/lib/phone';
 import { cn } from '@/lib/utils';
@@ -430,6 +431,9 @@ export default function WhatsAppSettingsPage() {
               </CardContent>
             </Card>
           )}
+
+          {/* ─── CRM cross-reference (admin only) ─── */}
+          {status.state === 'connected' && <SyncClientsCard />}
 
           {/* ─── Worker activity strip ─── */}
           <Card className="overflow-hidden">

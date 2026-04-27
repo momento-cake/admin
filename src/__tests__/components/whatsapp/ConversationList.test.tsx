@@ -167,4 +167,61 @@ describe('ConversationList', () => {
     // Initials still rendered.
     expect(row.textContent).toContain('M');
   });
+
+  it('renders placeholder rows after real conversations and marks them', () => {
+    const realConv = baseConv({
+      id: '5511real',
+      clienteNome: 'Real',
+      lastMessageAt: { seconds: Math.floor(Date.now() / 1000) - 300, nanoseconds: 0 },
+    });
+    const placeholderConv = baseConv({
+      id: '5511placeholder',
+      clienteNome: 'Placeholder',
+      placeholder: true,
+      lastMessageAt: null,
+      lastMessagePreview: '',
+    });
+    useConversationsMock.mockReturnValue({
+      conversations: [placeholderConv, realConv],
+      isLoading: false,
+      error: null,
+    });
+    render(<ConversationList selectedId={null} />);
+
+    // Both rendered.
+    const realRow = screen.getByTestId('conversation-row-5511real');
+    const placeholderRow = screen.getByTestId('conversation-row-5511placeholder');
+
+    // Placeholder is visually de-emphasized via the data attribute we add for
+    // styling and tests.
+    expect(placeholderRow.dataset.placeholder).toBe('true');
+    expect(realRow.dataset.placeholder).toBeUndefined();
+
+    // Real conversation appears BEFORE the placeholder in DOM order, even if
+    // the upstream array put the placeholder first.
+    expect(realRow.compareDocumentPosition(placeholderRow)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+
+    // Placeholder rows show the "Sem mensagens ainda" label.
+    expect(screen.getByText(/sem mensagens ainda/i)).toBeInTheDocument();
+  });
+
+  it('does not show the unread badge for placeholders even if unreadCount > 0', () => {
+    useConversationsMock.mockReturnValue({
+      conversations: [
+        baseConv({
+          id: 'p1',
+          placeholder: true,
+          lastMessageAt: null,
+          unreadCount: 5,
+          clienteNome: 'P',
+        }),
+      ],
+      isLoading: false,
+      error: null,
+    });
+    render(<ConversationList selectedId={null} />);
+    expect(screen.queryAllByTestId('unread-badge')).toHaveLength(0);
+  });
 });

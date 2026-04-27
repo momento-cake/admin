@@ -397,6 +397,14 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // whatsapp_sync_jobs: CRM cross-reference jobs.
+    // Admin creates a job (via API route) and subscribes to its status doc.
+    // Worker drains pending jobs via Admin SDK.
+    match /whatsapp_sync_jobs/{jobId} {
+      allow read, create: if isAdmin();
+      allow update, delete: if false;
+    }
+
     // System collections (admin only)
     match /system/{document=**} {
       allow read, write: if isAdmin();

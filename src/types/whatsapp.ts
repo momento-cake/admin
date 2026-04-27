@@ -39,6 +39,14 @@ export interface WhatsAppStatus {
 /**
  * `whatsapp_conversations/{conversationId}` — one per phone number.
  * conversationId == normalized phone (e.g. "5511999999999").
+ *
+ * `placeholder: true` rows are CRM-side cross-references created by the
+ * "Sincronizar contatos do CRM" job. They have no messages yet — atendentes
+ * see them in the inbox so they can initiate the first conversation. As soon
+ * as a message arrives (in or out), they flip to a normal conversation.
+ *
+ * `lastMessageAt` is nullable for placeholders. For real conversations it is
+ * always set; component code should treat `null` as "no messages yet."
  */
 export interface WhatsAppConversation {
   id: string;
@@ -55,16 +63,45 @@ export interface WhatsAppConversation {
   profilePictureUrl?: string;
   /** When the worker last successfully attempted to fetch the photo URL. */
   profilePictureRefreshedAt?: Timestamp;
-  lastMessageAt: Timestamp;
+  lastMessageAt: Timestamp | null;
   lastMessagePreview: string;
   lastMessageDirection: WhatsAppMessageDirection;
   unreadCount: number;
   createdAt: Timestamp;
   updatedAt: Timestamp;
+  /** True iff this row was created by the CRM cross-reference job and has
+   * not yet seen a real message. */
+  placeholder?: boolean;
   // Reserved for post-MVP expansion. Kept in the type so reads never blow up.
   tags?: string[];
   assignedTo?: string;
   status?: 'open' | 'closed';
+}
+
+/**
+ * `whatsapp_sync_jobs/{jobId}` — admin-triggered cross-reference job.
+ * Admin writes pending; worker processes; admin watches doc for completion.
+ */
+export type WhatsAppSyncJobStatus = 'pending' | 'running' | 'complete' | 'failed';
+
+export interface WhatsAppSyncJob {
+  id: string;
+  status: WhatsAppSyncJobStatus;
+  /** Phones to check, normalized (digits, no '+'). */
+  phones: string[];
+  /** Optional denorm map { phone → { id, name } } the worker uses to populate
+   * the placeholder conversation with client metadata. */
+  clientsByPhone?: Record<string, { id?: string; name?: string }>;
+  /** Aggregate counts populated by the worker on completion. */
+  matched?: number;
+  created?: number;
+  skipped?: number;
+  error?: string;
+  createdBy?: string;
+  createdAt: Timestamp;
+  startedAt?: Timestamp;
+  completedAt?: Timestamp;
+  failedAt?: Timestamp;
 }
 
 /**

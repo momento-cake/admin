@@ -47,10 +47,12 @@ function docToConversation(snap: DocumentSnapshot<DocumentData>): WhatsAppConver
     clienteId: data.clienteId,
     clienteNome: data.clienteNome,
     whatsappName: data.whatsappName,
-    lastMessageAt: data.lastMessageAt,
+    // Placeholders intentionally have a null lastMessageAt — see WhatsAppConversation.
+    lastMessageAt: data.lastMessageAt ?? null,
     lastMessagePreview: data.lastMessagePreview ?? '',
     lastMessageDirection: data.lastMessageDirection ?? 'in',
     unreadCount: data.unreadCount ?? 0,
+    placeholder: data.placeholder === true ? true : undefined,
     createdAt: data.createdAt,
     updatedAt: data.updatedAt,
     tags: data.tags,
