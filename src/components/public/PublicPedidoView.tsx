@@ -183,13 +183,6 @@ export function PublicPedidoView({ pedido, token, onPedidoUpdate }: PublicPedido
   const grandTotal = (orcamento?.total ?? 0) + freteDisplay
   const statusConfig = getStatusConfig(pedido.status)
 
-  const handleEntregaUpdate = (newEntrega: PublicEntrega) => {
-    onPedidoUpdate({
-      ...pedido,
-      entrega: newEntrega,
-    })
-  }
-
   const handleConfirm = async () => {
     if (confirmingRef.current) return
     confirmingRef.current = true
@@ -477,15 +470,12 @@ export function PublicPedidoView({ pedido, token, onPedidoUpdate }: PublicPedido
             </div>
           )}
 
-          {/* Delivery / Pickup Toggle — locked once the customer has confirmed and moved into payment */}
+          {/* Delivery / Pickup — display only. The admin sets this internally; the customer cannot change it from here. */}
           <div className={`${mounted ? 'animate-fade-in-up stagger-4' : 'opacity-0'}`}>
             <PublicEntregaToggle
               entrega={entrega}
-              token={token}
               storeAddresses={pedido.storeAddresses}
               storeHours={pedido.storeHours}
-              onEntregaUpdate={handleEntregaUpdate}
-              readOnly={pedido.status !== 'AGUARDANDO_APROVACAO'}
             />
           </div>
 
