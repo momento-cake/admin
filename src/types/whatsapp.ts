@@ -47,6 +47,14 @@ export interface WhatsAppConversation {
   clienteId?: string;
   clienteNome?: string;
   whatsappName?: string;
+  /**
+   * Cached WhatsApp profile picture URL. Signed by WhatsApp's CDN and
+   * expires in ~24h, so the worker re-fetches every ~20h on inbound traffic.
+   * Absent when the contact has no public photo or has hidden it.
+   */
+  profilePictureUrl?: string;
+  /** When the worker last successfully attempted to fetch the photo URL. */
+  profilePictureRefreshedAt?: Timestamp;
   lastMessageAt: Timestamp;
   lastMessagePreview: string;
   lastMessageDirection: WhatsAppMessageDirection;

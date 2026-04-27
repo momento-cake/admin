@@ -206,6 +206,9 @@ async function main(): Promise<void> {
               timestamp: new Date(Number(msg.messageTimestamp ?? Date.now() / 1000) * 1000),
             },
             instanceId,
+            // Pass the live socket so the inbound handler can opportunistically
+            // refresh contact profile pictures (~20h cache, 24h URL expiry).
+            sock,
           );
         } catch (e) {
           logger.error({ err: e, wid }, 'failed to handle incoming message');
