@@ -38,6 +38,10 @@ vi.mock('@/components/pedidos/ShareOrderButton', () => ({
   ),
 }));
 
+vi.mock('@/components/pedidos/PedidoCheckoutCard', () => ({
+  PedidoCheckoutCard: () => <div data-testid="checkout-card" />,
+}));
+
 // Mock UI components
 vi.mock('@/components/ui/card', () => ({
   Card: ({ children }: any) => <div>{children}</div>,

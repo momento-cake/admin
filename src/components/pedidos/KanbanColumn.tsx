@@ -88,6 +88,17 @@ export function KanbanColumn({
             {pedidos.length}
           </span>
         </div>
+        {theme.columnSubcaption && (
+          <p
+            className={cn(
+              'text-[10.5px] leading-tight italic',
+              theme.columnHeaderText,
+              'opacity-75',
+            )}
+          >
+            {theme.columnSubcaption}
+          </p>
+        )}
         <p className="text-[11px] text-muted-foreground tabular-nums">
           {total > 0 ? formatPrice(total) : '—'}
         </p>

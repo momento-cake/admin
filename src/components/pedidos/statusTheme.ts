@@ -2,6 +2,12 @@ import { PedidoStatus } from '@/types/pedido'
 
 export interface StatusTheme {
   label: string
+  /**
+   * Optional one-line subcaption for the kanban column header.
+   * Used to differentiate "waiting on customer" columns from
+   * "waiting on the kitchen" columns at a glance.
+   */
+  columnSubcaption?: string
   dot: string
   softBg: string
   softRing: string
@@ -30,6 +36,7 @@ export const STATUS_THEME: Record<PedidoStatus, StatusTheme> = {
   },
   AGUARDANDO_APROVACAO: {
     label: 'Aguardando',
+    columnSubcaption: 'Aguardando revisão do cliente',
     dot: 'bg-amber-500',
     softBg: 'bg-amber-50',
     softRing: 'ring-amber-200',
@@ -56,6 +63,7 @@ export const STATUS_THEME: Record<PedidoStatus, StatusTheme> = {
   },
   AGUARDANDO_PAGAMENTO: {
     label: 'Aguard. Pagamento',
+    columnSubcaption: 'Aguardando pagamento do cliente',
     dot: 'bg-indigo-500',
     softBg: 'bg-indigo-50',
     softRing: 'ring-indigo-200',

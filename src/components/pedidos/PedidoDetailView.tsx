@@ -31,6 +31,17 @@ import { NfSection } from './NfSection'
 import { PacoteManager } from './PacoteManager'
 import { EntregaSection } from './EntregaSection'
 import { ShareOrderButton } from './ShareOrderButton'
+import { PedidoCheckoutCard } from './PedidoCheckoutCard'
+
+const CUSTOMER_HANDOFF_STATUSES = new Set([
+  'AGUARDANDO_APROVACAO',
+  'AGUARDANDO_PAGAMENTO',
+])
+
+const SHARE_PROMPT_BY_STATUS: Record<string, string> = {
+  AGUARDANDO_APROVACAO: 'Cliente revisando — envie o link se ainda não enviou.',
+  AGUARDANDO_PAGAMENTO: 'Cliente confirmou. Aguardando pagamento.',
+}
 
 interface PedidoDetailViewProps {
   pedido: Pedido
@@ -118,19 +129,36 @@ export function PedidoDetailView({ pedido, onUpdate }: PedidoDetailViewProps) {
     }).format(date)
   }
 
+  const isCustomerHandoff = CUSTOMER_HANDOFF_STATUSES.has(pedido.status)
+
   return (
     <div className="space-y-6">
       {/* Header info */}
       <Card>
         <CardContent className="pt-6">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
             <div className="space-y-2">
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-3">
                 <code className="text-lg font-mono font-bold bg-muted px-3 py-1 rounded">
                   {pedido.numeroPedido}
                 </code>
                 <PedidoStatusBadge status={pedido.status} />
+                {isCustomerHandoff && (
+                  <ShareOrderButton
+                    publicToken={pedido.publicToken}
+                    pedidoStatus={pedido.status}
+                    clienteNome={pedido.clienteNome}
+                    numeroPedido={pedido.numeroPedido}
+                    variant="primary"
+                  />
+                )}
               </div>
+
+              {isCustomerHandoff && (
+                <p className="text-xs text-muted-foreground">
+                  {SHARE_PROMPT_BY_STATUS[pedido.status]}
+                </p>
+              )}
 
               <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
                 <span className="flex items-center gap-1">
@@ -153,25 +181,15 @@ export function PedidoDetailView({ pedido, onUpdate }: PedidoDetailViewProps) {
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
-              <div className="text-right">
-                {activeOrcamento && (
-                  <p className="text-2xl font-bold">
-                    {formatPrice(activeOrcamento.total)}
-                  </p>
-                )}
-                <p className="text-sm text-muted-foreground">
-                  {ENTREGA_TIPO_LABELS[pedido.entrega.tipo]}
+            <div className="text-right">
+              {activeOrcamento && (
+                <p className="text-2xl font-bold tabular-nums">
+                  {formatPrice(activeOrcamento.total)}
                 </p>
-              </div>
-              {pedido.status === 'AGUARDANDO_APROVACAO' && (
-                <ShareOrderButton
-                  publicToken={pedido.publicToken}
-                  pedidoStatus={pedido.status}
-                  clienteNome={pedido.clienteNome}
-                  numeroPedido={pedido.numeroPedido}
-                />
               )}
+              <p className="text-sm text-muted-foreground">
+                {ENTREGA_TIPO_LABELS[pedido.entrega.tipo]}
+              </p>
             </div>
           </div>
 
@@ -190,6 +208,9 @@ export function PedidoDetailView({ pedido, onUpdate }: PedidoDetailViewProps) {
           </div>
         </CardContent>
       </Card>
+
+      {/* Customer self-service status (billing + payment session) */}
+      <PedidoCheckoutCard pedido={pedido} />
 
       {/* Tabs */}
       <Tabs defaultValue="orcamento">
