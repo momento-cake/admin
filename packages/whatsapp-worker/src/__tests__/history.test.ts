@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { handleHistorySync } from '../history.js';
+import { handleHistorySync, __resetProfilePhotoThrottleForTests } from '../history.js';
 import type { HistorySyncEvent } from '../history.js';
 
 interface MockState {
@@ -109,6 +109,7 @@ describe('handleHistorySync', () => {
       writeLog: [],
     };
     db = buildDb(state);
+    __resetProfilePhotoThrottleForTests();
   });
 
   function makeEvent(overrides?: Partial<HistorySyncEvent>): HistorySyncEvent {
@@ -483,5 +484,376 @@ describe('handleHistorySync', () => {
     );
     expect(result.chatsUpserted).toBe(1);
     expect(state.conversations.size).toBe(1);
+  });
+
+  describe('whatsappName backfill from message pushName', () => {
+    it('upserts conversations with whatsappName extracted from message pushName', async () => {
+      // chat.name is missing — only the message-level pushName carries the
+      // contact's display name. This is the production case that motivated the
+      // backfill (Baileys leaves chat.name empty for unsaved contacts).
+      const event = makeEvent({
+        chats: [{ id: '5511999999999@s.whatsapp.net' }],
+        messages: [
+          {
+            key: {
+              remoteJid: '5511999999999@s.whatsapp.net',
+              fromMe: false,
+              id: 'WA-001',
+            },
+            message: { conversation: 'oi' },
+            messageTimestamp: 1735000000,
+            pushName: 'Maria Silva',
+          },
+        ],
+      });
+
+      await handleHistorySync(
+        db as unknown as FirebaseFirestore.Firestore,
+        event,
+        'primary',
+      );
+
+      const conv = state.conversations.get('5511999999999');
+      expect(conv?.whatsappName).toBe('Maria Silva');
+    });
+
+    it('picks the most recent inbound pushName when multiple messages exist', async () => {
+      const event = makeEvent({
+        chats: [{ id: '5511999999999@s.whatsapp.net' }],
+        messages: [
+          {
+            key: { remoteJid: '5511999999999@s.whatsapp.net', fromMe: false, id: 'M1' },
+            message: { conversation: 'old' },
+            messageTimestamp: 1735000000,
+            pushName: 'Old Name',
+          },
+          {
+            key: { remoteJid: '5511999999999@s.whatsapp.net', fromMe: false, id: 'M2' },
+            message: { conversation: 'new' },
+            messageTimestamp: 1735100000,
+            pushName: 'New Name',
+          },
+        ],
+      });
+
+      await handleHistorySync(
+        db as unknown as FirebaseFirestore.Firestore,
+        event,
+        'primary',
+      );
+
+      const conv = state.conversations.get('5511999999999');
+      expect(conv?.whatsappName).toBe('New Name');
+    });
+
+    it('ignores pushName from fromMe messages (it is our own name, not the contact)', async () => {
+      const event = makeEvent({
+        chats: [{ id: '5511999999999@s.whatsapp.net' }],
+        messages: [
+          {
+            key: { remoteJid: '5511999999999@s.whatsapp.net', fromMe: true, id: 'OUT' },
+            message: { conversation: 'reply' },
+            messageTimestamp: 1735000000,
+            pushName: 'Admin User',
+          },
+        ],
+      });
+
+      await handleHistorySync(
+        db as unknown as FirebaseFirestore.Firestore,
+        event,
+        'primary',
+      );
+
+      const conv = state.conversations.get('5511999999999');
+      expect(conv?.whatsappName).toBeUndefined();
+    });
+
+    it('skips empty/whitespace-only pushNames and falls back to undefined', async () => {
+      const event = makeEvent({
+        chats: [{ id: '5511999999999@s.whatsapp.net' }],
+        messages: [
+          {
+            key: { remoteJid: '5511999999999@s.whatsapp.net', fromMe: false, id: 'EMPTY' },
+            message: { conversation: 'oi' },
+            messageTimestamp: 1735000000,
+            pushName: '   ',
+          },
+          {
+            key: { remoteJid: '5511999999999@s.whatsapp.net', fromMe: false, id: 'NULL' },
+            message: { conversation: 'oi 2' },
+            messageTimestamp: 1735000001,
+            pushName: '',
+          },
+        ],
+      });
+
+      await handleHistorySync(
+        db as unknown as FirebaseFirestore.Firestore,
+        event,
+        'primary',
+      );
+
+      const conv = state.conversations.get('5511999999999');
+      expect(conv?.whatsappName).toBeUndefined();
+    });
+
+    it('does not overwrite an existing whatsappName on update path', async () => {
+      // Simulate inbound.ts having already set a fresh whatsappName.
+      state.conversations.set('5511999999999', {
+        id: '5511999999999',
+        phone: '5511999999999',
+        whatsappName: 'Existing Name From Inbound',
+      });
+
+      const event = makeEvent({
+        chats: [{ id: '5511999999999@s.whatsapp.net' }],
+        messages: [
+          {
+            key: { remoteJid: '5511999999999@s.whatsapp.net', fromMe: false, id: 'M1' },
+            message: { conversation: 'oi' },
+            messageTimestamp: 1735000000,
+            pushName: 'Stale History Name',
+          },
+        ],
+      });
+
+      await handleHistorySync(
+        db as unknown as FirebaseFirestore.Firestore,
+        event,
+        'primary',
+      );
+
+      const conv = state.conversations.get('5511999999999');
+      expect(conv?.whatsappName).toBe('Existing Name From Inbound');
+    });
+
+    it('fills whatsappName on update path when the existing value is missing/empty', async () => {
+      state.conversations.set('5511999999999', {
+        id: '5511999999999',
+        phone: '5511999999999',
+        whatsappName: '',
+      });
+
+      const event = makeEvent({
+        chats: [{ id: '5511999999999@s.whatsapp.net' }],
+        messages: [
+          {
+            key: { remoteJid: '5511999999999@s.whatsapp.net', fromMe: false, id: 'M1' },
+            message: { conversation: 'oi' },
+            messageTimestamp: 1735000000,
+            pushName: 'Backfilled Name',
+          },
+        ],
+      });
+
+      await handleHistorySync(
+        db as unknown as FirebaseFirestore.Firestore,
+        event,
+        'primary',
+      );
+
+      const conv = state.conversations.get('5511999999999');
+      expect(conv?.whatsappName).toBe('Backfilled Name');
+    });
+
+    it('prefers message pushName over chat.name (chat.name is unreliable for unsaved contacts)', async () => {
+      const event = makeEvent({
+        chats: [
+          { id: '5511999999999@s.whatsapp.net', name: '5511999999999' },
+        ],
+        messages: [
+          {
+            key: { remoteJid: '5511999999999@s.whatsapp.net', fromMe: false, id: 'M1' },
+            message: { conversation: 'oi' },
+            messageTimestamp: 1735000000,
+            pushName: 'Maria',
+          },
+        ],
+      });
+
+      await handleHistorySync(
+        db as unknown as FirebaseFirestore.Firestore,
+        event,
+        'primary',
+      );
+
+      const conv = state.conversations.get('5511999999999');
+      expect(conv?.whatsappName).toBe('Maria');
+    });
+  });
+
+  describe('profile picture backfill', () => {
+    it('calls sock.profilePictureUrl once per JID and writes URL + timestamp on create', async () => {
+      const profilePictureUrl = vi
+        .fn<(jid: string, type: 'image' | 'preview') => Promise<string | undefined>>()
+        .mockResolvedValue('https://pps.whatsapp.net/v/abc?token=xyz');
+      const sock = { profilePictureUrl };
+
+      const event = makeEvent({
+        chats: [{ id: '5511999999999@s.whatsapp.net' }],
+      });
+
+      await handleHistorySync(
+        db as unknown as FirebaseFirestore.Firestore,
+        event,
+        'primary',
+        sock,
+      );
+
+      expect(profilePictureUrl).toHaveBeenCalledTimes(1);
+      // Baileys expects the full JID, not the bare phone.
+      expect(profilePictureUrl).toHaveBeenCalledWith('5511999999999@s.whatsapp.net', 'image');
+      const conv = state.conversations.get('5511999999999');
+      expect(conv?.profilePictureUrl).toBe('https://pps.whatsapp.net/v/abc?token=xyz');
+      expect(conv?.profilePictureRefreshedAt).toBeInstanceOf(Date);
+    });
+
+    it('throttles repeated calls for the same JID within 60s across separate handleHistorySync runs', async () => {
+      const profilePictureUrl = vi
+        .fn<(jid: string, type: 'image' | 'preview') => Promise<string | undefined>>()
+        .mockResolvedValue('https://pps.whatsapp.net/v/abc');
+      const sock = { profilePictureUrl };
+
+      const event1 = makeEvent({
+        chats: [{ id: '5511999999999@s.whatsapp.net' }],
+      });
+      // Second event covers the same JID — common when Baileys delivers
+      // history in multiple chunks.
+      const event2 = makeEvent({
+        chats: [{ id: '5511999999999@s.whatsapp.net' }],
+      });
+
+      await handleHistorySync(db as unknown as FirebaseFirestore.Firestore, event1, 'primary', sock);
+      await handleHistorySync(db as unknown as FirebaseFirestore.Firestore, event2, 'primary', sock);
+
+      // Throttle: only one call across both chunks.
+      expect(profilePictureUrl).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not crash when sock.profilePictureUrl rejects (private/404) and ingests the chat anyway', async () => {
+      const profilePictureUrl = vi
+        .fn<(jid: string, type: 'image' | 'preview') => Promise<string | undefined>>()
+        .mockRejectedValue(Object.assign(new Error('not found'), { status: 404 }));
+      const sock = { profilePictureUrl };
+
+      const event = makeEvent({
+        chats: [{ id: '5511999999999@s.whatsapp.net' }],
+      });
+
+      const result = await handleHistorySync(
+        db as unknown as FirebaseFirestore.Firestore,
+        event,
+        'primary',
+        sock,
+      );
+
+      expect(result.chatsUpserted).toBe(1);
+      const conv = state.conversations.get('5511999999999');
+      expect(conv).toBeDefined();
+      expect(conv?.profilePictureUrl).toBeUndefined();
+      // Refresh timestamp IS set so we don't immediately retry.
+      expect(conv?.profilePictureRefreshedAt).toBeInstanceOf(Date);
+    });
+
+    it('does not call profilePictureUrl when sock is undefined (back-compat)', async () => {
+      const event = makeEvent({
+        chats: [{ id: '5511999999999@s.whatsapp.net', name: 'Maria' }],
+      });
+
+      // No sock argument — old call signature.
+      const result = await handleHistorySync(
+        db as unknown as FirebaseFirestore.Firestore,
+        event,
+        'primary',
+      );
+
+      expect(result.chatsUpserted).toBe(1);
+      const conv = state.conversations.get('5511999999999');
+      expect(conv).toBeDefined();
+      expect(conv?.profilePictureUrl).toBeUndefined();
+      // No fetch attempted, so no refresh timestamp either.
+      expect(conv?.profilePictureRefreshedAt).toBeUndefined();
+    });
+
+    it('re-fetches when stored URL is older than 20h on update path', async () => {
+      const TWENTY_ONE_HOURS_AGO = new Date(Date.now() - 21 * 60 * 60 * 1000);
+      state.conversations.set('5511999999999', {
+        id: '5511999999999',
+        phone: '5511999999999',
+        profilePictureUrl: 'https://pps.whatsapp.net/v/old',
+        profilePictureRefreshedAt: TWENTY_ONE_HOURS_AGO,
+      });
+
+      const profilePictureUrl = vi
+        .fn<(jid: string, type: 'image' | 'preview') => Promise<string | undefined>>()
+        .mockResolvedValue('https://pps.whatsapp.net/v/new');
+      const sock = { profilePictureUrl };
+
+      const event = makeEvent({
+        chats: [{ id: '5511999999999@s.whatsapp.net' }],
+      });
+
+      await handleHistorySync(
+        db as unknown as FirebaseFirestore.Firestore,
+        event,
+        'primary',
+        sock,
+      );
+
+      expect(profilePictureUrl).toHaveBeenCalledTimes(1);
+      const conv = state.conversations.get('5511999999999');
+      expect(conv?.profilePictureUrl).toBe('https://pps.whatsapp.net/v/new');
+    });
+
+    it('skips fetch when stored URL is fresher than 20h on update path', async () => {
+      const ONE_HOUR_AGO = new Date(Date.now() - 60 * 60 * 1000);
+      state.conversations.set('5511999999999', {
+        id: '5511999999999',
+        phone: '5511999999999',
+        profilePictureUrl: 'https://pps.whatsapp.net/v/fresh',
+        profilePictureRefreshedAt: ONE_HOUR_AGO,
+      });
+
+      const profilePictureUrl = vi.fn();
+      const sock = { profilePictureUrl };
+
+      const event = makeEvent({
+        chats: [{ id: '5511999999999@s.whatsapp.net' }],
+      });
+
+      await handleHistorySync(
+        db as unknown as FirebaseFirestore.Firestore,
+        event,
+        'primary',
+        sock,
+      );
+
+      expect(profilePictureUrl).not.toHaveBeenCalled();
+      const conv = state.conversations.get('5511999999999');
+      expect(conv?.profilePictureUrl).toBe('https://pps.whatsapp.net/v/fresh');
+    });
+
+    it('treats undefined return from profilePictureUrl as "no photo" — sets timestamp only', async () => {
+      const profilePictureUrl = vi
+        .fn<(jid: string, type: 'image' | 'preview') => Promise<string | undefined>>()
+        .mockResolvedValue(undefined);
+      const sock = { profilePictureUrl };
+
+      const event = makeEvent({
+        chats: [{ id: '5511999999999@s.whatsapp.net' }],
+      });
+
+      await handleHistorySync(
+        db as unknown as FirebaseFirestore.Firestore,
+        event,
+        'primary',
+        sock,
+      );
+
+      const conv = state.conversations.get('5511999999999');
+      expect(conv?.profilePictureUrl).toBeUndefined();
+      expect(conv?.profilePictureRefreshedAt).toBeInstanceOf(Date);
+    });
   });
 });
