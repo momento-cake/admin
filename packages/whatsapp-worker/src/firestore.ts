@@ -24,6 +24,13 @@ export function initFirestore(): Firestore {
   }
 
   dbInstance = admin.firestore();
+  // Strip undefined fields silently instead of throwing. Required because
+  // inbound.ts builds message docs with `text: msg.text`, which is undefined
+  // for media-only messages, fromMe replays without bodies, and
+  // failed-decryption events. Without this flag the entire write rejects with
+  // "Cannot use undefined as a Firestore value (found in field text)" — see
+  // https://firebase.google.com/docs/reference/admin/node/firebase-admin.firestore.firestoresettings.
+  dbInstance.settings({ ignoreUndefinedProperties: true });
   return dbInstance;
 }
 
