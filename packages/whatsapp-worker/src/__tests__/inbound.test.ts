@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { handleIncomingMessage, __resetProfilePhotoThrottleForTests } from '../inbound.js';
+import { handleIncomingMessage, isSelfJid, __resetProfilePhotoThrottleForTests } from '../inbound.js';
 import type { IncomingMessage } from '../inbound.js';
 
 interface MockState {
@@ -820,6 +820,223 @@ describe('handleIncomingMessage', () => {
       const [msgDoc] = [...state.messages.values()];
       expect(msgDoc.text).toBe('Olá, gostaria de um bolo');
       expect(msgDoc.direction).toBe('in');
+    });
+  });
+
+  describe('fromMe protocol/device-sync filter (production garbage-row fix)', () => {
+    /**
+     * Background: WhatsApp's multi-device protocol uses `messages.upsert` for
+     * both real user-typed fromMe messages AND for internal device-sync
+     * chatter (read receipts, key rotations, ephemeral mode flips, etc.).
+     * The latter arrives with `key.remoteJid` set to OUR own JID and/or with
+     * a `protocolMessage` payload and no user content. Production wrote 7+
+     * `type:'system'`, `text:''` rows whose `conversationId` was the user's
+     * own phone — pure protocol noise. The handler now drops those silently.
+     *
+     * The mock socket below is what the live worker would build: it carries
+     * `user.id` (the worker's own paired JID) plus a `profilePictureUrl`
+     * stub so the existing photo-fetch path remains exercisable. Skipped
+     * cases must never call `profilePictureUrl` either — no work whatsoever
+     * for protocol messages.
+     */
+
+    const OWN_JID = '5511555555555@s.whatsapp.net';
+    const OWN_PHONE = '5511555555555';
+
+    function buildPairedSock() {
+      const profilePictureUrl = vi
+        .fn<(jid: string, type: 'image' | 'preview') => Promise<string | undefined>>()
+        .mockResolvedValue(undefined);
+      return {
+        profilePictureUrl,
+        user: { id: OWN_JID },
+      };
+    }
+
+    it('skips fromMe when remoteJid matches the worker own JID — no Firestore write', async () => {
+      const sock = buildPairedSock();
+      const result = await handleIncomingMessage(
+        db as unknown as FirebaseFirestore.Firestore,
+        makeMsg({
+          fromMe: true,
+          // The CONTACT phone in the adapter would be the user's own phone —
+          // because device-sync uses our own JID as remoteJid. Explicit
+          // about both to mirror what reaches the handler in production.
+          from: OWN_PHONE,
+          remoteJid: OWN_JID,
+          whatsappMessageId: 'WA-DEVICE-SYNC-001',
+          type: 'system',
+          text: '',
+        }),
+        'primary',
+        sock,
+      );
+
+      expect(result.status).toBe('skipped');
+      // Nothing touched: no message doc, no conversation doc, no photo fetch.
+      expect(state.messages.size).toBe(0);
+      expect(state.conversations.size).toBe(0);
+      expect(sock.profilePictureUrl).not.toHaveBeenCalled();
+    });
+
+    it('skips fromMe when remoteJid carries a :device suffix matching the own JID', async () => {
+      // Multi-device: same identity, with the device index appended.
+      // `5511555555555:42@s.whatsapp.net` must compare equal to OWN_JID.
+      const sock = buildPairedSock();
+      const result = await handleIncomingMessage(
+        db as unknown as FirebaseFirestore.Firestore,
+        makeMsg({
+          fromMe: true,
+          from: OWN_PHONE,
+          remoteJid: '5511555555555:42@s.whatsapp.net',
+          whatsappMessageId: 'WA-DEVICE-SYNC-002',
+          type: 'system',
+          text: '',
+        }),
+        'primary',
+        sock,
+      );
+
+      expect(result.status).toBe('skipped');
+      expect(state.messages.size).toBe(0);
+      expect(state.conversations.size).toBe(0);
+    });
+
+    it('skips fromMe when hasProtocolMessage is true — even if remoteJid is a real contact', async () => {
+      // Read receipts and key rotations CAN target a real contact's JID
+      // (e.g., "I read your message"). Those still must not land in the
+      // inbox: the protocol-message flag is the authoritative signal.
+      const sock = buildPairedSock();
+      const result = await handleIncomingMessage(
+        db as unknown as FirebaseFirestore.Firestore,
+        makeMsg({
+          fromMe: true,
+          // Different from OWN_JID — a real contact.
+          remoteJid: '5511999999999@s.whatsapp.net',
+          hasProtocolMessage: true,
+          whatsappMessageId: 'WA-PROTO-MSG-001',
+          // Adapter collapses protocol-only messages to type:'system' with
+          // no text — which mirrors what arrives in production.
+          type: 'system',
+          text: undefined,
+        }),
+        'primary',
+        sock,
+      );
+
+      expect(result.status).toBe('skipped');
+      expect(state.messages.size).toBe(0);
+      expect(state.conversations.size).toBe(0);
+    });
+
+    it('writes fromMe text messages to a normal contact (regression guard)', async () => {
+      // Real fromMe text from another linked device — must NOT be filtered.
+      const sock = buildPairedSock();
+      const result = await handleIncomingMessage(
+        db as unknown as FirebaseFirestore.Firestore,
+        makeMsg({
+          fromMe: true,
+          remoteJid: '5511999999999@s.whatsapp.net',
+          whatsappMessageId: 'WA-FROMME-TEXT-001',
+          text: 'Confirmando seu pedido!',
+        }),
+        'primary',
+        sock,
+      );
+
+      expect(result.status).toBe('inserted');
+      expect(state.messages.size).toBe(1);
+      const [msgDoc] = [...state.messages.values()];
+      expect(msgDoc.direction).toBe('out');
+      expect(msgDoc.status).toBe('sent');
+      expect(msgDoc.text).toBe('Confirmando seu pedido!');
+    });
+
+    it('writes fromMe media messages to a normal contact (regression guard)', async () => {
+      // Image/audio/etc. messages have no text but DO have user content.
+      // The filter must let them through.
+      const sock = buildPairedSock();
+      const result = await handleIncomingMessage(
+        db as unknown as FirebaseFirestore.Firestore,
+        makeMsg({
+          fromMe: true,
+          remoteJid: '5511999999999@s.whatsapp.net',
+          whatsappMessageId: 'WA-FROMME-IMG-001',
+          type: 'image',
+          text: undefined,
+        }),
+        'primary',
+        sock,
+      );
+
+      expect(result.status).toBe('inserted');
+      expect(state.messages.size).toBe(1);
+      const [msgDoc] = [...state.messages.values()];
+      expect(msgDoc.direction).toBe('out');
+      expect(msgDoc.type).toBe('image');
+    });
+
+    it('back-compat: fromMe with no sock parameter behaves as before (writes the message)', async () => {
+      // The self-JID check is a no-op without a sock (test mode and any
+      // pre-fix call site retain their original behavior). Conditions 2 and
+      // 3 still apply, so we explicitly pass user content here so the only
+      // dependency is on the sock parameter.
+      const result = await handleIncomingMessage(
+        db as unknown as FirebaseFirestore.Firestore,
+        makeMsg({
+          fromMe: true,
+          // remoteJid intentionally set to the would-be own JID to prove the
+          // self-JID check needs a sock to fire.
+          remoteJid: OWN_JID,
+          from: OWN_PHONE,
+          whatsappMessageId: 'WA-NO-SOCK-001',
+          text: 'Test message',
+        }),
+        'primary',
+        // No sock argument.
+      );
+
+      // Without sock, isSelfJid is bypassed and content is non-empty, so the
+      // message is written normally — pre-fix behavior preserved.
+      expect(result.status).toBe('inserted');
+      expect(state.messages.size).toBe(1);
+      const conv = state.conversations.get(OWN_PHONE);
+      expect(conv).toBeDefined();
+      expect(conv?.lastMessageDirection).toBe('out');
+    });
+  });
+
+  describe('isSelfJid helper', () => {
+    it('matches identical bare JIDs', () => {
+      expect(isSelfJid('5511555555555@s.whatsapp.net', '5511555555555@s.whatsapp.net')).toBe(true);
+    });
+
+    it('matches when one side carries a :device suffix', () => {
+      expect(
+        isSelfJid('5511555555555:42@s.whatsapp.net', '5511555555555@s.whatsapp.net'),
+      ).toBe(true);
+    });
+
+    it('matches across @lid and @s.whatsapp.net hosts when prefix is the same', () => {
+      // Defensive: in practice Baileys emits one canonical form, but if the
+      // hosts diverge for the same identity we still want to filter.
+      expect(isSelfJid('5511555555555@lid', '5511555555555@s.whatsapp.net')).toBe(true);
+    });
+
+    it('returns false for different prefixes', () => {
+      expect(isSelfJid('5511999999999@s.whatsapp.net', '5511555555555@s.whatsapp.net')).toBe(
+        false,
+      );
+    });
+
+    it('returns false when ownJid is missing or empty (test/pre-pair mode)', () => {
+      expect(isSelfJid('5511555555555@s.whatsapp.net', undefined)).toBe(false);
+      expect(isSelfJid('5511555555555@s.whatsapp.net', null)).toBe(false);
+      expect(isSelfJid('5511555555555@s.whatsapp.net', '')).toBe(false);
+    });
+
+    it('returns false when remote jid is empty', () => {
+      expect(isSelfJid('', '5511555555555@s.whatsapp.net')).toBe(false);
     });
   });
 });
