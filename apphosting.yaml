@@ -62,34 +62,30 @@ env:
       - RUNTIME
 
   # --- Asaas (customer self-service checkout) ---
-  # The customer checkout flow needs these env vars at runtime. They're
-  # commented out here because the production Asaas account hasn't been
-  # provisioned yet. The customer subdomain (pedidos.momentocake.com.br)
-  # is also not attached, so no user can reach the payment routes today.
-  #
-  # Before re-enabling: create the Asaas production account, then
-  #   1. Run for each of the five secrets:
-  #      firebase apphosting:secrets:set ASAAS_API_KEY \
-  #        --data-file <(printf '%s' '<prod-key>')
-  #      (similar for ASAAS_BASE_URL=https://api.asaas.com/v3,
-  #       ASAAS_WEBHOOK_TOKEN, BILLING_ENCRYPTION_KEY, PAYMENT_PROVIDER=asaas)
-  #   2. firebase apphosting:secrets:grantaccess \
-  #        ASAAS_API_KEY,ASAAS_BASE_URL,ASAAS_WEBHOOK_TOKEN,BILLING_ENCRYPTION_KEY,PAYMENT_PROVIDER \
-  #        --backend admin
-  #   3. Uncomment the block below and merge.
-  #
-  # - variable: ASAAS_API_KEY
-  #   secret: ASAAS_API_KEY
-  #   availability: [RUNTIME]
-  # - variable: ASAAS_BASE_URL
-  #   secret: ASAAS_BASE_URL
-  #   availability: [RUNTIME]
-  # - variable: ASAAS_WEBHOOK_TOKEN
-  #   secret: ASAAS_WEBHOOK_TOKEN
-  #   availability: [RUNTIME]
-  # - variable: BILLING_ENCRYPTION_KEY
-  #   secret: BILLING_ENCRYPTION_KEY
-  #   availability: [RUNTIME]
-  # - variable: PAYMENT_PROVIDER
-  #   secret: PAYMENT_PROVIDER
-  #   availability: [RUNTIME]
+  # Sandbox credentials are currently provisioned in Secret Manager so the
+  # team can iterate on the customer flow against test PIX/cards. To rotate
+  # to production credentials later:
+  #   firebase apphosting:secrets:set ASAAS_API_KEY    --data-file <(printf '%s' '<prod-key>')
+  #   firebase apphosting:secrets:set ASAAS_BASE_URL   --data-file <(printf '%s' 'https://api.asaas.com/v3')
+  #   firebase apphosting:secrets:set BILLING_ENCRYPTION_KEY --data-file <(openssl rand -hex 32)
+  # Then trigger a new rollout.
+  - variable: ASAAS_API_KEY
+    secret: ASAAS_API_KEY
+    availability:
+      - RUNTIME
+  - variable: ASAAS_BASE_URL
+    secret: ASAAS_BASE_URL
+    availability:
+      - RUNTIME
+  - variable: ASAAS_WEBHOOK_TOKEN
+    secret: ASAAS_WEBHOOK_TOKEN
+    availability:
+      - RUNTIME
+  - variable: BILLING_ENCRYPTION_KEY
+    secret: BILLING_ENCRYPTION_KEY
+    availability:
+      - RUNTIME
+  - variable: PAYMENT_PROVIDER
+    secret: PAYMENT_PROVIDER
+    availability:
+      - RUNTIME
