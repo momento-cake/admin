@@ -12,7 +12,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { Trash2, Paperclip, FileText, ImageIcon } from 'lucide-react'
+import { Trash2, Paperclip, FileText, ImageIcon, Webhook } from 'lucide-react'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import { toast } from 'sonner'
 import {
   PAGAMENTO_METODO_LABELS,
@@ -20,6 +26,8 @@ import {
 } from '@/types/pedido'
 import { formatPrice } from '@/lib/products'
 import { deleteReceipt } from '@/lib/storage'
+
+const ASAAS_WEBHOOK_AUTHOR = 'asaas-webhook'
 
 interface PaymentListProps {
   pedidoId: string
@@ -111,16 +119,36 @@ export function PaymentList({
   })
 
   return (
+    <TooltipProvider delayDuration={150}>
     <div className="divide-y rounded-md border">
-      {sorted.map((p) => (
+      {sorted.map((p) => {
+        const isWebhook = p.createdBy === ASAAS_WEBHOOK_AUTHOR
+        return (
         <div key={p.id} className="flex items-center justify-between gap-3 p-3">
           <div className="flex-1 min-w-0 space-y-0.5">
-            <div className="flex items-center gap-2 text-sm">
-              <span className="font-medium">{formatPrice(p.valor)}</span>
+            <div className="flex flex-wrap items-center gap-2 text-sm">
+              <span className="font-medium tabular-nums">{formatPrice(p.valor)}</span>
               <span className="text-muted-foreground">·</span>
               <span>{PAGAMENTO_METODO_LABELS[p.metodo]}</span>
               <span className="text-muted-foreground">·</span>
-              <span className="text-muted-foreground">{formatDate(p.data)}</span>
+              <span className="text-muted-foreground tabular-nums">{formatDate(p.data)}</span>
+              {isWebhook && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span
+                      className="inline-flex items-center gap-1 rounded-full bg-indigo-50 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-indigo-800 ring-1 ring-inset ring-indigo-200"
+                      tabIndex={0}
+                      aria-label="Confirmado automaticamente pelo Asaas"
+                    >
+                      <Webhook className="h-3 w-3" aria-hidden />
+                      Asaas
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-xs">
+                    Confirmado automaticamente pelo Asaas via webhook.
+                  </TooltipContent>
+                </Tooltip>
+              )}
             </div>
             {p.observacao && (
               <p className="text-xs text-muted-foreground truncate">{p.observacao}</p>
@@ -159,7 +187,8 @@ export function PaymentList({
             )}
           </div>
         </div>
-      ))}
+        )
+      })}
 
       <AlertDialog open={!!confirmId} onOpenChange={(o) => !o && setConfirmId(null)}>
         <AlertDialogContent>
@@ -181,5 +210,6 @@ export function PaymentList({
         </AlertDialogContent>
       </AlertDialog>
     </div>
+    </TooltipProvider>
   )
 }

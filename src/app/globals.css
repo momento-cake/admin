@@ -476,3 +476,199 @@
     0 1px 4px rgba(184, 149, 106, 0.3),
     0 0 0 2px rgba(184, 149, 106, 0.15);
 }
+
+/* ── Checkout polish — paper, ribbon, perforation, hourglass ── */
+
+/* Soft paper grain layered over premium-card surfaces (use as a sibling overlay) */
+.paper-grain {
+  background-image: url("data:image/svg+xml,%3Csvg width='180' height='180' viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.72 0 0 0 0 0.58 0 0 0 0 0.41 0 0 0 0.06 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  pointer-events: none;
+  mix-blend-mode: multiply;
+}
+
+/* Tear-off receipt edge (use as ::before / ::after) */
+.tear-edge-top {
+  background-image:
+    radial-gradient(circle at 6px 0, transparent 4px, #ffffff 4.5px),
+    linear-gradient(to right, #ffffff, #ffffff);
+  background-size: 12px 8px, 100% 100%;
+  background-repeat: repeat-x, no-repeat;
+  background-position: top, top;
+}
+.tear-edge-bottom {
+  background-image:
+    radial-gradient(circle at 6px 8px, transparent 4px, #ffffff 4.5px);
+  background-size: 12px 8px;
+  background-repeat: repeat-x;
+  background-position: bottom;
+}
+
+/* Hand-stitched dashed border (gold) */
+.stitched-border {
+  border: 1.5px dashed rgba(184, 149, 106, 0.55);
+  border-radius: 18px;
+}
+
+/* Polaroid-style QR frame */
+.qr-frame {
+  position: relative;
+  background: #ffffff;
+  padding: 18px 18px 36px;
+  border-radius: 4px;
+  box-shadow:
+    0 1px 2px rgba(45, 35, 25, 0.06),
+    0 12px 28px -12px rgba(45, 35, 25, 0.18),
+    0 22px 40px -28px rgba(184, 149, 106, 0.35);
+}
+.qr-frame::before,
+.qr-frame::after {
+  content: "";
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border: 1px solid rgba(139, 115, 85, 0.35);
+}
+.qr-frame::before {
+  top: 6px;
+  left: 6px;
+  border-right: none;
+  border-bottom: none;
+}
+.qr-frame::after {
+  bottom: 26px;
+  right: 6px;
+  border-left: none;
+  border-top: none;
+}
+
+/* Hourglass for PIX countdown */
+@keyframes hourglassFlip {
+  0%, 45% { transform: rotate(0deg); }
+  50%, 95% { transform: rotate(180deg); }
+  100% { transform: rotate(360deg); }
+}
+.animate-hourglass {
+  animation: hourglassFlip 6s ease-in-out infinite;
+  transform-origin: center;
+}
+
+/* Subtle ambient glow behind grand totals / amount pills */
+.amount-glow {
+  background:
+    radial-gradient(120% 120% at 50% 0%, rgba(232, 200, 122, 0.16), transparent 60%),
+    linear-gradient(180deg, #faf7f2, #ffffff);
+}
+
+/* Ribbon underlining the submit button */
+.ribbon-tag {
+  position: relative;
+  display: inline-block;
+  padding: 4px 18px;
+  background: linear-gradient(180deg, #f5e9d2, #e8c87a 60%, #c9a96e);
+  color: #5c4a2e;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 10px;
+  border-radius: 2px;
+  box-shadow: 0 1px 2px rgba(92, 74, 46, 0.18);
+}
+.ribbon-tag::before,
+.ribbon-tag::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  width: 8px;
+  height: 100%;
+  background: inherit;
+}
+.ribbon-tag::before {
+  left: -7px;
+  clip-path: polygon(100% 0, 100% 100%, 0 50%);
+}
+.ribbon-tag::after {
+  right: -7px;
+  clip-path: polygon(0 0, 0 100%, 100% 50%);
+}
+
+/* Slow gentle pulse for "aguardando pagamento" dot */
+@keyframes gentlePulse {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.25); }
+}
+.animate-gentle-pulse {
+  animation: gentlePulse 1.8s ease-in-out infinite;
+}
+
+/* Floating-label friendly input — used by the checkout cards */
+.gilded-input {
+  width: 100%;
+  padding: 18px 14px 8px;
+  font-size: 15px;
+  background: #ffffff;
+  color: #2d2319;
+  border: 1px solid rgba(212, 196, 168, 0.55);
+  border-radius: 12px;
+  outline: none;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease, background-color 0.25s ease;
+}
+.gilded-input:focus {
+  border-color: rgba(184, 149, 106, 0.7);
+  box-shadow:
+    0 0 0 3px rgba(232, 200, 122, 0.18),
+    inset 0 -2px 0 0 rgba(184, 149, 106, 0.5);
+  background: #fffefb;
+}
+.gilded-input:disabled {
+  background: #faf7f2;
+  color: #8b7e6e;
+  cursor: not-allowed;
+}
+.gilded-input::placeholder {
+  color: transparent; /* hide; we use floating labels */
+}
+.gilded-input.has-error {
+  border-color: rgba(220, 90, 90, 0.55);
+  box-shadow: 0 0 0 3px rgba(220, 90, 90, 0.10);
+}
+
+.gilded-label {
+  position: absolute;
+  left: 14px;
+  top: 14px;
+  font-size: 14px;
+  color: #a89b8a;
+  pointer-events: none;
+  transition: transform 0.2s ease, color 0.2s ease, font-size 0.2s ease;
+  background: transparent;
+  letter-spacing: 0.01em;
+}
+.gilded-input:focus + .gilded-label,
+.gilded-input:not(:placeholder-shown) + .gilded-label,
+.gilded-input.is-filled + .gilded-label {
+  transform: translateY(-10px);
+  font-size: 11px;
+  color: #8b7355;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.gilded-input:focus + .gilded-label {
+  color: #b8956a;
+}
+
+/* Page-turn transition between checkout steps */
+@keyframes pageTurn {
+  0% {
+    opacity: 0;
+    transform: rotateY(-6deg) translateX(-8px) translateY(6px);
+    transform-origin: left center;
+  }
+  100% {
+    opacity: 1;
+    transform: rotateY(0deg) translateX(0) translateY(0);
+  }
+}
+.animate-page-turn {
+  animation: pageTurn 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  perspective: 1000px;
+}

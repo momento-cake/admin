@@ -1,8 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 
 const PEDIDOS_COLLECTION = 'pedidos';
+
+function rateLimited(retryAfterMs: number) {
+  return NextResponse.json(
+    {
+      success: false,
+      error: 'Muitas tentativas. Tente novamente em alguns instantes.',
+    },
+    {
+      status: 429,
+      headers: { 'Retry-After': String(Math.ceil(retryAfterMs / 1000)) },
+    },
+  );
+}
 const STORE_ADDRESSES_COLLECTION = 'storeAddresses';
 const STORE_HOURS_COLLECTION = 'storeHours';
 
@@ -17,7 +31,9 @@ const DIAS_SEMANA_DEFAULTS = [
 ];
 
 // POST /api/public/pedidos/[token]/confirmar - Confirm a pedido by public token (no auth required)
-// Only allows confirmation of orders with status AGUARDANDO_APROVACAO
+// Only allows confirmation of orders with status AGUARDANDO_APROVACAO. The
+// pedido transitions to AGUARDANDO_PAGAMENTO so the customer can complete the
+// online checkout (billing data + PIX/cartão) before we mark it CONFIRMADO.
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ token: string }> }
@@ -31,6 +47,13 @@ export async function POST(
         { status: 400 }
       );
     }
+
+    const limit = checkRateLimit({
+      key: `confirmar:${getClientIp(request)}:${token}`,
+      max: 3,
+      windowMs: 60_000,
+    });
+    if (!limit.ok) return rateLimited(limit.retryAfterMs);
 
     const snapshot = await adminDb
       .collection(PEDIDOS_COLLECTION)
@@ -61,7 +84,7 @@ export async function POST(
       }
 
       transaction.update(docRef, {
-        status: 'CONFIRMADO',
+        status: 'AGUARDANDO_PAGAMENTO',
         updatedAt: FieldValue.serverTimestamp(),
       });
 
@@ -138,7 +161,7 @@ export async function POST(
       id: docRef.id,
       numeroPedido: data.numeroPedido,
       clienteNome: data.clienteNome,
-      status: 'CONFIRMADO',
+      status: 'AGUARDANDO_PAGAMENTO',
       orcamento: activeOrcamento || null,
       entrega: data.entrega,
       dataEntrega: data.dataEntrega || null,

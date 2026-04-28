@@ -3,7 +3,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { PEDIDO_STATUS_LABELS, type PedidoStatus, type EntregaTipo } from '@/types/pedido'
 import { PublicEntregaToggle } from './PublicEntregaToggle'
-import { CheckCircle2, Loader2, Calendar, Sparkles, MessageSquare, Package } from 'lucide-react'
+import { PublicCheckoutFlow, type PublicBillingData, type PublicPaymentSessionData } from './PublicCheckoutFlow'
+import { ArrowRight, Loader2, Calendar, Sparkles, MessageSquare, Package } from 'lucide-react'
 import { toast } from 'sonner'
 
 // Types for the public API response (filtered data)
@@ -88,6 +89,10 @@ export interface PublicPedidoData {
   createdAt: string
   storeAddresses: PublicStoreAddress[]
   storeHours: PublicStoreHours[]
+  billing?: PublicBillingData | null
+  paymentSession?: PublicPaymentSessionData | null
+  totalPago?: number | null
+  paidAt?: string | null
 }
 
 interface PublicPedidoViewProps {
@@ -178,13 +183,6 @@ export function PublicPedidoView({ pedido, token, onPedidoUpdate }: PublicPedido
   const grandTotal = (orcamento?.total ?? 0) + freteDisplay
   const statusConfig = getStatusConfig(pedido.status)
 
-  const handleEntregaUpdate = (newEntrega: PublicEntrega) => {
-    onPedidoUpdate({
-      ...pedido,
-      entrega: newEntrega,
-    })
-  }
-
   const handleConfirm = async () => {
     if (confirmingRef.current) return
     confirmingRef.current = true
@@ -203,7 +201,7 @@ export function PublicPedidoView({ pedido, token, onPedidoUpdate }: PublicPedido
       }
 
       setShowConfetti(true)
-      toast.success('Pedido confirmado com sucesso!')
+      toast.success('Pedido confirmado! Vamos para o pagamento.')
       onPedidoUpdate(json.data)
 
       setTimeout(() => setShowConfetti(false), 4000)
@@ -281,40 +279,6 @@ export function PublicPedidoView({ pedido, token, onPedidoUpdate }: PublicPedido
 
         {/* Content */}
         <main className="max-w-2xl mx-auto px-5 py-8 space-y-6">
-          {/* Confirmed Success Banner */}
-          {pedido.status === 'CONFIRMADO' && (
-            <div
-              role="alert"
-              className={`premium-card overflow-hidden ${mounted ? 'animate-scale-in' : 'opacity-0'}`}
-            >
-              <div className="bg-gradient-to-r from-emerald-50 via-emerald-50/60 to-transparent p-6">
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0 animate-celebrate-check">
-                    <CheckCircle2 className="h-6 w-6 text-emerald-600" />
-                  </div>
-                  <div className="pt-0.5">
-                    <p
-                      className="text-xl text-emerald-800 mb-1"
-                      style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontWeight: 600 }}
-                    >
-                      Pedido Confirmado!
-                    </p>
-                    <p
-                      className="text-sm text-emerald-600/80 leading-relaxed"
-                      style={{ fontFamily: 'var(--font-dm-sans), system-ui, sans-serif' }}
-                    >
-                      Obrigada por confirmar. Estamos preparando tudo com muito carinho para
-                      {pedido.dataEntrega
-                        ? ` o dia ${formatDate(pedido.dataEntrega)}`
-                        : ' você'
-                      }.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* Greeting & Order Info Card */}
           <div
             className={`premium-card p-6 ${mounted ? 'animate-fade-in-up stagger-1' : 'opacity-0'}`}
@@ -506,15 +470,12 @@ export function PublicPedidoView({ pedido, token, onPedidoUpdate }: PublicPedido
             </div>
           )}
 
-          {/* Delivery / Pickup Toggle */}
+          {/* Delivery / Pickup — display only. The admin sets this internally; the customer cannot change it from here. */}
           <div className={`${mounted ? 'animate-fade-in-up stagger-4' : 'opacity-0'}`}>
             <PublicEntregaToggle
               entrega={entrega}
-              token={token}
               storeAddresses={pedido.storeAddresses}
               storeHours={pedido.storeHours}
-              onEntregaUpdate={handleEntregaUpdate}
-              readOnly={pedido.status === 'CONFIRMADO'}
             />
           </div>
 
@@ -541,7 +502,7 @@ export function PublicPedidoView({ pedido, token, onPedidoUpdate }: PublicPedido
             </div>
           )}
 
-          {/* Confirm Button */}
+          {/* Confirm Button — moves the pedido to AGUARDANDO_PAGAMENTO and reveals the checkout flow below */}
           {pedido.status === 'AGUARDANDO_APROVACAO' && (
             <div className={`pt-2 pb-4 ${mounted ? 'animate-fade-in-up stagger-6' : 'opacity-0'}`}>
               <button
@@ -557,8 +518,8 @@ export function PublicPedidoView({ pedido, token, onPedidoUpdate }: PublicPedido
                   </>
                 ) : (
                   <>
-                    <CheckCircle2 className="h-5 w-5" />
-                    <span className="text-base font-semibold tracking-wide">Confirmar Pedido</span>
+                    <span className="text-base font-semibold tracking-wide">Confirmar e ir para Pagamento</span>
+                    <ArrowRight className="h-5 w-5" />
                   </>
                 )}
               </button>
@@ -566,8 +527,20 @@ export function PublicPedidoView({ pedido, token, onPedidoUpdate }: PublicPedido
                 className="text-center text-[11px] text-[#a89b8a] mt-3 tracking-wide"
                 style={{ fontFamily: 'var(--font-dm-sans), system-ui, sans-serif' }}
               >
-                Ao confirmar, seu pedido será enviado para produção
+                Após confirmar, você poderá pagar via PIX ou cartão de crédito
               </p>
+            </div>
+          )}
+
+          {/* Checkout Flow — billing form, PIX/Card tabs, or success screen.
+              Renders nothing for statuses other than AGUARDANDO_PAGAMENTO and CONFIRMADO. */}
+          {(pedido.status === 'AGUARDANDO_PAGAMENTO' || pedido.status === 'CONFIRMADO') && (
+            <div className={`${mounted ? 'animate-fade-in-up stagger-6' : 'opacity-0'}`}>
+              <PublicCheckoutFlow
+                pedido={pedido}
+                token={token}
+                onPedidoUpdate={(partial) => onPedidoUpdate({ ...pedido, ...partial })}
+              />
             </div>
           )}
         </main>

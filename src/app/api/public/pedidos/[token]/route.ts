@@ -51,7 +51,11 @@ export async function GET(
     const data = doc.data();
 
     // Status-based access control: only allow viewing certain statuses
-    const allowedStatuses: PedidoStatus[] = ['AGUARDANDO_APROVACAO', 'CONFIRMADO'];
+    const allowedStatuses: PedidoStatus[] = [
+      'AGUARDANDO_APROVACAO',
+      'CONFIRMADO',
+      'AGUARDANDO_PAGAMENTO',
+    ];
     if (!allowedStatuses.includes(data.status)) {
       return NextResponse.json(
         { success: false, error: 'Este pedido não está disponível para visualização' },
@@ -104,6 +108,35 @@ export async function GET(
           fechado: d.data().fechado,
         }));
 
+    // Sanitize the in-flight payment session: never expose providerCustomerId
+    // or internal idempotency state to the public response.
+    const rawSession = data.paymentSession as Record<string, unknown> | undefined;
+    let paymentSession: Record<string, unknown> | null = null;
+    if (rawSession) {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { providerCustomerId, processedWebhookEventIds, ...safe } = rawSession;
+      paymentSession = safe;
+    }
+
+    // The latest payment date — convenience for the UI to show "paid at X".
+    const pagamentos = Array.isArray(data.pagamentos)
+      ? (data.pagamentos as Array<{ data?: unknown }>)
+      : [];
+    const lastPagamento = pagamentos[pagamentos.length - 1];
+    const paidAt = lastPagamento?.data ?? null;
+
+    // LGPD: never echo CPF/CNPJ back to the public client. The customer
+    // doesn't need their own document re-displayed; only the metadata
+    // (nome/email/telefone/confirmedAt) is useful for "your billing details
+    // on file" UX.
+    const rawBilling = data.billing as Record<string, unknown> | undefined;
+    let safeBilling: Record<string, unknown> | null = null;
+    if (rawBilling) {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { cpfCnpj, ...rest } = rawBilling;
+      safeBilling = rest;
+    }
+
     // Build public-safe response (exclude internal data)
     const publicPedido = {
       id: doc.id,
@@ -115,6 +148,9 @@ export async function GET(
       dataEntrega: data.dataEntrega || null,
       observacoesCliente: data.observacoesCliente || null,
       createdAt: data.createdAt,
+      billing: safeBilling,
+      paymentSession,
+      paidAt,
       storeAddresses,
       storeHours,
     };
