@@ -12,6 +12,18 @@
 #        sudo chmod 600 /opt/whatsapp-worker/service-account.json
 #   3. The whatsapp-worker:latest image is loaded locally (deploy-via-ssh.sh handles this).
 #
+# This script also provisions /opt/whatsapp-worker/auth_info_baileys/ — the host
+# directory where Baileys persists its WhatsApp Web auth state (Signal Protocol
+# session keys, registration credentials, etc.). The directory is bind-mounted
+# into the container at /app/auth_info_baileys. Notes:
+#
+#   - Owned by ubuntu:ubuntu, mode 0700 (contains sensitive private keys).
+#   - Survives container restarts AND image redeploys (deploy-via-ssh.sh does
+#     not touch /opt/whatsapp-worker/).
+#   - Losing this folder = the bakery must re-pair the WhatsApp number by
+#     scanning a new QR code from their phone's "Linked devices" menu.
+#   - Backing it up offsite (encrypted) is recommended for DR; see README.
+#
 # Run from the directory containing whatsapp-worker.service, or pass its path as $1.
 
 set -euo pipefail
@@ -27,6 +39,12 @@ fi
 
 echo "==> Installing $UNIT_SRC -> $UNIT_DST"
 sudo cp "$UNIT_SRC" "$UNIT_DST"
+
+# Provision the Baileys auth state directory on the host. `install -d` is
+# idempotent: it's a no-op if the directory already exists with matching
+# ownership and mode, otherwise it creates / fixes them. Safe to re-run.
+echo "==> Ensuring /opt/whatsapp-worker/auth_info_baileys (0700 ubuntu:ubuntu)"
+sudo install -d -o ubuntu -g ubuntu -m 0700 /opt/whatsapp-worker/auth_info_baileys
 
 echo "==> systemctl daemon-reload"
 sudo systemctl daemon-reload

@@ -11,7 +11,11 @@ servers. No inbound ports are exposed.
 
 - **One worker per WhatsApp instance** — coordinated via a Firestore lease
   (`whatsapp_status/{instanceId}.workerInstanceId`, 60s TTL, renewed every 20s).
-- **Auth state persisted in Firestore** so a restart does not require a fresh QR scan.
+- **Auth state persisted on the local filesystem** (Baileys' standard
+  `useMultiFileAuthState`) so a restart does not require a fresh QR scan. The
+  folder lives on the VM at `/opt/whatsapp-worker/auth_info_baileys/` and is
+  bind-mounted into the container at `/app/auth_info_baileys`. See
+  [State persistence](#state-persistence) below.
 - **Heartbeat** every 30s into `whatsapp_status` so the UI can show "last seen".
 - **Outbox subscription** watches `whatsapp_outbox` for `pending` docs and sends them.
 
@@ -52,6 +56,11 @@ Follow Phase 5 §5a in the master plan
 4. SSH in, install Docker, add `ubuntu` to the `docker` group.
 5. Generate a Firebase service-account JSON and place it at
    `/opt/whatsapp-worker/service-account.json` with `chmod 600`.
+6. `install-systemd.sh` will create `/opt/whatsapp-worker/auth_info_baileys/`
+   (mode 0700, owned by `ubuntu`). On the first run it will be empty and the
+   worker will emit a QR for pairing — scan it from the bakery's phone via
+   "Linked devices". After pairing, files appear in the folder and survive
+   subsequent restarts and image redeploys.
 
 ### Per-deploy steps (scripted)
 
@@ -104,14 +113,51 @@ the VM:
 
 ```
 GOOGLE_APPLICATION_CREDENTIALS=/app/service-account.json
+BAILEYS_AUTH_DIR=/app/auth_info_baileys      # in-container path; matches the bind mount
 FIREBASE_PROJECT_ID=momentocake-admin-dev    # use momentocake-admin for prod
 WHATSAPP_INSTANCE_ID=primary
 LOG_LEVEL=info
 NODE_ENV=production
 ```
 
+The unit also bind-mounts `/opt/whatsapp-worker/auth_info_baileys` (host) onto
+`/app/auth_info_baileys` (container) so that auth state survives container
+recreation. See [State persistence](#state-persistence).
+
 `RestartSec=120` is intentional: the lease TTL is 60s, so a restart at 120s never
 collides with the worker's own previous lock.
+
+## State persistence
+
+The worker keeps two pieces of state outside of Firestore on the VM, both under
+`/opt/whatsapp-worker/`:
+
+| Path | Mode | Owner | What it is |
+|---|---|---|---|
+| `service-account.json` | 0600 | root | Firebase Admin SDK credentials. |
+| `auth_info_baileys/` | 0700 | ubuntu | Baileys' WhatsApp Web auth state (Signal Protocol session keys, registration credentials, sender keys). |
+
+Both are bind-mounted into the container — `auth_info_baileys/` lands at
+`/app/auth_info_baileys` (configurable via the `BAILEYS_AUTH_DIR` env var). The
+folder is **not** wiped during normal redeploys (`deploy-via-ssh.sh` only ships a
+new image and restarts the unit), so the WhatsApp pairing persists across both
+container restarts and image redeploys.
+
+> **Losing this folder = re-pairing required.** If the directory is deleted,
+> corrupted, or the VM is rebuilt without restoring it, the worker will boot
+> into the `pairing` state and emit a fresh QR code that must be scanned from
+> the bakery's phone via "Linked devices".
+
+The folder contains private Signal Protocol keys; treat it as sensitive
+material. Permissions are 0700 (`ubuntu:ubuntu`) and `install-systemd.sh`
+(re)applies that on every run.
+
+### Legacy Firestore auth state
+
+Earlier MVP iterations persisted auth state in Firestore under
+`whatsapp_sessions/{instanceId}` (and briefly `whatsapp_auth_state/{instanceId}`).
+Those collections are **no longer used** and can be cleaned up post-deploy after
+the file-based auth state is verified working in production.
 
 ## Operational commands (on the VM)
 
@@ -122,14 +168,26 @@ sudo journalctl -u whatsapp-worker -f         # tail logs
 sudo journalctl -u whatsapp-worker --since "10 min ago"
 ```
 
-## Future hardening
+## Future hardening / DR
 
 - **Service-account least privilege.** The MVP uses a broad Firebase Admin SDK key.
   Tightening to only the collections the worker writes (`whatsapp_messages`,
-  `whatsapp_conversations`, `whatsapp_outbox`, `whatsapp_status`,
-  `whatsapp_auth_state`) requires a custom IAM role + service account; it's deferred
-  until after manual verification because the broad key is what the rest of this
-  project already uses.
+  `whatsapp_conversations`, `whatsapp_outbox`, `whatsapp_status`) requires a
+  custom IAM role + service account; it's deferred until after manual
+  verification because the broad key is what the rest of this project already
+  uses.
+- **Auth state offsite backup.** `/opt/whatsapp-worker/auth_info_baileys/` is the
+  single source of truth for the WhatsApp pairing — losing it forces a manual
+  re-pair from the bakery's phone. Periodically backing it up offsite (encrypted)
+  is recommended for DR. The typical pattern is a cron job along the lines of:
+
+  ```bash
+  tar czf - /opt/whatsapp-worker/auth_info_baileys \
+    | gpg --encrypt --recipient ops@momentocake.com.br \
+    | gsutil cp - gs://momentocake-backups/whatsapp/auth-$(date +%Y%m%d).tar.gz.gpg
+  ```
+
+  Out of scope for this PR; tracked separately.
 - **Image signing & SBOM** — out of scope for MVP.
 - **OCIR-based CI/CD** — see "Container registry options" above; keep manual
   `deploy-via-ssh.sh` for now.
@@ -143,8 +201,10 @@ sudo journalctl -u whatsapp-worker --since "10 min ago"
   lease auto-expires after 60s of no renewal.
 - **QR never appears**: check `whatsapp_status/{instanceId}.state` — should flip to
   `pairing`. If it stays at `connecting`, the WhatsApp WebSocket is unreachable or
-  the auth state is in a half-state — wipe `whatsapp_auth_state/{instanceId}` and
-  restart the worker to force a fresh pairing.
+  the auth state is in a half-state — wipe the host folder
+  (`sudo rm -rf /opt/whatsapp-worker/auth_info_baileys/* && sudo systemctl restart whatsapp-worker`)
+  to force a fresh pairing. The empty folder itself must remain (mode 0700,
+  `ubuntu:ubuntu`) so the bind-mount keeps working.
 - **Repeated reconnect loop**: usually means the WhatsApp session was logged out
   remotely (e.g. via the phone's "Linked devices" menu). The worker logs
   `logged out — manual re-pair required` and stops auto-reconnecting; visit

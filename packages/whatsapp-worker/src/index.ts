@@ -24,7 +24,7 @@ import { Boom } from '@hapi/boom';
 
 import { initFirestore } from './firestore.js';
 import { acquireLease, LeaseHeldError } from './lease.js';
-import { createFirestoreAuthState } from './auth-state.js';
+import { loadAuthState } from './auth-state.js';
 import { handleIncomingMessage } from './inbound.js';
 import { subscribeToOutbox } from './outbound.js';
 import { clearQR, emitQR, heartbeat, updateStatus } from './status.js';
@@ -184,8 +184,11 @@ async function main(): Promise<void> {
     throw err;
   }
 
-  // 2. Set up auth state and Baileys socket.
-  const { state, saveCreds } = await createFirestoreAuthState(db, instanceId);
+  // 2. Set up auth state and Baileys socket. Auth lives on disk under
+  //    BAILEYS_AUTH_DIR (mounted by systemd) — see `loadAuthState`.
+  const authBundle = await loadAuthState();
+  const { state, saveCreds } = authBundle;
+  logger.info({ authDir: authBundle.authDir }, 'auth state loaded');
   const { version } = await fetchLatestBaileysVersion();
 
   // Construct the socket options separately so the production config block
@@ -255,7 +258,18 @@ async function main(): Promise<void> {
             state: 'disconnected',
             lastError: 'logged out',
           });
-          logger.warn('logged out — manual re-pair required');
+          // Wipe the on-disk auth folder so the next worker start emits a
+          // fresh QR. Without this the next start would reload the now-stale
+          // creds and Baileys would loop on auth failures.
+          try {
+            await authBundle.reset();
+            logger.warn(
+              { authDir: authBundle.authDir },
+              'logged out — auth folder cleared, next start will request QR',
+            );
+          } catch (e) {
+            logger.error({ err: e }, 'failed to clear auth folder after logout');
+          }
           return; // do not auto-reconnect
         }
 

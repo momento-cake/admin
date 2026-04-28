@@ -15,6 +15,11 @@
 #   - Docker installed and the user is in the docker group
 #   - /etc/systemd/system/whatsapp-worker.service installed (run install-systemd.sh once)
 #   - /opt/whatsapp-worker/service-account.json present and 0600
+#   - /opt/whatsapp-worker/auth_info_baileys/ present and 0700 (created by install-systemd.sh)
+#
+# This script does NOT touch /opt/whatsapp-worker/ on the VM. The service-account
+# JSON and the Baileys auth state directory are preserved across deploys; only
+# the Docker image is replaced and the systemd unit is restarted.
 
 set -euo pipefail
 
