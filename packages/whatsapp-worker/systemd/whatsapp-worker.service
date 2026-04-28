@@ -4,20 +4,24 @@ After=docker.service
 Requires=docker.service
 
 [Service]
-Restart=unless-stopped
+# `unless-stopped` is a Docker policy, not a systemd one — systemd silently
+# treats it as `Restart=no`, leaving the worker dead after any clean exit
+# (lease contention, SIGTERM). `always` is the right systemd directive.
+Restart=always
 # RestartSec sits just above the 60s lease TTL so a scheduled restart never races
 # the worker against its own stale lock; see packages/whatsapp-worker/src/lease.ts.
 RestartSec=120
 ExecStartPre=-/usr/bin/docker rm -f whatsapp-worker
 # Baileys auth state lives at /opt/whatsapp-worker/auth_info_baileys on the host
-# (see install-systemd.sh, which creates it 0700 ubuntu:ubuntu). It survives container
-# restarts and image redeploys; losing it forces re-pairing on the bakery's phone.
+# (see install-systemd.sh, which creates it 0700 owned by uid 100 / gid 101 to
+# match the container's `app` user). It survives container restarts and image
+# redeploys; losing it forces re-pairing on the bakery's phone.
 ExecStart=/usr/bin/docker run --rm --name whatsapp-worker \
   -v /opt/whatsapp-worker/service-account.json:/app/service-account.json:ro \
   -v /opt/whatsapp-worker/auth_info_baileys:/app/auth_info_baileys \
   -e GOOGLE_APPLICATION_CREDENTIALS=/app/service-account.json \
   -e BAILEYS_AUTH_DIR=/app/auth_info_baileys \
-  -e FIREBASE_PROJECT_ID=momentocake-admin-dev \
+  -e FIREBASE_PROJECT_ID=momentocake-admin \
   -e WHATSAPP_INSTANCE_ID=primary \
   -e LOG_LEVEL=info \
   -e NODE_ENV=production \
