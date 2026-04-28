@@ -43,8 +43,12 @@ sudo cp "$UNIT_SRC" "$UNIT_DST"
 # Provision the Baileys auth state directory on the host. `install -d` is
 # idempotent: it's a no-op if the directory already exists with matching
 # ownership and mode, otherwise it creates / fixes them. Safe to re-run.
-echo "==> Ensuring /opt/whatsapp-worker/auth_info_baileys (0700 ubuntu:ubuntu)"
-sudo install -d -o ubuntu -g ubuntu -m 0700 /opt/whatsapp-worker/auth_info_baileys
+# Owner uid 100 / gid 101 matches the container image's `app` system user
+# (Alpine `adduser -S app -G app` allocates uid 100). The container needs
+# to read AND write this folder; the host's `ubuntu` user does not need
+# access. Baileys keys are sensitive — only the worker process should read.
+echo "==> Ensuring /opt/whatsapp-worker/auth_info_baileys (0700 100:101)"
+sudo install -d -o 100 -g 101 -m 0700 /opt/whatsapp-worker/auth_info_baileys
 
 echo "==> systemctl daemon-reload"
 sudo systemctl daemon-reload
