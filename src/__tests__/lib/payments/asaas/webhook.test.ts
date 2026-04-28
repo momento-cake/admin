@@ -113,15 +113,15 @@ describe('parseAsaasWebhook', () => {
     expect(evt?.type).toBe(expected);
   });
 
-  it('maps unknown event to OTHER and still preserves chargeId', () => {
+  it('maps an event name not yet in EVENT_TYPE_MAP to OTHER and still preserves chargeId', () => {
     const evt = parseAsaasWebhook(
-      payload({ event: 'PAYMENT_CHECKOUT_VIEWED' }),
+      payload({ event: 'PAYMENT_NEW_EVENT_FROM_ASAAS' }),
       validHeaders,
       TOKEN,
     );
     expect(evt?.type).toBe('OTHER');
     expect(evt?.chargeId).toBe('pay_123');
-    expect(evt?.id).toBe('PAYMENT_CHECKOUT_VIEWED:pay_123');
+    expect(evt?.id).toBe('PAYMENT_NEW_EVENT_FROM_ASAAS:pay_123');
   });
 
   it('returns null when token is invalid', () => {

@@ -169,6 +169,46 @@ export interface Pagamento {
 }
 
 /**
+ * Anomaly record — chargebacks, deletions, restorations, card declines after
+ * approval. Captured separately from `pagamentos` so the money log stays a
+ * pure record of receipts/refunds while the operational signals stay queryable.
+ */
+export type PaymentAnomalyKind =
+  | 'CHARGEBACK_REQUESTED'
+  | 'CHARGEBACK_DISPUTE'
+  | 'CHARGEBACK_REVERSAL_AWAITING'
+  | 'CARD_REPROVED_BY_RISK'
+  | 'CARD_CAPTURE_REFUSED'
+  | 'CHARGE_DELETED'
+  | 'CHARGE_RESTORED'
+  | 'CASH_RECEIPT_UNDONE';
+
+export interface PaymentAnomaly {
+  id: string;
+  kind: PaymentAnomalyKind;
+  /** The Asaas event name that triggered this anomaly, for traceability. */
+  sourceEvent: string;
+  /** The Asaas charge id involved. */
+  chargeId: string;
+  /** Optional amount associated with the event (e.g. chargeback amount). */
+  amount?: number;
+  /** Free-form description shown to ops. */
+  message: string;
+  recordedAt: Timestamp;
+}
+
+export const PAYMENT_ANOMALY_LABELS: Record<PaymentAnomalyKind, string> = {
+  CHARGEBACK_REQUESTED: 'Chargeback solicitado',
+  CHARGEBACK_DISPUTE: 'Chargeback em disputa',
+  CHARGEBACK_REVERSAL_AWAITING: 'Aguardando estorno de chargeback',
+  CARD_REPROVED_BY_RISK: 'Cartão reprovado na análise de risco',
+  CARD_CAPTURE_REFUSED: 'Captura de cartão recusada',
+  CHARGE_DELETED: 'Cobrança removida no Asaas',
+  CHARGE_RESTORED: 'Cobrança restaurada no Asaas',
+  CASH_RECEIPT_UNDONE: 'Recebimento em dinheiro desfeito',
+};
+
+/**
  * Delivery / pickup details for a pedido.
  */
 export interface PedidoEntrega {
@@ -236,6 +276,11 @@ export interface Pedido {
   // Customer self-service checkout
   billing?: PedidoBilling;
   paymentSession?: PedidoPaymentSession;
+
+  // Operational signals from the payment provider that aren't pure money flow
+  // (chargebacks, card declines after approval, charge deletions, etc.).
+  // Optional and append-only.
+  paymentAnomalies?: PaymentAnomaly[];
 
   // Metadata
   isActive: boolean;

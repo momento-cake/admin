@@ -6,10 +6,15 @@ export type PaymentMethod = 'PIX' | 'CARTAO_CREDITO';
 
 export type NormalizedChargeStatus =
   | 'PENDING'
+  | 'PENDING_RISK_ANALYSIS'
   | 'CONFIRMED'
   | 'FAILED'
   | 'EXPIRED'
-  | 'REFUNDED';
+  | 'REFUNDED'
+  | 'PARTIALLY_REFUNDED'
+  | 'CHARGEBACK_REQUESTED'
+  | 'CHARGEBACK_DISPUTE'
+  | 'DELETED';
 
 export interface BillingInfo {
   nome: string;
@@ -51,9 +56,52 @@ export interface CardPaymentInput {
   remoteIp?: string;
 }
 
+/**
+ * Every Asaas webhook event we know about. Anything outside this set normalizes
+ * to `'OTHER'` and is treated as observational only.
+ */
+export type AsaasEventType =
+  // Lifecycle
+  | 'PAYMENT_CREATED'
+  | 'PAYMENT_UPDATED'
+  | 'PAYMENT_DELETED'
+  | 'PAYMENT_RESTORED'
+  // Money landed
+  | 'PAYMENT_CONFIRMED'
+  | 'PAYMENT_RECEIVED'
+  | 'PAYMENT_AUTHORIZED'
+  | 'PAYMENT_ANTICIPATED'
+  // Card risk pipeline
+  | 'PAYMENT_AWAITING_RISK_ANALYSIS'
+  | 'PAYMENT_APPROVED_BY_RISK_ANALYSIS'
+  | 'PAYMENT_REPROVED_BY_RISK_ANALYSIS'
+  | 'PAYMENT_CREDIT_CARD_CAPTURE_REFUSED'
+  // Negative / reversal
+  | 'PAYMENT_OVERDUE'
+  | 'PAYMENT_REFUNDED'
+  | 'PAYMENT_PARTIALLY_REFUNDED'
+  | 'PAYMENT_REFUND_IN_PROGRESS'
+  | 'PAYMENT_RECEIVED_IN_CASH_UNDONE'
+  // Chargebacks
+  | 'PAYMENT_CHARGEBACK_REQUESTED'
+  | 'PAYMENT_CHARGEBACK_DISPUTE'
+  | 'PAYMENT_AWAITING_CHARGEBACK_REVERSAL'
+  // Collection
+  | 'PAYMENT_DUNNING_RECEIVED'
+  | 'PAYMENT_DUNNING_REQUESTED'
+  // Splits
+  | 'PAYMENT_SPLIT_CANCELLED'
+  | 'PAYMENT_SPLIT_DIVERGENCE_BLOCK'
+  | 'PAYMENT_SPLIT_DIVERGENCE_BLOCK_FINISHED'
+  // Analytics
+  | 'PAYMENT_CHECKOUT_VIEWED'
+  | 'PAYMENT_BANK_SLIP_VIEWED'
+  // Anything else Asaas may send in the future
+  | 'OTHER';
+
 export interface WebhookEvent {
   id: string;
-  type: 'PAYMENT_CONFIRMED' | 'PAYMENT_RECEIVED' | 'PAYMENT_OVERDUE' | 'PAYMENT_REFUNDED' | 'PAYMENT_DELETED' | 'OTHER';
+  type: AsaasEventType;
   chargeId: string;
   externalReference?: string;
   status: NormalizedChargeStatus;

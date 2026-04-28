@@ -1,51 +1,40 @@
 import { adminDb } from '@/lib/firebase-admin';
-import { FieldValue, Timestamp } from 'firebase-admin/firestore';
+import { FieldValue } from 'firebase-admin/firestore';
 import type {
   DocumentReference,
   Transaction,
 } from 'firebase-admin/firestore';
-import {
-  calcularTotalPedido,
-  resolvePaymentFields,
-  roundCurrency,
-  sumPagamentos,
-} from '@/lib/payment-logic';
-import type { Pagamento, Pedido } from '@/types/pedido';
+import type { Pedido } from '@/types/pedido';
 import type { WebhookEvent } from '@/lib/payments/types';
+import { handleConfirmedPayment } from '@/lib/payments/handlers/confirmed-handler';
+import { handleRefund } from '@/lib/payments/handlers/refund-handler';
+import {
+  ANOMALY_EVENT_TYPES,
+  handleAnomaly,
+} from '@/lib/payments/handlers/anomaly-handler';
+import type { HandlerContext, RecordChargeResult } from '@/lib/payments/handlers/types';
+
+export type { RecordChargeResult } from '@/lib/payments/handlers/types';
 
 /**
- * Result of recording a charge confirmation against a pedido.
+ * Idempotently records an Asaas webhook event onto a pedido.
  *
- * The route layer maps this to an HTTP response. Tests can also assert directly
- * against the discriminated union.
- */
-export type RecordChargeResult =
-  | { kind: 'idempotent'; eventId: string }
-  | { kind: 'not_found' }
-  | { kind: 'unhandled_status'; status: WebhookEvent['status'] }
-  | {
-      kind: 'recorded';
-      eventId: string;
-      pagamentoId: string;
-      totalPago: number;
-      statusPagamento: 'PAGO' | 'PARCIAL' | 'PENDENTE' | 'VENCIDO';
-      transitionedToConfirmado: boolean;
-    };
-
-/**
- * Idempotently records a webhook charge event onto a pedido.
+ * The transaction body:
+ *   1. Reads the pedido and short-circuits if the event id has already been
+ *      processed (`processedWebhookEventIds`, capped at 50 most-recent ids).
+ *   2. Builds a default session-state patch (status, lastWebhookAt,
+ *      processedWebhookEventIds).
+ *   3. Dispatches to a per-event handler:
+ *        - Anomaly events (chargebacks, deletions, card declines after approval,
+ *          etc.)                                       → handleAnomaly
+ *        - Refund-class status (REFUNDED, PARTIALLY_REFUNDED, etc.) →
+ *          handleRefund
+ *        - CONFIRMED status                            → handleConfirmedPayment
+ *        - Anything else                               → default: commit session
+ *          patch only and return `unhandled_status`.
  *
- * The behavior is:
- *   1. CONFIRMED  → append a Pagamento, recompute totals via `resolvePaymentFields`,
- *                   and (if fully paid) flip a pedido in `AGUARDANDO_PAGAMENTO`
- *                   to `CONFIRMADO`.
- *   2. Any other status (FAILED, EXPIRED, REFUNDED, PENDING) → only update the
- *                   `paymentSession.status` so the customer's polling endpoint
- *                   reflects the new state. We don't touch `pagamentos`.
- *
- * Idempotency is provided by `paymentSession.processedWebhookEventIds`: if the
- * event id has already been processed, we no-op. The list is capped at the most
- * recent 50 ids.
+ * Each handler runs inside the same Firestore transaction the dispatcher
+ * opened, so all writes commit atomically.
  *
  * Both the webhook route AND the immediate-confirmation path used by card
  * charges call this helper, so the rules live in exactly one place.
@@ -72,8 +61,6 @@ export async function recordChargeConfirmation(
       return { kind: 'idempotent' as const, eventId: event.id };
     }
 
-    // Always update the session state — even non-CONFIRMED events should
-    // flip the visible status (e.g. PENDING → EXPIRED) so customers see it.
     const nextProcessed = [...processed, event.id].slice(-50);
     const sessionPatch: Record<string, unknown> = {
       'paymentSession.status': event.status,
@@ -81,96 +68,46 @@ export async function recordChargeConfirmation(
       'paymentSession.processedWebhookEventIds': nextProcessed,
     };
 
-    if (event.status !== 'CONFIRMED') {
-      transaction.update(pedidoRef, sessionPatch);
-      // Surface unhandled webhook deliveries so ops can correlate them with
-      // admin manual payments racing the webhook, expirations, refunds, etc.
-      console.warn('[asaas-webhook] status_mismatch', {
-        pedidoId: pedidoRef.id,
-        currentStatus: data.status,
-        eventId: event.id,
-        eventType: event.type,
-      });
-      return {
-        kind: 'unhandled_status' as const,
-        status: event.status,
-      };
-    }
-
-    // CONFIRMED → append a Pagamento and recompute the pedido's payment fields.
-    const partialPedido = {
-      id: pedidoRef.id,
-      orcamentos: data.orcamentos || [],
-      entrega: data.entrega,
-    } as Pedido;
-    const total = calcularTotalPedido(partialPedido);
-
-    const existingPagamentos: Pagamento[] = Array.isArray(data.pagamentos)
-      ? (data.pagamentos as Pagamento[])
-      : [];
-
-    const paymentDate = event.paymentDate ?? new Date();
-    const now = Timestamp.now();
-    const pagamentoId =
-      typeof crypto !== 'undefined' && 'randomUUID' in crypto
-        ? crypto.randomUUID()
-        : `asaas-${event.id}`;
-
-    const pagamento: Pagamento = {
-      id: pagamentoId,
-      data: Timestamp.fromDate(paymentDate) as unknown as Pagamento['data'],
-      valor: roundCurrency(event.amount),
-      metodo: event.paymentMethod || 'PIX',
-      observacao: 'Pagamento online',
-      comprovanteUrl: null,
-      comprovantePath: null,
-      comprovanteTipo: null,
-      createdAt: now as unknown as Pagamento['createdAt'],
-      createdBy: 'asaas-webhook',
+    const ctx: HandlerContext = {
+      transaction,
+      pedidoRef,
+      snap,
+      data,
+      event,
+      sessionPatch,
     };
 
-    const updatedPagamentos = [...existingPagamentos, pagamento];
-    const totalPago = sumPagamentos(updatedPagamentos);
-
-    const resolved = resolvePaymentFields({
-      pagamentos: updatedPagamentos,
-      totalPago,
-      dataVencimento: data.dataVencimento as unknown as Timestamp,
-      dataEntrega: data.dataEntrega as unknown as Timestamp,
-      createdAt: data.createdAt as unknown as Timestamp,
-      total,
-    });
-
-    const dataVencimentoWrite =
-      (data.dataVencimento as unknown as Timestamp | undefined) ??
-      Timestamp.fromDate(resolved.dataVencimentoDate);
-
-    const updatePayload: Record<string, unknown> = {
-      ...sessionPatch,
-      pagamentos: updatedPagamentos,
-      totalPago,
-      statusPagamento: resolved.statusPagamento,
-      dataVencimento: dataVencimentoWrite,
-      updatedAt: FieldValue.serverTimestamp(),
-      lastModifiedBy: 'asaas-webhook',
-    };
-
-    const transitionedToConfirmado =
-      resolved.statusPagamento === 'PAGO' &&
-      data.status === 'AGUARDANDO_PAGAMENTO';
-    if (transitionedToConfirmado) {
-      updatePayload.status = 'CONFIRMADO';
+    // 1) Operational anomalies — chargebacks, deletions, card declines, etc.
+    if (ANOMALY_EVENT_TYPES.has(event.type)) {
+      return handleAnomaly(ctx);
     }
 
-    transaction.update(pedidoRef, updatePayload);
+    // 2) Refund-class events — full or partial refund, refund-in-progress.
+    if (
+      event.status === 'REFUNDED' ||
+      event.status === 'PARTIALLY_REFUNDED' ||
+      event.type === 'PAYMENT_PARTIALLY_REFUNDED' ||
+      event.type === 'PAYMENT_REFUND_IN_PROGRESS'
+    ) {
+      return handleRefund(ctx);
+    }
 
-    return {
-      kind: 'recorded' as const,
+    // 3) Money landed.
+    if (event.status === 'CONFIRMED') {
+      return handleConfirmedPayment(ctx);
+    }
+
+    // Default: commit session-state update + log unhandled.
+    transaction.update(pedidoRef, sessionPatch);
+    console.warn('[asaas-webhook] status_mismatch', {
+      pedidoId: pedidoRef.id,
+      currentStatus: data.status,
       eventId: event.id,
-      pagamentoId,
-      totalPago,
-      statusPagamento: resolved.statusPagamento,
-      transitionedToConfirmado,
+      eventType: event.type,
+    });
+    return {
+      kind: 'unhandled_status' as const,
+      status: event.status,
     };
   });
 }

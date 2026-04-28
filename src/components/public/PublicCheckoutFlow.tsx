@@ -60,7 +60,12 @@ export function PublicCheckoutFlow({
   token,
   onPedidoUpdate,
 }: PublicCheckoutFlowProps) {
-  const [tab, setTab] = useState<'pix' | 'card'>('pix')
+  // Default the active tab to whichever method already has an in-flight
+  // session — so a customer who reloaded mid card-review lands on the card
+  // tab (where the "em análise" panel lives), not the PIX tab.
+  const initialTab: 'pix' | 'card' =
+    pedido.paymentSession?.method === 'CARTAO_CREDITO' ? 'card' : 'pix'
+  const [tab, setTab] = useState<'pix' | 'card'>(initialTab)
 
   // 1. Already paid → success screen
   if (pedido.status === 'CONFIRMADO') {
@@ -198,6 +203,12 @@ export function PublicCheckoutFlow({
             }}
             amount={amountDue}
             onPaid={handlePaid}
+            existingSession={
+              pedido.paymentSession &&
+              pedido.paymentSession.method === 'CARTAO_CREDITO'
+                ? { status: pedido.paymentSession.status }
+                : null
+            }
           />
         </TabsContent>
       </Tabs>

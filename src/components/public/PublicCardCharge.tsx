@@ -11,11 +11,21 @@ const fontHeading = { fontFamily: 'var(--font-playfair), Georgia, serif' }
 const POLL_INTERVAL_MS = 3000
 const POLL_MAX_DURATION_MS = 30 * 60 * 1000
 
+interface ExistingCardSession {
+  status: NormalizedChargeStatus
+}
+
 interface PublicCardChargeProps {
   token: string
   billing: BillingInfo
   amount: number
   onPaid: () => void
+  /**
+   * Pre-existing card payment session. When the customer reloads the page
+   * mid-review, the orchestrator passes the persisted session so the UI can
+   * skip the form and resume the appropriate state.
+   */
+  existingSession?: ExistingCardSession | null
 }
 
 interface CardFieldErrors {
@@ -95,10 +105,15 @@ export function PublicCardCharge({
   billing,
   amount,
   onPaid,
+  existingSession,
 }: PublicCardChargeProps) {
   // Note: `billing` is included in props for future provider context;
   // the backend resolves it from the pedido itself.
   void billing
+
+  const initialRiskAnalysis =
+    existingSession?.status === 'PENDING_RISK_ANALYSIS'
+  const initialPendingPolling = initialRiskAnalysis
 
   const [number, setNumber] = useState('')
   const [holderName, setHolderName] = useState('')
@@ -107,7 +122,8 @@ export function PublicCardCharge({
   const [cvv, setCvv] = useState('')
   const [errors, setErrors] = useState<CardFieldErrors>({})
   const [submitting, setSubmitting] = useState(false)
-  const [pendingPolling, setPendingPolling] = useState(false)
+  const [pendingPolling, setPendingPolling] = useState(initialPendingPolling)
+  const [riskAnalysis, setRiskAnalysis] = useState(initialRiskAnalysis)
   const [topError, setTopError] = useState<string | null>(null)
 
   const onPaidCalledRef = useRef(false)
@@ -146,12 +162,19 @@ export function PublicCardCharge({
               onPaid()
             }
             setPendingPolling(false)
+            setRiskAnalysis(false)
             return
           }
           if (psStatus === 'FAILED') {
             setPendingPolling(false)
+            setRiskAnalysis(false)
             setTopError('Pagamento recusado. Tente outro cartão.')
             return
+          }
+          if (psStatus === 'PENDING_RISK_ANALYSIS') {
+            setRiskAnalysis(true)
+          } else if (psStatus === 'PENDING') {
+            setRiskAnalysis(false)
           }
         }
       } catch {
@@ -242,6 +265,11 @@ export function PublicCardCharge({
       }
 
       // Pending status -> start polling
+      const psStatus: NormalizedChargeStatus | undefined =
+        json.data?.paymentSession?.status
+      if (psStatus === 'PENDING_RISK_ANALYSIS') {
+        setRiskAnalysis(true)
+      }
       setPendingPolling(true)
     } catch {
       setTopError('Erro de conexão. Tente novamente.')
@@ -270,7 +298,7 @@ export function PublicCardCharge({
           className="text-center text-[22px] text-[#2d2319] leading-tight"
           style={{ ...fontHeading, fontWeight: 600 }}
         >
-          Pagamento no cartão
+          {riskAnalysis ? 'Pagamento em análise' : 'Pagamento no cartão'}
         </h3>
         <p
           className="text-center text-[13px] text-[#8b7e6e] mt-1.5 leading-relaxed"
@@ -286,6 +314,54 @@ export function PublicCardCharge({
         </p>
       </div>
 
+      {riskAnalysis && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="px-6 pt-5 pb-7 space-y-4"
+        >
+          <div className="flex justify-center">
+            <div className="w-14 h-14 rounded-full bg-amber-50/70 border border-amber-200/70 flex items-center justify-center shadow-[0_2px_10px_-2px_rgba(184,149,106,0.25)]">
+              <Loader2 className="h-6 w-6 text-amber-600 animate-spin" />
+            </div>
+          </div>
+          <p
+            className="text-center text-[13px] text-[#7a6552] leading-relaxed px-2"
+            style={fontBody}
+          >
+            Estamos verificando seu cartão com o sistema antifraude. Isso pode
+            levar alguns minutos. Você pode fechar esta página — vamos te
+            avisar.
+          </p>
+          <div
+            className="flex items-center justify-center gap-2 pt-1"
+            aria-hidden="true"
+          >
+            <span className="h-px w-6 bg-[#d4c4a8]/50" />
+            <p
+              className="text-[10px] text-[#a89b8a] tracking-[0.22em] uppercase"
+              style={fontBody}
+            >
+              Aguardando confirmação
+            </p>
+            <span className="h-px w-6 bg-[#d4c4a8]/50" />
+          </div>
+          {topError && (
+            <div
+              role="alert"
+              className="flex items-start gap-2.5 p-3 rounded-xl bg-red-50/80 border border-red-200"
+            >
+              <AlertCircle className="h-4 w-4 text-red-500 flex-shrink-0 mt-0.5" />
+              <p className="text-[13px] text-red-700" style={fontBody}>
+                {topError}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {!riskAnalysis && (
+      <>
       {/* Card visual preview — gives the form a tactile anchor */}
       <div className="px-6 mt-5">
         <div
@@ -537,6 +613,8 @@ export function PublicCardCharge({
           </p>
         </div>
       </div>
+      </>
+      )}
     </form>
   )
 }
