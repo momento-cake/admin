@@ -60,3 +60,34 @@ env:
     availability:
       - BUILD
       - RUNTIME
+
+  # --- Asaas (customer self-service checkout) ---
+  # Provision these secrets before deploying:
+  #   firebase apphosting:secrets:set ASAAS_API_KEY        --data-file <(echo -n '<prod-key>')
+  #   firebase apphosting:secrets:set ASAAS_BASE_URL       --data-file <(echo -n 'https://api.asaas.com/v3')
+  #   firebase apphosting:secrets:set ASAAS_WEBHOOK_TOKEN  --data-file <(openssl rand -hex 32)
+  #   firebase apphosting:secrets:set BILLING_ENCRYPTION_KEY --data-file <(openssl rand -hex 32)
+  #   firebase apphosting:secrets:set PAYMENT_PROVIDER     --data-file <(echo -n 'asaas')
+  #   firebase apphosting:secrets:grantaccess \
+  #       ASAAS_API_KEY,ASAAS_BASE_URL,ASAAS_WEBHOOK_TOKEN,BILLING_ENCRYPTION_KEY,PAYMENT_PROVIDER \
+  #       --backend <backend-id>
+  - variable: ASAAS_API_KEY
+    secret: ASAAS_API_KEY
+    availability:
+      - RUNTIME
+  - variable: ASAAS_BASE_URL
+    secret: ASAAS_BASE_URL
+    availability:
+      - RUNTIME
+  - variable: ASAAS_WEBHOOK_TOKEN
+    secret: ASAAS_WEBHOOK_TOKEN
+    availability:
+      - RUNTIME
+  - variable: BILLING_ENCRYPTION_KEY
+    secret: BILLING_ENCRYPTION_KEY
+    availability:
+      - RUNTIME
+  - variable: PAYMENT_PROVIDER
+    secret: PAYMENT_PROVIDER
+    availability:
+      - RUNTIME
