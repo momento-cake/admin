@@ -88,6 +88,41 @@ const CHARGE_STATUS_THEME: Record<NormalizedChargeStatus, ChargeStatusTheme> = {
     ring: 'ring-sky-200',
     text: 'text-sky-800',
   },
+  PARTIALLY_REFUNDED: {
+    label: 'Estorno parcial',
+    dot: 'bg-sky-500',
+    bg: 'bg-sky-50',
+    ring: 'ring-sky-200',
+    text: 'text-sky-800',
+  },
+  PENDING_RISK_ANALYSIS: {
+    label: 'Em análise antifraude',
+    dot: 'bg-amber-500',
+    bg: 'bg-amber-50',
+    ring: 'ring-amber-200',
+    text: 'text-amber-800',
+  },
+  CHARGEBACK_REQUESTED: {
+    label: 'Chargeback solicitado',
+    dot: 'bg-rose-600',
+    bg: 'bg-rose-50',
+    ring: 'ring-rose-300',
+    text: 'text-rose-900',
+  },
+  CHARGEBACK_DISPUTE: {
+    label: 'Chargeback em disputa',
+    dot: 'bg-rose-600',
+    bg: 'bg-rose-50',
+    ring: 'ring-rose-300',
+    text: 'text-rose-900',
+  },
+  DELETED: {
+    label: 'Cobrança removida',
+    dot: 'bg-stone-500',
+    bg: 'bg-stone-100',
+    ring: 'ring-stone-200',
+    text: 'text-stone-700',
+  },
 }
 
 function parseTimestamp(value: unknown): Date | null {
