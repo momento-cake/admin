@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { render, screen, waitFor, cleanup } from '@testing-library/react'
+import { render, screen, waitFor, cleanup, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { PublicCardCharge } from '@/components/public/PublicCardCharge'
 import type { BillingInfo } from '@/lib/payments/types'
@@ -151,6 +151,199 @@ describe('PublicCardCharge', () => {
       expect(screen.getByRole('alert').textContent).toMatch(/recusad/i)
     })
     expect(onPaid).not.toHaveBeenCalled()
+  })
+
+  it('shows "Pagamento em análise" panel and starts polling when charge response reports PENDING_RISK_ANALYSIS', async () => {
+    const user = userEvent.setup()
+    const onPaid = vi.fn()
+
+    vi.mocked(global.fetch).mockResolvedValueOnce({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          success: true,
+          data: {
+            paymentSession: {
+              method: 'CARTAO_CREDITO',
+              status: 'PENDING_RISK_ANALYSIS',
+              amount: 150,
+              chargeId: 'charge-1',
+            },
+            immediatelyConfirmed: false,
+          },
+        }),
+    } as Response)
+
+    render(
+      <PublicCardCharge
+        token="abc"
+        billing={billing}
+        amount={150}
+        onPaid={onPaid}
+      />,
+    )
+
+    await fillValidCard(user)
+    await user.click(screen.getByRole('button', { name: /pagar/i }))
+
+    await waitFor(() => {
+      expect(screen.getByText(/Pagamento em análise/i)).toBeInTheDocument()
+    })
+    expect(screen.getByText(/sistema antifraude/i)).toBeInTheDocument()
+    // Form fields should no longer be rendered
+    expect(screen.queryByLabelText(/número do cartão/i)).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /pagar/i })).not.toBeInTheDocument()
+    // Live region present
+    expect(screen.getByRole('status')).toHaveAttribute('aria-live', 'polite')
+    expect(onPaid).not.toHaveBeenCalled()
+  })
+
+  it('renders the "em análise" state immediately when existingSession.status is PENDING_RISK_ANALYSIS', () => {
+    render(
+      <PublicCardCharge
+        token="tok"
+        billing={billing}
+        amount={150}
+        onPaid={vi.fn()}
+        existingSession={{ status: 'PENDING_RISK_ANALYSIS' }}
+      />,
+    )
+
+    expect(screen.getByText(/Pagamento em análise/i)).toBeInTheDocument()
+    expect(screen.getByText(/sistema antifraude/i)).toBeInTheDocument()
+    // No card form
+    expect(screen.queryByLabelText(/número do cartão/i)).not.toBeInTheDocument()
+    // No QR or pay button
+    expect(screen.queryByRole('button', { name: /pagar/i })).not.toBeInTheDocument()
+  })
+
+  it('polling: PENDING → PENDING_RISK_ANALYSIS → CONFIRMED reaches success path', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    try {
+      const onPaid = vi.fn()
+      let pollCount = 0
+      vi.mocked(global.fetch).mockImplementation(async (input: RequestInfo | URL) => {
+        const url = String(input)
+        if (url.endsWith('/charge/card')) {
+          return {
+            ok: true,
+            json: async () => ({
+              success: true,
+              data: {
+                paymentSession: { method: 'CARTAO_CREDITO', status: 'PENDING' },
+                immediatelyConfirmed: false,
+              },
+            }),
+          } as Response
+        }
+        if (url.endsWith('/payment-status')) {
+          pollCount += 1
+          if (pollCount === 1) {
+            return {
+              ok: true,
+              json: async () => ({
+                success: true,
+                data: {
+                  status: 'AGUARDANDO_PAGAMENTO',
+                  paymentSession: { status: 'PENDING_RISK_ANALYSIS' },
+                },
+              }),
+            } as Response
+          }
+          return {
+            ok: true,
+            json: async () => ({
+              success: true,
+              data: {
+                status: 'CONFIRMADO',
+                paymentSession: { status: 'CONFIRMED' },
+              },
+            }),
+          } as Response
+        }
+        throw new Error('Unexpected URL: ' + url)
+      })
+
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      render(
+        <PublicCardCharge
+          token="tok"
+          billing={billing}
+          amount={150}
+          onPaid={onPaid}
+        />,
+      )
+
+      await fillValidCard(user)
+      await user.click(screen.getByRole('button', { name: /pagar/i }))
+
+      // First poll: PENDING_RISK_ANALYSIS — UI flips to em análise
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(3500)
+      })
+      await waitFor(() => {
+        expect(screen.getByText(/Pagamento em análise/i)).toBeInTheDocument()
+      })
+
+      // Second poll: CONFIRMED — onPaid fires
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(3500)
+      })
+      await waitFor(() => {
+        expect(onPaid).toHaveBeenCalledTimes(1)
+      })
+    } finally {
+      vi.runOnlyPendingTimers()
+      vi.useRealTimers()
+    }
+  })
+
+  it('polling: PENDING_RISK_ANALYSIS → FAILED falls back to declined error', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    try {
+      vi.mocked(global.fetch).mockImplementation(async (input: RequestInfo | URL) => {
+        const url = String(input)
+        if (url.endsWith('/payment-status')) {
+          return {
+            ok: true,
+            json: async () => ({
+              success: true,
+              data: {
+                status: 'AGUARDANDO_PAGAMENTO',
+                paymentSession: { status: 'FAILED' },
+              },
+            }),
+          } as Response
+        }
+        throw new Error('Unexpected URL: ' + url)
+      })
+
+      render(
+        <PublicCardCharge
+          token="tok"
+          billing={billing}
+          amount={150}
+          onPaid={vi.fn()}
+          existingSession={{ status: 'PENDING_RISK_ANALYSIS' }}
+        />,
+      )
+
+      // Start in em análise state
+      expect(screen.getByText(/Pagamento em análise/i)).toBeInTheDocument()
+
+      // First poll returns FAILED → form returns with declined error
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(3500)
+      })
+      await waitFor(() => {
+        expect(screen.getByRole('alert').textContent).toMatch(/recusad/i)
+      })
+      // Form is back so the user can retry
+      expect(screen.getByLabelText(/número do cartão/i)).toBeInTheDocument()
+    } finally {
+      vi.runOnlyPendingTimers()
+      vi.useRealTimers()
+    }
   })
 
   it('shows generic error and no onPaid call when API returns 400', async () => {

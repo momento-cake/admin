@@ -25,8 +25,19 @@ import {
   ShieldCheck,
   CircleDot,
   Globe,
+  AlertTriangle,
+  XCircle,
+  Trash2,
+  RotateCcw,
+  Undo2,
+  Bell,
 } from 'lucide-react'
-import type { Pedido } from '@/types/pedido'
+import {
+  PAYMENT_ANOMALY_LABELS,
+  type PaymentAnomaly,
+  type PaymentAnomalyKind,
+  type Pedido,
+} from '@/types/pedido'
 import type {
   NormalizedChargeStatus,
   PaymentMethod,
@@ -122,6 +133,64 @@ const CHARGE_STATUS_THEME: Record<NormalizedChargeStatus, ChargeStatusTheme> = {
     bg: 'bg-stone-100',
     ring: 'ring-stone-200',
     text: 'text-stone-700',
+  },
+}
+
+interface AnomalyTheme {
+  Icon: typeof AlertTriangle
+  bg: string
+  ring: string
+  text: string
+}
+
+const ANOMALY_THEME: Record<PaymentAnomalyKind, AnomalyTheme> = {
+  CHARGEBACK_REQUESTED: {
+    Icon: AlertTriangle,
+    bg: 'bg-rose-50',
+    ring: 'ring-rose-200',
+    text: 'text-rose-800',
+  },
+  CHARGEBACK_DISPUTE: {
+    Icon: AlertTriangle,
+    bg: 'bg-rose-50',
+    ring: 'ring-rose-200',
+    text: 'text-rose-800',
+  },
+  CHARGEBACK_REVERSAL_AWAITING: {
+    Icon: AlertTriangle,
+    bg: 'bg-amber-50',
+    ring: 'ring-amber-200',
+    text: 'text-amber-800',
+  },
+  CARD_REPROVED_BY_RISK: {
+    Icon: XCircle,
+    bg: 'bg-rose-50',
+    ring: 'ring-rose-200',
+    text: 'text-rose-800',
+  },
+  CARD_CAPTURE_REFUSED: {
+    Icon: XCircle,
+    bg: 'bg-rose-50',
+    ring: 'ring-rose-200',
+    text: 'text-rose-800',
+  },
+  CHARGE_DELETED: {
+    Icon: Trash2,
+    bg: 'bg-stone-100',
+    ring: 'ring-stone-200',
+    text: 'text-stone-700',
+  },
+  CHARGE_RESTORED: {
+    Icon: RotateCcw,
+    bg: 'bg-emerald-50',
+    ring: 'ring-emerald-200',
+    text: 'text-emerald-800',
+  },
+  CASH_RECEIPT_UNDONE: {
+    Icon: Undo2,
+    bg: 'bg-amber-50',
+    ring: 'ring-amber-200',
+    text: 'text-amber-800',
   },
 }
 
@@ -287,6 +356,17 @@ export function PedidoCheckoutCard({ pedido }: PedidoCheckoutCardProps) {
   const billingPhone = formatPhone(billing?.telefone)
   const billingMask = billing ? maskCpfCnpj(billing.cpfCnpj) : null
 
+  // Newest-first ordering for the operational-signals section. We sort a copy
+  // so we don't mutate props.
+  const sortedAnomalies: PaymentAnomaly[] = pedido.paymentAnomalies
+    ? [...pedido.paymentAnomalies].sort((a, b) => {
+        const aTs = parseTimestamp(a.recordedAt)?.getTime() ?? 0
+        const bTs = parseTimestamp(b.recordedAt)?.getTime() ?? 0
+        return bTs - aTs
+      })
+    : []
+  const hasAnomalies = sortedAnomalies.length > 0
+
   return (
     <TooltipProvider delayDuration={150}>
       <Card>
@@ -308,7 +388,8 @@ export function PedidoCheckoutCard({ pedido }: PedidoCheckoutCardProps) {
           </div>
         </CardHeader>
 
-        <CardContent className="grid gap-x-6 gap-y-4 md:grid-cols-2">
+        <CardContent className="space-y-4">
+          <div className="grid gap-x-6 gap-y-4 md:grid-cols-2">
           {/* ---------- BILLING ---------- */}
           <div className="space-y-3">
             <h3 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
@@ -488,6 +569,102 @@ export function PedidoCheckoutCard({ pedido }: PedidoCheckoutCardProps) {
               </p>
             )}
           </div>
+          </div>
+
+          {/* ---------- OPERATIONAL ANOMALIES ---------- */}
+          {hasAnomalies && (
+            <>
+              <Separator />
+              <section
+                aria-label="Sinais operacionais"
+                data-testid="payment-anomalies-section"
+                className="space-y-3"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                    <Bell className="h-3 w-3" aria-hidden />
+                    Sinais operacionais
+                  </h3>
+                  <span className="inline-flex items-center rounded-full bg-stone-100 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-stone-700 ring-1 ring-inset ring-stone-200">
+                    {sortedAnomalies.length}
+                  </span>
+                </div>
+
+                <ul className="space-y-2">
+                  {sortedAnomalies.map((anomaly) => {
+                    const theme = ANOMALY_THEME[anomaly.kind]
+                    const Icon = theme.Icon
+                    const label = PAYMENT_ANOMALY_LABELS[anomaly.kind]
+                    return (
+                      <li
+                        key={anomaly.id}
+                        data-testid="payment-anomaly-row"
+                        className={cn(
+                          'flex items-start gap-3 rounded-md px-3 py-2 ring-1 ring-inset',
+                          theme.bg,
+                          theme.ring,
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            'mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/60',
+                            theme.text,
+                          )}
+                          aria-hidden
+                        >
+                          <Icon className="h-3.5 w-3.5" />
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                            <p className={cn('text-sm font-medium', theme.text)}>
+                              {label}
+                            </p>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span
+                                  className="text-[11px] tabular-nums text-muted-foreground"
+                                  tabIndex={0}
+                                >
+                                  {formatRelativeShort(anomaly.recordedAt, now)}
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent side="top">
+                                {formatDateTime(anomaly.recordedAt)}
+                              </TooltipContent>
+                            </Tooltip>
+                          </div>
+                          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span
+                                  className="inline-flex items-center gap-1 font-mono tabular-nums"
+                                  tabIndex={0}
+                                >
+                                  <Lock className="h-3 w-3" aria-hidden />
+                                  {anomaly.chargeId}
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="max-w-xs">
+                                Evento Asaas: {anomaly.sourceEvent}
+                              </TooltipContent>
+                            </Tooltip>
+                            {typeof anomaly.amount === 'number' && (
+                              <span className="font-mono tabular-nums">
+                                {formatPrice(anomaly.amount)}
+                              </span>
+                            )}
+                            <span className="font-mono uppercase tracking-wide text-stone-500">
+                              {anomaly.sourceEvent}
+                            </span>
+                          </div>
+                        </div>
+                      </li>
+                    )
+                  })}
+                </ul>
+              </section>
+            </>
+          )}
         </CardContent>
       </Card>
     </TooltipProvider>

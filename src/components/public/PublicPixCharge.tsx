@@ -51,6 +51,10 @@ function formatCountdown(ms: number): string {
 function isUnusableSession(session: ExistingPixSession | null | undefined): boolean {
   if (!session) return true
   if (session.status === 'EXPIRED' || session.status === 'FAILED') return true
+  // Risk analysis is reusable even without QR codes — the panel doesn't need
+  // them and we don't want to spawn a fresh charge while one is being
+  // reviewed.
+  if (session.status === 'PENDING_RISK_ANALYSIS') return false
   if (!session.pixCopyPaste && !session.pixQrCodeBase64) return true
   return false
 }
@@ -114,7 +118,8 @@ export function PublicPixCharge({
     if (
       session.status === 'CONFIRMED' ||
       session.status === 'EXPIRED' ||
-      session.status === 'FAILED'
+      session.status === 'FAILED' ||
+      session.status === 'PENDING_RISK_ANALYSIS'
     ) {
       return
     }
@@ -230,6 +235,22 @@ export function PublicPixCharge({
             setSession((prev) => (prev ? { ...prev, status: psStatus } : prev))
             return
           }
+          if (psStatus === 'PENDING_RISK_ANALYSIS') {
+            // Defensive: PIX rarely triggers risk analysis, but if Asaas
+            // reports it we swap the QR for the calmer "em análise" panel
+            // and keep polling.
+            setSession((prev) =>
+              prev && prev.status !== psStatus
+                ? { ...prev, status: psStatus }
+                : prev,
+            )
+          } else if (psStatus === 'PENDING') {
+            setSession((prev) =>
+              prev && prev.status !== psStatus
+                ? { ...prev, status: psStatus }
+                : prev,
+            )
+          }
         }
       } catch {
         // ignore transient network errors
@@ -265,10 +286,14 @@ export function PublicPixCharge({
   }
 
   const expiresAtMs = session?.expiresAt ? Date.parse(session.expiresAt) : null
+  const isRiskAnalysis = session?.status === 'PENDING_RISK_ANALYSIS'
   const expired =
-    session?.status === 'EXPIRED' ||
-    session?.status === 'FAILED' ||
-    (expiresAtMs !== null && !Number.isNaN(expiresAtMs) && expiresAtMs <= now)
+    !isRiskAnalysis &&
+    (session?.status === 'EXPIRED' ||
+      session?.status === 'FAILED' ||
+      (expiresAtMs !== null &&
+        !Number.isNaN(expiresAtMs) &&
+        expiresAtMs <= now))
 
   return (
     <div className="premium-card overflow-hidden animate-page-turn">
@@ -279,7 +304,7 @@ export function PublicPixCharge({
           className="text-center text-[22px] text-[#2d2319] leading-tight"
           style={{ ...fontHeading, fontWeight: 600 }}
         >
-          Aponte a câmera
+          {isRiskAnalysis ? 'Pagamento em análise' : 'Aponte a câmera'}
         </h3>
         <p
           className="text-center text-[13px] text-[#8b7e6e] mt-1.5 leading-relaxed"
@@ -341,8 +366,41 @@ export function PublicPixCharge({
           </div>
         )}
 
+        {/* Risk analysis state — defensive: PIX rarely triggers this, but
+            if it does we replace the QR with the calmer review panel. */}
+        {session && isRiskAnalysis && (
+          <div role="status" aria-live="polite" className="space-y-4 pt-2">
+            <div className="flex justify-center">
+              <div className="w-14 h-14 rounded-full bg-amber-50/70 border border-amber-200/70 flex items-center justify-center shadow-[0_2px_10px_-2px_rgba(184,149,106,0.25)]">
+                <Loader2 className="h-6 w-6 text-amber-600 animate-spin" />
+              </div>
+            </div>
+            <p
+              className="text-center text-[13px] text-[#7a6552] leading-relaxed px-2"
+              style={fontBody}
+            >
+              Estamos verificando seu pagamento com o sistema antifraude. Isso
+              pode levar alguns minutos. Você pode fechar esta página — vamos
+              te avisar.
+            </p>
+            <div
+              className="flex items-center justify-center gap-2 pt-1"
+              aria-hidden="true"
+            >
+              <span className="h-px w-6 bg-[#d4c4a8]/50" />
+              <p
+                className="text-[10px] text-[#a89b8a] tracking-[0.22em] uppercase"
+                style={fontBody}
+              >
+                Aguardando confirmação
+              </p>
+              <span className="h-px w-6 bg-[#d4c4a8]/50" />
+            </div>
+          </div>
+        )}
+
         {/* Active session */}
-        {session && !expired && session.status !== 'CONFIRMED' && (
+        {session && !isRiskAnalysis && !expired && session.status !== 'CONFIRMED' && (
           <>
             {/* QR — framed like a polaroid pinned to the page */}
             {session.qrCodeBase64 && (
@@ -462,7 +520,7 @@ export function PublicPixCharge({
         )}
 
         {/* Expired state */}
-        {session && expired && session.status !== 'CONFIRMED' && (
+        {session && expired && !isRiskAnalysis && session.status !== 'CONFIRMED' && (
           <div className="space-y-3">
             <div
               role="alert"

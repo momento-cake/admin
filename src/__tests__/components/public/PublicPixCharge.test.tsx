@@ -452,6 +452,77 @@ describe('PublicPixCharge', () => {
     ).toBeInTheDocument()
   })
 
+  it('shows "Pagamento em análise" panel when existingSession.status is PENDING_RISK_ANALYSIS, no QR rendered', () => {
+    render(
+      <PublicPixCharge
+        token="tok"
+        amount={100}
+        onPaid={vi.fn()}
+        existingSession={{
+          pixQrCodeBase64: FAKE_QR_BASE64,
+          pixCopyPaste: FAKE_COPY_PASTE,
+          expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+          status: 'PENDING_RISK_ANALYSIS',
+        }}
+      />,
+    )
+
+    expect(screen.getByText(/Pagamento em análise/i)).toBeInTheDocument()
+    expect(screen.getByText(/sistema antifraude/i)).toBeInTheDocument()
+    expect(screen.queryByAltText(/QR Code PIX/i)).not.toBeInTheDocument()
+    expect(screen.queryByTestId('pix-copy-paste')).not.toBeInTheDocument()
+    // No new charge call when status is risk-analysis
+    expect(global.fetch).not.toHaveBeenCalled()
+    // Live region present
+    const status = screen.getByRole('status')
+    expect(status).toHaveAttribute('aria-live', 'polite')
+  })
+
+  it('polling flips PIX session from PENDING to PENDING_RISK_ANALYSIS, hiding the QR', async () => {
+    vi.mocked(global.fetch).mockImplementation(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.endsWith('/payment-status')) {
+        return {
+          ok: true,
+          json: async () => ({
+            success: true,
+            data: {
+              status: 'AGUARDANDO_PAGAMENTO',
+              paymentSession: { status: 'PENDING_RISK_ANALYSIS', method: 'PIX' },
+              paidAt: null,
+            },
+          }),
+        } as Response
+      }
+      throw new Error('Unexpected URL: ' + url)
+    })
+
+    render(
+      <PublicPixCharge
+        token="tok"
+        amount={100}
+        onPaid={vi.fn()}
+        existingSession={{
+          pixQrCodeBase64: FAKE_QR_BASE64,
+          pixCopyPaste: FAKE_COPY_PASTE,
+          expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+          status: 'PENDING',
+        }}
+      />,
+    )
+
+    expect(screen.getByAltText(/QR Code PIX/i)).toBeInTheDocument()
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3500)
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText(/Pagamento em análise/i)).toBeInTheDocument()
+    })
+    expect(screen.queryByAltText(/QR Code PIX/i)).not.toBeInTheDocument()
+  })
+
   it('formats the countdown as "Xh Ym" when the remaining time is at least 1 hour', async () => {
     vi.useFakeTimers()
     const fakeNow = new Date('2025-01-01T12:00:00Z').getTime()
