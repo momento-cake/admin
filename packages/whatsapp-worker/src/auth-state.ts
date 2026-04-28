@@ -1,108 +1,70 @@
 /**
- * Firestore-backed adapter for Baileys' multi-device auth state.
+ * Thin wrapper around Baileys' built-in `useMultiFileAuthState`.
  *
- * Mirrors the contract of Baileys' built-in `useMultiFileAuthState`, which
- * stores `creds.json` and per-key files on disk. We persist to Firestore so
- * the worker can be redeployed without re-pairing.
+ * Why a wrapper at all?
+ *  - Centralizes the auth-folder path resolution (env var + sensible default)
+ *    so the worker entrypoint and tests share one source of truth.
+ *  - Adds a `reset()` helper that wipes the folder. We call this on
+ *    `DisconnectReason.loggedOut` so the next worker start emits a fresh QR
+ *    instead of trying to reuse a now-invalid session.
  *
- * Layout:
- *   whatsapp_sessions/{instanceId}                 -> { creds: { json: <BufferJSON-encoded creds> } }
- *   whatsapp_sessions/{instanceId}/keys/{type}-{id} -> { json: <BufferJSON-encoded value> }
+ * Why not our own Firestore-backed adapter? We had one (this file's previous
+ * incarnation). It produced subtle libsignal state inconsistencies — visible
+ * as `MessageCounterError`, `PreKey` and `SessionError` failures decrypting
+ * fromMe messages from other linked devices. Baileys' maintainers
+ * specifically warn against custom auth adapters in production; the
+ * file-based path is the well-trodden one.
  *
- * Buffers in Baileys' state are serialized via Baileys' `BufferJSON.replacer`
- * / `BufferJSON.reviver` which round-trip Buffer instances through a tagged
- * `{ type: 'Buffer', data: 'base64...' }` shape.
+ * Persistence: the auth folder lives outside the worker's working tree
+ * (default `/app/auth_info_baileys`) and is mounted from the host so the
+ * pairing survives redeploys. Path is configurable via `BAILEYS_AUTH_DIR`.
  */
 
-import type { Firestore } from 'firebase-admin/firestore';
-import { BufferJSON, initAuthCreds } from '@whiskeysockets/baileys';
-import type {
-  AuthenticationCreds,
-  AuthenticationState,
-  SignalDataSet,
-  SignalDataTypeMap,
-} from '@whiskeysockets/baileys';
+import { rm } from 'node:fs/promises';
+import { resolve } from 'node:path';
 
-const SESSIONS_COLLECTION = 'whatsapp_sessions';
+import { useMultiFileAuthState } from '@whiskeysockets/baileys';
+import type { AuthenticationState } from '@whiskeysockets/baileys';
 
-interface StoredJson {
-  json: string;
-}
+const DEFAULT_AUTH_DIR = '/app/auth_info_baileys';
 
-function encode(value: unknown): StoredJson {
-  return { json: JSON.stringify(value, BufferJSON.replacer) };
-}
-
-function decode<T>(stored: StoredJson | undefined): T | null {
-  if (!stored?.json) return null;
-  return JSON.parse(stored.json, BufferJSON.reviver) as T;
-}
-
-export interface FirestoreAuthState {
+export interface AuthBundle {
   state: AuthenticationState;
   saveCreds: () => Promise<void>;
+  /** Absolute path to the auth folder Baileys is reading/writing. */
+  authDir: string;
+  /**
+   * Recursively removes the auth folder so the next `loadAuthState()` call
+   * (typically at next worker start) returns a freshly-initialized state and
+   * Baileys re-emits a QR for pairing.
+   */
+  reset: () => Promise<void>;
 }
 
-export async function createFirestoreAuthState(
-  db: Firestore,
-  instanceId: string,
-): Promise<FirestoreAuthState> {
-  const sessionRef = db.collection(SESSIONS_COLLECTION).doc(instanceId);
-  const keysRef = sessionRef.collection('keys');
-
-  // Load creds (or initialize new ones).
-  let creds: AuthenticationCreds;
-  const sessionSnap = await sessionRef.get();
-  if (sessionSnap.exists) {
-    const stored = sessionSnap.data() as { creds?: StoredJson } | undefined;
-    creds = decode<AuthenticationCreds>(stored?.creds) ?? initAuthCreds();
-  } else {
-    creds = initAuthCreds();
-  }
-
-  const keyDocId = (type: string, id: string) => `${type}-${id}`;
-
-  const state: AuthenticationState = {
-    creds,
-    keys: {
-      get: async <T extends keyof SignalDataTypeMap>(
-        type: T,
-        ids: string[],
-      ): Promise<{ [id: string]: SignalDataTypeMap[T] }> => {
-        const result: { [id: string]: SignalDataTypeMap[T] } = {};
-        await Promise.all(
-          ids.map(async (id) => {
-            const snap = await keysRef.doc(keyDocId(type, id)).get();
-            const stored = snap.exists ? (snap.data() as StoredJson) : undefined;
-            const value = decode<SignalDataTypeMap[T]>(stored);
-            if (value) result[id] = value;
-          }),
-        );
-        return result;
-      },
-      set: async (data: SignalDataSet): Promise<void> => {
-        const tasks: Array<Promise<unknown>> = [];
-        for (const type of Object.keys(data) as Array<keyof SignalDataSet>) {
-          const byId = data[type];
-          if (!byId) continue;
-          for (const id of Object.keys(byId)) {
-            const value = (byId as Record<string, unknown>)[id];
-            const docRef = keysRef.doc(keyDocId(String(type), id));
-            if (value === null || value === undefined) {
-              tasks.push(docRef.delete().catch(() => undefined));
-            } else {
-              tasks.push(docRef.set(encode(value)));
-            }
-          }
-        }
-        await Promise.all(tasks);
-      },
+/**
+ * Resolve the auth folder from `BAILEYS_AUTH_DIR` (falling back to the
+ * production default), then hand off to Baileys' `useMultiFileAuthState`.
+ *
+ * The folder is created on-demand by `useMultiFileAuthState` if it doesn't
+ * exist, so callers don't need to pre-create it.
+ */
+export async function loadAuthState(): Promise<AuthBundle> {
+  const authDir = resolveAuthDir();
+  const { state, saveCreds } = await useMultiFileAuthState(authDir);
+  return {
+    state,
+    saveCreds,
+    authDir,
+    reset: async () => {
+      await rm(authDir, { recursive: true, force: true });
     },
   };
+}
 
-  const saveCreds = async (): Promise<void> => {
-    await sessionRef.set({ creds: encode(state.creds) }, { merge: true });
-  };
-
-  return { state, saveCreds };
+/**
+ * Exposed for tests — production callers should use `loadAuthState()`.
+ */
+export function resolveAuthDir(): string {
+  const fromEnv = process.env.BAILEYS_AUTH_DIR;
+  return resolve(fromEnv && fromEnv.length > 0 ? fromEnv : DEFAULT_AUTH_DIR);
 }

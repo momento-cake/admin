@@ -1,140 +1,98 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createFirestoreAuthState } from '../auth-state.js';
+/**
+ * The implementation of file-based auth lives in Baileys
+ * (`useMultiFileAuthState`) — that's the whole point of this refactor — so
+ * the tests here cover only the thin wrapper: env-var path resolution and
+ * the `reset()` helper.
+ */
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { mkdtemp, rm, writeFile, access } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
 
-interface DocStore {
-  creds?: Record<string, unknown>; // mirrors what was passed via .set as `creds: <obj>`
-  keys: Map<string, Record<string, unknown>>;
-}
+import { loadAuthState, resolveAuthDir } from '../auth-state.js';
 
-function buildDb(store: DocStore) {
-  const sessionDocRef = {
-    id: 'primary',
-    get: vi.fn(async () => ({
-      exists: store.creds !== undefined,
-      data: () => (store.creds ? { creds: store.creds } : undefined),
-    })),
-    set: vi.fn(async (data: { creds: Record<string, unknown> }, opts?: { merge?: boolean }) => {
-      void opts;
-      store.creds = data.creds as Record<string, unknown>;
-    }),
-  };
-
-  const keysCollection = {
-    doc: vi.fn((id: string) => ({
-      id,
-      get: vi.fn(async () => {
-        const data = store.keys.get(id);
-        return { exists: data !== undefined, data: () => data };
-      }),
-      set: vi.fn(async (data: Record<string, unknown>) => {
-        store.keys.set(id, data);
-      }),
-      delete: vi.fn(async () => {
-        store.keys.delete(id);
-      }),
-    })),
-  };
-
-  return {
-    collection: vi.fn((name: string) => {
-      if (name === 'whatsapp_sessions') {
-        return {
-          doc: vi.fn((instanceId: string) => {
-            void instanceId;
-            return {
-              ...sessionDocRef,
-              collection: vi.fn((sub: string) => {
-                if (sub === 'keys') return keysCollection;
-                throw new Error(`Unexpected subcollection: ${sub}`);
-              }),
-            };
-          }),
-        };
-      }
-      throw new Error(`Unexpected top collection: ${name}`);
-    }),
-  };
-}
-
-describe('createFirestoreAuthState', () => {
-  let store: DocStore;
-  let db: ReturnType<typeof buildDb>;
+describe('resolveAuthDir', () => {
+  let originalEnv: string | undefined;
 
   beforeEach(() => {
-    store = { keys: new Map() };
-    db = buildDb(store);
+    originalEnv = process.env.BAILEYS_AUTH_DIR;
   });
 
-  it('returns initial creds when no doc exists', async () => {
-    const { state } = await createFirestoreAuthState(
-      db as unknown as FirebaseFirestore.Firestore,
-      'primary',
-    );
-    expect(state.creds).toBeDefined();
-    // initAuthCreds returns objects with these standard fields
-    expect(typeof state.creds).toBe('object');
+  afterEach(() => {
+    if (originalEnv === undefined) delete process.env.BAILEYS_AUTH_DIR;
+    else process.env.BAILEYS_AUTH_DIR = originalEnv;
   });
 
-  it('saveCreds writes serialized creds to Firestore', async () => {
-    const { state, saveCreds } = await createFirestoreAuthState(
-      db as unknown as FirebaseFirestore.Firestore,
-      'primary',
-    );
-    state.creds.advSecretKey = 'test-secret';
-    await saveCreds();
-    expect(store.creds).toBeDefined();
-    expect(typeof (store.creds as { json: string }).json).toBe('string');
-    // The JSON string should contain our test value (base64 or raw).
-    expect((store.creds as { json: string }).json).toContain('test-secret');
+  it('returns the production default when BAILEYS_AUTH_DIR is unset', () => {
+    delete process.env.BAILEYS_AUTH_DIR;
+    expect(resolveAuthDir()).toBe(resolve('/app/auth_info_baileys'));
   });
 
-  it('round-trips creds (write then read returns equivalent shape)', async () => {
-    const { state, saveCreds } = await createFirestoreAuthState(
-      db as unknown as FirebaseFirestore.Firestore,
-      'primary',
-    );
-    state.creds.advSecretKey = 'secret-XYZ';
-    await saveCreds();
-
-    // Re-load:
-    const reloaded = await createFirestoreAuthState(
-      db as unknown as FirebaseFirestore.Firestore,
-      'primary',
-    );
-    expect(reloaded.state.creds.advSecretKey).toBe('secret-XYZ');
+  it('returns the production default when BAILEYS_AUTH_DIR is empty', () => {
+    process.env.BAILEYS_AUTH_DIR = '';
+    expect(resolveAuthDir()).toBe(resolve('/app/auth_info_baileys'));
   });
 
-  it('keys.set writes key data, keys.get reads it back', async () => {
-    const { state } = await createFirestoreAuthState(
-      db as unknown as FirebaseFirestore.Firestore,
-      'primary',
-    );
+  it('returns BAILEYS_AUTH_DIR (resolved to absolute) when set', () => {
+    process.env.BAILEYS_AUTH_DIR = '/tmp/custom-auth';
+    expect(resolveAuthDir()).toBe(resolve('/tmp/custom-auth'));
+  });
+});
 
-    // Baileys SignalKeyStore interface:
-    await state.keys.set({
-      'pre-key': {
-        '1': { public: Buffer.from([1, 2, 3]), private: Buffer.from([4, 5, 6]) },
-      },
-    });
+describe('loadAuthState', () => {
+  let tmpDir: string;
+  let originalEnv: string | undefined;
 
-    const result = await state.keys.get('pre-key', ['1']);
-    expect(result['1']).toBeDefined();
+  beforeEach(async () => {
+    originalEnv = process.env.BAILEYS_AUTH_DIR;
+    tmpDir = await mkdtemp(join(tmpdir(), 'baileys-auth-test-'));
+    process.env.BAILEYS_AUTH_DIR = tmpDir;
   });
 
-  it('keys.set with null value deletes the key', async () => {
-    const { state } = await createFirestoreAuthState(
-      db as unknown as FirebaseFirestore.Firestore,
-      'primary',
-    );
+  afterEach(async () => {
+    if (originalEnv === undefined) delete process.env.BAILEYS_AUTH_DIR;
+    else process.env.BAILEYS_AUTH_DIR = originalEnv;
+    await rm(tmpDir, { recursive: true, force: true });
+  });
 
-    await state.keys.set({
-      'pre-key': {
-        '1': { public: Buffer.from([1, 2, 3]), private: Buffer.from([4, 5, 6]) },
-      },
-    });
-    await state.keys.set({ 'pre-key': { '1': null } });
+  it('honors BAILEYS_AUTH_DIR and returns a usable AuthBundle', async () => {
+    const bundle = await loadAuthState();
+    expect(bundle.authDir).toBe(resolve(tmpDir));
+    expect(typeof bundle.saveCreds).toBe('function');
+    expect(typeof bundle.reset).toBe('function');
+    // Baileys initializes creds on first call; shape includes a few standard fields.
+    expect(typeof bundle.state.creds).toBe('object');
+    expect(bundle.state.creds).not.toBeNull();
+    // keys store should expose Baileys' SignalKeyStore surface.
+    expect(typeof bundle.state.keys.get).toBe('function');
+    expect(typeof bundle.state.keys.set).toBe('function');
+  });
 
-    const result = await state.keys.get('pre-key', ['1']);
-    expect(result['1']).toBeUndefined();
+  it('persists creds across reloads (saveCreds writes a file the next load reads back)', async () => {
+    const first = await loadAuthState();
+    // Mutate something serializable on the creds and save.
+    first.state.creds.advSecretKey = 'secret-XYZ';
+    await first.saveCreds();
+
+    const second = await loadAuthState();
+    expect(second.state.creds.advSecretKey).toBe('secret-XYZ');
+  });
+
+  it('reset() removes the auth folder so the next load starts fresh', async () => {
+    const bundle = await loadAuthState();
+    // Drop a sentinel file so we can be sure the folder existed and was wiped.
+    await writeFile(join(bundle.authDir, 'sentinel.txt'), 'x');
+    await expect(access(bundle.authDir)).resolves.toBeUndefined();
+
+    await bundle.reset();
+
+    await expect(access(bundle.authDir)).rejects.toThrow();
+  });
+
+  it('reset() is idempotent (does not throw if the folder is already gone)', async () => {
+    const bundle = await loadAuthState();
+    await bundle.reset();
+    // Second call should silently succeed thanks to `force: true`.
+    await expect(bundle.reset()).resolves.toBeUndefined();
   });
 });
