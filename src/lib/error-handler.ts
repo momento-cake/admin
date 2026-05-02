@@ -62,42 +62,55 @@ const firebaseErrorMap: Record<string, string> = {
  * Convert any error to AppError with user-friendly message
  */
 export function handleError(error: any): AppError {
-  // If already an AppError, return it
-  if (error.code && error.message) {
-    return error as AppError;
+  if (!error) {
+    return {
+      code: 'unknown-error',
+      message: 'Erro desconhecido. Por favor, tente novamente',
+      details: String(error),
+    };
   }
 
-  // Handle Firestore errors
-  if (error.code) {
-    const message = firebaseErrorMap[error.code] || firebaseErrorMap[error.message];
-    if (message) {
-      return {
-        code: error.code,
-        message,
-        details: error.message
-      };
-    }
+  const rawMessage = typeof error.message === 'string' ? error.message : '';
+
+  // Map a known Firestore/Firebase code to its Portuguese message
+  if (error.code && firebaseErrorMap[error.code]) {
+    return {
+      code: error.code,
+      message: firebaseErrorMap[error.code],
+      details: rawMessage,
+    };
   }
 
-  // Handle Firebase error messages that don't have a code
-  if (typeof error.message === 'string') {
-    // Check if message contains any known error patterns
+  // Map by pattern when the message embeds a known Firebase token (e.g. "5 NOT_FOUND ...")
+  if (rawMessage) {
     for (const [key, value] of Object.entries(firebaseErrorMap)) {
-      if (error.message.includes(key)) {
+      if (rawMessage.includes(key)) {
         return {
           code: key,
           message: value,
-          details: error.message
+          details: rawMessage,
         };
       }
     }
+  }
+
+  // Preserve the original message for plain Errors (typically thrown from API
+  // responses with already-localized text, e.g. "Pedido tem saldo em aberto").
+  // We require an Error instance so we don't surface raw third-party error
+  // payloads with technical strings.
+  if (error instanceof Error && rawMessage) {
+    return {
+      code: (error as Error & { code?: string }).code || 'unknown-error',
+      message: rawMessage,
+      details: rawMessage,
+    };
   }
 
   // Fallback for unknown errors
   return {
     code: 'unknown-error',
     message: 'Erro desconhecido. Por favor, tente novamente',
-    details: error instanceof Error ? error.message : String(error)
+    details: error instanceof Error ? rawMessage : String(error),
   };
 }
 
