@@ -2,13 +2,28 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react'
 import { Pedido } from '@/types/pedido'
+import { parseApiResponse, formatErrorMessage, logError } from '@/lib/error-handler'
+
+export interface OptimisticHandle {
+  rollback: () => void
+  commit: () => void
+}
 
 interface PedidoContextValue {
   pedido: Pedido | null
   isLoading: boolean
   error: string | null
   refreshPedido: () => Promise<void>
-  optimisticUpdate: (updater: (pedido: Pedido) => Pedido) => void
+  /**
+   * Apply an optimistic mutation. Each call returns its own `{ rollback, commit }`
+   * handle, so concurrent operations don't trample each other's baselines.
+   * Always call exactly one of `rollback()` (on failure) or `commit()` (on success).
+   */
+  optimisticUpdate: (updater: (pedido: Pedido) => Pedido) => OptimisticHandle
+  /**
+   * @deprecated Prefer the handle returned by `optimisticUpdate`. Kept for
+   * legacy call sites; rolls back to the most recent stacked baseline.
+   */
   rollback: () => void
 }
 
@@ -23,20 +38,20 @@ export function PedidoProvider({ pedidoId, children }: PedidoProviderProps) {
   const [pedido, setPedido] = useState<Pedido | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const previousPedidoRef = useRef<Pedido | null>(null)
+  // Stack of pending optimistic baselines. Top of stack is the most recent
+  // pre-mutation snapshot. Cleared as operations commit or rollback.
+  const baselineStackRef = useRef<Pedido[]>([])
 
   const loadPedido = useCallback(async () => {
     try {
       setIsLoading(true)
       setError(null)
       const response = await fetch(`/api/pedidos/${pedidoId}`)
-      const json = await response.json()
-      if (!json.success) throw new Error(json.error || 'Erro ao carregar pedido')
-      const result = json.data as Pedido
+      const result = await parseApiResponse<Pedido>(response)
       setPedido(result)
-      previousPedidoRef.current = result
+      baselineStackRef.current = []
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao carregar pedido')
+      setError(formatErrorMessage(err))
     } finally {
       setIsLoading(false)
     }
@@ -45,28 +60,54 @@ export function PedidoProvider({ pedidoId, children }: PedidoProviderProps) {
   const refreshPedido = useCallback(async () => {
     try {
       const response = await fetch(`/api/pedidos/${pedidoId}`)
-      const json = await response.json()
-      if (!json.success) throw new Error(json.error || 'Erro ao atualizar pedido')
-      const result = json.data as Pedido
+      const result = await parseApiResponse<Pedido>(response)
       setPedido(result)
-      previousPedidoRef.current = result
+      baselineStackRef.current = []
     } catch (err) {
-      console.error('Erro ao atualizar pedido:', err)
+      logError('PedidoContext.refreshPedido', err)
+      throw err
     }
   }, [pedidoId])
 
-  const optimisticUpdate = useCallback((updater: (pedido: Pedido) => Pedido) => {
-    setPedido((current) => {
-      if (!current) return current
-      previousPedidoRef.current = current
-      return updater(current)
-    })
-  }, [])
+  const optimisticUpdate = useCallback(
+    (updater: (pedido: Pedido) => Pedido): OptimisticHandle => {
+      let baseline: Pedido | null = null
+      setPedido((current) => {
+        if (!current) return current
+        baseline = current
+        baselineStackRef.current.push(current)
+        return updater(current)
+      })
 
+      let settled = false
+      return {
+        rollback: () => {
+          if (settled) return
+          settled = true
+          if (!baseline) return
+          const stack = baselineStackRef.current
+          const idx = stack.lastIndexOf(baseline)
+          if (idx >= 0) stack.splice(idx, 1)
+          setPedido(baseline)
+        },
+        commit: () => {
+          if (settled) return
+          settled = true
+          if (!baseline) return
+          const stack = baselineStackRef.current
+          const idx = stack.lastIndexOf(baseline)
+          if (idx >= 0) stack.splice(idx, 1)
+        },
+      }
+    },
+    []
+  )
+
+  // Legacy helper: roll back to the most recent unsettled baseline.
   const rollback = useCallback(() => {
-    if (previousPedidoRef.current) {
-      setPedido(previousPedidoRef.current)
-    }
+    const stack = baselineStackRef.current
+    const last = stack.pop()
+    if (last) setPedido(last)
   }, [])
 
   useEffect(() => {

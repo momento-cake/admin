@@ -26,6 +26,7 @@ import {
 } from '@/types/pedido'
 import { formatPrice } from '@/lib/products'
 import { deleteReceipt } from '@/lib/storage'
+import { describeError, parseApiResponse } from '@/lib/error-handler'
 
 const ASAAS_WEBHOOK_AUTHOR = 'asaas-webhook'
 
@@ -88,12 +89,9 @@ export function PaymentList({
         `/api/pedidos/${pedidoId}/pagamentos/${pagamentoId}`,
         { method: 'DELETE' }
       )
-      const json = await res.json()
-      if (!res.ok || !json.success) {
-        throw new Error(json.error ?? 'Erro ao excluir pagamento')
-      }
+      const data = await parseApiResponse<{ removed?: { comprovantePath?: string } }>(res)
       // Best-effort receipt cleanup client-side
-      const path = json.data?.removed?.comprovantePath as string | undefined
+      const path = data?.removed?.comprovantePath
       if (path) {
         try {
           await deleteReceipt(path)
@@ -104,7 +102,9 @@ export function PaymentList({
       toast.success('Pagamento excluído')
       onChanged()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Erro ao excluir pagamento')
+      toast.error('Erro ao excluir pagamento', {
+        description: describeError(err),
+      })
     } finally {
       setDeleting(null)
       setConfirmId(null)

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { getAuthFromRequest, canPerformActionFromRequest, unauthorizedResponse, forbiddenResponse } from '@/lib/api-auth';
+import { formatErrorMessage, logError } from '@/lib/error-handler';
 
 const PEDIDOS_COLLECTION = 'pedidos';
 
@@ -48,9 +49,9 @@ export async function PUT(
 
     return NextResponse.json({ success: true, message: 'Orcamento ativado com sucesso' });
   } catch (error) {
-    console.error('❌ Erro ao ativar orcamento:', error);
+    logError('PEDIDO_ORCAMENTO_ATIVAR_PUT', error);
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : 'Erro interno do servidor' },
+      { success: false, error: formatErrorMessage(error) },
       { status: 500 }
     );
   }

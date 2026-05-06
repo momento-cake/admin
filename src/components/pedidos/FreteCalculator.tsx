@@ -1,11 +1,17 @@
 'use client'
 
 import { useState } from 'react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Calculator, RefreshCw, Loader2, MapPin, Truck } from 'lucide-react'
 import { PedidoEntrega } from '@/types/pedido'
 import { formatPrice } from '@/lib/products'
+import {
+  ApiError,
+  describeError,
+  parseApiResponse,
+} from '@/lib/error-handler'
 
 interface FreteCalculatorProps {
   pedidoId: string
@@ -39,27 +45,61 @@ export function FreteCalculator({
         body: JSON.stringify({
           enderecoEntrega: entrega.enderecoEntrega,
         }),
+        signal: AbortSignal.timeout(15000),
       })
 
-      const data = await response.json()
+      const data = await parseApiResponse<{
+        distanciaKm: number
+        custoPorKm: number
+        freteTotal: number
+      }>(response)
 
-      if (!response.ok) {
-        if (data.needsManualDistance) {
-          setManualMode(true)
-          setError(data.error || 'Cálculo automático falhou. Insira a distância manualmente.')
-        } else {
-          setError(data.error || 'Erro ao calcular frete')
-        }
+      onUpdate({
+        distanciaKm: data.distanciaKm,
+        custoPorKm: data.custoPorKm,
+        freteTotal: data.freteTotal,
+      })
+    } catch (err) {
+      // Manual-distance UX path: the calcular-frete API returns HTTP 422 with
+      // `needsManualDistance: true` when geocoding/route calculation fails.
+      // The flag sits at the top level of the response (not inside `details`),
+      // so we trigger on `status === 422` — this endpoint only returns 422 in
+      // that scenario.
+      const isManualDistance =
+        err instanceof ApiError && err.status === 422
+
+      if (isManualDistance) {
+        setManualMode(true)
+        const message =
+          err instanceof Error
+            ? err.message
+            : 'Cálculo automático falhou. Insira a distância manualmente.'
+        setError(message)
+        toast.error('Cálculo automático indisponível', {
+          description: describeError(err),
+        })
         return
       }
 
-      onUpdate({
-        distanciaKm: data.data.distanciaKm,
-        custoPorKm: data.data.custoPorKm,
-        freteTotal: data.data.freteTotal,
+      // Timeout path (AbortSignal.timeout fires a TimeoutError DOMException).
+      if (
+        err instanceof DOMException &&
+        (err.name === 'TimeoutError' || err.name === 'AbortError')
+      ) {
+        setError('Tempo limite excedido ao calcular frete')
+        toast.error('Tempo limite excedido ao calcular frete', {
+          description:
+            'O serviço de cálculo demorou mais que o esperado. Tente novamente.',
+        })
+        return
+      }
+
+      const message =
+        err instanceof Error ? err.message : 'Erro de conexão ao calcular frete'
+      setError(message)
+      toast.error('Erro ao calcular frete', {
+        description: describeError(err),
       })
-    } catch {
-      setError('Erro de conexão ao calcular frete')
     } finally {
       setLoading(false)
     }

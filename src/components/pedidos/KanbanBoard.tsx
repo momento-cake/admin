@@ -10,8 +10,17 @@ import { Search, Plus, RefreshCw, LayoutGrid, List } from 'lucide-react'
 import Link from 'next/link'
 import { useDebounce } from '@/hooks/useDebounce'
 import { Pedido, PedidoStatus } from '@/types/pedido'
-import { formatErrorMessage, logError } from '@/lib/error-handler'
+import {
+  parseApiResponse,
+  describeError,
+  formatErrorMessage,
+  logError,
+} from '@/lib/error-handler'
+import { calcularTotalPedido } from '@/lib/payment-logic'
 import { formatPrice } from '@/lib/products'
+
+const formatBRL = (value: number) =>
+  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)
 import { cn } from '@/lib/utils'
 import { KANBAN_COLUMN_ORDER } from './statusTheme'
 import { KanbanColumn } from './KanbanColumn'
@@ -52,10 +61,9 @@ export function KanbanBoard({ onPedidoView, onPedidoCreate, canUpdate = true }: 
       params.set('page', '1')
 
       const response = await fetch('/api/pedidos?' + params.toString())
-      const result = await response.json()
-      if (!result.success) throw new Error(result.error || 'Erro ao carregar pedidos')
+      const data = await parseApiResponse<Pedido[]>(response)
 
-      setPedidos(result.data as Pedido[])
+      setPedidos(data)
     } catch (err) {
       const msg = formatErrorMessage(err)
       setError(msg)
@@ -144,12 +152,24 @@ export function KanbanBoard({ onPedidoView, onPedidoCreate, canUpdate = true }: 
     if (!pedidoId || !origin) return
     if (origin === targetStatus) return
     if (!canUpdate) {
-      toast.error('Sem permissão para atualizar pedidos')
+      toast.error('Sem permissão', {
+        description: 'Você não tem permissão para atualizar pedidos.',
+      })
       return
     }
 
     const target = pedidos.find((p) => p.id === pedidoId)
     if (!target) return
+
+    // Gate ENTREGUE: payment must be complete before delivery
+    if (targetStatus === 'ENTREGUE' && target.statusPagamento !== 'PAGO') {
+      const total = calcularTotalPedido(target)
+      const saldo = Math.max(0, total - (target.totalPago ?? 0))
+      toast.error('Não é possível marcar como entregue', {
+        description: `Registre o pagamento total antes de marcar como entregue. Saldo em aberto: ${formatBRL(saldo)}`,
+      })
+      return
+    }
 
     // Optimistic update
     setUpdatingId(pedidoId)
@@ -163,8 +183,7 @@ export function KanbanBoard({ onPedidoView, onPedidoCreate, canUpdate = true }: 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: targetStatus }),
       })
-      const result = await response.json()
-      if (!result.success) throw new Error(result.error || 'Falha ao atualizar status')
+      await parseApiResponse(response)
       toast.success('Status atualizado', {
         description: `Pedido ${target.numeroPedido} movido`,
       })
@@ -173,7 +192,7 @@ export function KanbanBoard({ onPedidoView, onPedidoCreate, canUpdate = true }: 
       setPedidos((prev) =>
         prev.map((p) => (p.id === pedidoId ? { ...p, status: origin } : p)),
       )
-      toast.error('Erro ao mover pedido', { description: formatErrorMessage(err) })
+      toast.error('Erro ao mover pedido', { description: describeError(err) })
       logError('KanbanBoard.updateStatus', err)
     } finally {
       setUpdatingId(null)

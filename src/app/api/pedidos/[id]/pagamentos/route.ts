@@ -14,6 +14,7 @@ import {
   resolvePaymentFields,
   sumPagamentos,
 } from '@/lib/payment-logic';
+import { formatErrorMessage, logError } from '@/lib/error-handler';
 import type { Pagamento, Pedido } from '@/types/pedido';
 
 const PEDIDOS_COLLECTION = 'pedidos';
@@ -133,12 +134,11 @@ export async function POST(
       { status: 201 }
     );
   } catch (error) {
-    console.error('❌ Erro ao registrar pagamento:', error);
+    logError('PEDIDO_PAGAMENTOS_POST', error);
     return NextResponse.json(
       {
         success: false,
-        error:
-          error instanceof Error ? error.message : 'Erro interno do servidor',
+        error: formatErrorMessage(error),
       },
       { status: 500 }
     );

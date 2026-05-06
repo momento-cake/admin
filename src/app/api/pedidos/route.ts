@@ -4,6 +4,7 @@ import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { createPedidoSchema } from '@/lib/validators/pedido';
 import { getAuthFromRequest, canPerformActionFromRequest, unauthorizedResponse, forbiddenResponse } from '@/lib/api-auth';
 import { withPaymentDefaults } from '@/lib/pedidos-server';
+import { formatErrorMessage, logError } from '@/lib/error-handler';
 import type { Pedido } from '@/types/pedido';
 
 const PEDIDOS_COLLECTION = 'pedidos';
@@ -48,7 +49,9 @@ export async function GET(request: NextRequest) {
       return forbiddenResponse('Sem permissão para visualizar pedidos');
     }
 
-    console.log('🔍 GET /api/pedidos - Fetching pedidos');
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('🔍 GET /api/pedidos - Fetching pedidos');
+    }
 
     const searchParams = request.nextUrl.searchParams;
     const searchQuery = searchParams.get('searchQuery') || undefined;
@@ -111,7 +114,9 @@ export async function GET(request: NextRequest) {
       .slice(startIndex, startIndex + limit)
       .map((p) => withPaymentDefaults(p as Pedido & Record<string, unknown>));
 
-    console.log(`✅ Successfully fetched ${paginated.length} pedidos (total: ${total})`);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`✅ Successfully fetched ${paginated.length} pedidos (total: ${total})`);
+    }
 
     return NextResponse.json({
       success: true,
@@ -122,9 +127,9 @@ export async function GET(request: NextRequest) {
       limit,
     });
   } catch (error) {
-    console.error('❌ Erro ao buscar pedidos:', error);
+    logError('PEDIDOS_GET', error);
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : 'Erro interno do servidor' },
+      { success: false, error: formatErrorMessage(error) },
       { status: 500 }
     );
   }
@@ -142,7 +147,9 @@ export async function POST(request: NextRequest) {
       return forbiddenResponse('Sem permissão para criar pedidos');
     }
 
-    console.log('➕ POST /api/pedidos - Creating pedido');
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('➕ POST /api/pedidos - Creating pedido');
+    }
 
     const body = await request.json();
 
@@ -246,7 +253,9 @@ export async function POST(request: NextRequest) {
       return { id: newDocRef.id, numeroPedido, publicToken };
     });
 
-    console.log(`✅ Successfully created pedido: ${result.numeroPedido} (${result.id})`);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`✅ Successfully created pedido: ${result.numeroPedido} (${result.id})`);
+    }
 
     return NextResponse.json(
       {
@@ -256,9 +265,9 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
-    console.error('❌ Erro ao criar pedido:', error);
+    logError('PEDIDOS_POST', error);
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : 'Erro interno do servidor' },
+      { success: false, error: formatErrorMessage(error) },
       { status: 500 }
     );
   }

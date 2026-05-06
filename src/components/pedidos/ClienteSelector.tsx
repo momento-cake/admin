@@ -4,10 +4,11 @@ import { useState, useEffect } from 'react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { Search, Loader2, X, UserCheck, UserPlus } from 'lucide-react'
+import { Search, Loader2, X, UserCheck, UserPlus, AlertCircle } from 'lucide-react'
 import { useDebounce } from '@/hooks/useDebounce'
 import { fetchClients } from '@/lib/clients'
 import { Client } from '@/types/client'
+import { logError } from '@/lib/error-handler'
 
 interface ClienteSelectorProps {
   selectedClient: { id: string; nome: string; telefone?: string } | null
@@ -21,24 +22,29 @@ export function ClienteSelector({ selectedClient, onSelect, onClear, onCreateNew
   const [results, setResults] = useState<Client[]>([])
   const [loading, setLoading] = useState(false)
   const [showResults, setShowResults] = useState(false)
+  const [searchError, setSearchError] = useState<string | null>(null)
 
   const debouncedSearch = useDebounce(searchInput, 300)
 
   useEffect(() => {
     if (!debouncedSearch || debouncedSearch.length < 2) {
       setResults([])
+      setSearchError(null)
       return
     }
 
     const search = async () => {
       setLoading(true)
+      setSearchError(null)
       try {
         const response = await fetchClients({ searchQuery: debouncedSearch, limit: 10 })
         setResults(response.clients)
         setShowResults(true)
       } catch (error) {
-        console.error('Erro ao buscar clientes:', error)
+        logError('ClienteSelector.search', error)
         setResults([])
+        setSearchError('Erro ao buscar clientes. Tente novamente.')
+        setShowResults(true)
       } finally {
         setLoading(false)
       }
@@ -96,7 +102,16 @@ export function ClienteSelector({ selectedClient, onSelect, onClear, onCreateNew
         )}
       </div>
 
-      {showResults && results.length > 0 && (
+      {showResults && searchError && (
+        <Card className="absolute z-50 w-full mt-1 shadow-lg">
+          <div className="flex items-start gap-2 px-4 py-3 text-sm text-destructive">
+            <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" aria-hidden />
+            <span>{searchError}</span>
+          </div>
+        </Card>
+      )}
+
+      {showResults && !searchError && results.length > 0 && (
         <Card className="absolute z-50 w-full mt-1 max-h-60 overflow-y-auto shadow-lg">
           {results.map((client) => {
             const phone = client.contactMethods?.find(
@@ -123,7 +138,7 @@ export function ClienteSelector({ selectedClient, onSelect, onClear, onCreateNew
         </Card>
       )}
 
-      {showResults && debouncedSearch.length >= 2 && results.length === 0 && !loading && (
+      {showResults && !searchError && debouncedSearch.length >= 2 && results.length === 0 && !loading && (
         <Card className="absolute z-50 w-full mt-1 shadow-lg">
           <div className="px-4 py-3">
             <p className="text-sm text-muted-foreground">

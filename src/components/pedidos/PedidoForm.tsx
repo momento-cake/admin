@@ -17,7 +17,7 @@ import {
 } from 'lucide-react'
 import { PedidoItem, PedidoEntrega } from '@/types/pedido'
 import { Address } from '@/types/client'
-import { formatErrorMessage } from '@/lib/error-handler'
+import { formatErrorMessage, logError } from '@/lib/error-handler'
 import { StepIndicator } from './creation/StepIndicator'
 import { ClienteStep } from './creation/ClienteStep'
 import { ItensStep } from './creation/ItensStep'
@@ -87,6 +87,8 @@ export function PedidoForm({
     nome: string
   } | null>(null)
   const [newAddress, setNewAddress] = useState<Partial<Address> | null>(null)
+  const [clientAddressLoadError, setClientAddressLoadError] = useState<string | null>(null)
+  const [storeAddressLoadError, setStoreAddressLoadError] = useState<string | null>(null)
 
   // Dates & notes
   const [dataEntrega, setDataEntrega] = useState('')
@@ -102,11 +104,13 @@ export function PedidoForm({
     if (!selectedClient?.id) {
       setClientAddresses([])
       setSelectedClientAddress(null)
+      setClientAddressLoadError(null)
       return
     }
 
     const loadClientAddresses = async () => {
       setLoadingClientAddresses(true)
+      setClientAddressLoadError(null)
       try {
         const response = await fetch(`/api/clients/${selectedClient.id}`)
         const data = await response.json()
@@ -117,7 +121,11 @@ export function PedidoForm({
         }
       } catch (err) {
         console.error('Erro ao carregar endereços do cliente:', err)
+        logError('PedidoForm.loadClientAddresses', err)
         setClientAddresses([])
+        setClientAddressLoadError(
+          'Não foi possível carregar os endereços do cliente. Tente novamente mais tarde.'
+        )
       } finally {
         setLoadingClientAddresses(false)
       }
@@ -132,14 +140,24 @@ export function PedidoForm({
       storeAddressesFetched.current = true
       const loadStoreAddresses = async () => {
         setLoadingStoreAddresses(true)
+        setStoreAddressLoadError(null)
         try {
           const response = await fetch('/api/store-addresses')
           const data = await response.json()
           if (data.success) {
             setStoreAddresses(data.data || [])
+          } else {
+            throw new Error(data.error || 'Erro ao carregar endereços da loja')
           }
         } catch (err) {
           console.error('Erro ao carregar endereços da loja:', err)
+          logError('PedidoForm.loadStoreAddresses', err)
+          setStoreAddressLoadError(
+            'Não foi possível carregar os endereços da loja. Tente novamente mais tarde.'
+          )
+          // Allow the retry on next mount of step; reset the guard only here
+          // when failure occurs so the user isn't permanently stuck.
+          storeAddressesFetched.current = false
         } finally {
           setLoadingStoreAddresses(false)
         }
@@ -369,6 +387,21 @@ export function PedidoForm({
 
             {currentStep === 1 && (
               <ItensStep items={items} onChange={setItems} />
+            )}
+
+            {currentStep === 2 && (clientAddressLoadError || storeAddressLoadError) && (
+              <div
+                role="alert"
+                className="mb-4 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800"
+              >
+                <p className="font-medium">Falha ao carregar endereços</p>
+                {clientAddressLoadError && (
+                  <p className="mt-1">{clientAddressLoadError}</p>
+                )}
+                {storeAddressLoadError && (
+                  <p className="mt-1">{storeAddressLoadError}</p>
+                )}
+              </div>
             )}
 
             {currentStep === 2 && (

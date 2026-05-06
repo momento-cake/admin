@@ -5,6 +5,7 @@ import { updatePedidoSchema } from '@/lib/validators/pedido';
 import { getAuthFromRequest, canPerformActionFromRequest, unauthorizedResponse, forbiddenResponse } from '@/lib/api-auth';
 import { calcularTotalPedido, roundCurrency } from '@/lib/payment-logic';
 import { withPaymentDefaults } from '@/lib/pedidos-server';
+import { formatErrorMessage, logError } from '@/lib/error-handler';
 import type { Pedido } from '@/types/pedido';
 
 const PEDIDOS_COLLECTION = 'pedidos';
@@ -25,7 +26,9 @@ export async function GET(
       return forbiddenResponse('Sem permissão para visualizar pedidos');
     }
 
-    console.log(`🔍 GET /api/pedidos/${id} - Fetching pedido`);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`🔍 GET /api/pedidos/${id} - Fetching pedido`);
+    }
 
     const docSnapshot = await adminDb.collection(PEDIDOS_COLLECTION).doc(id).get();
     if (!docSnapshot.exists) {
@@ -42,9 +45,9 @@ export async function GET(
       data: pedido,
     });
   } catch (error) {
-    console.error('❌ Erro ao buscar pedido:', error);
+    logError('PEDIDO_GET', error);
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : 'Erro interno do servidor' },
+      { success: false, error: formatErrorMessage(error) },
       { status: 500 }
     );
   }
@@ -66,7 +69,9 @@ export async function PUT(
       return forbiddenResponse('Sem permissão para atualizar pedidos');
     }
 
-    console.log(`✏️ PUT /api/pedidos/${id} - Updating pedido`);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`✏️ PUT /api/pedidos/${id} - Updating pedido`);
+    }
 
     const body = await request.json();
 
@@ -137,9 +142,9 @@ export async function PUT(
       } as Pedido & Record<string, unknown>),
     });
   } catch (error) {
-    console.error('❌ Erro ao atualizar pedido:', error);
+    logError('PEDIDO_PUT', error);
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : 'Erro interno do servidor' },
+      { success: false, error: formatErrorMessage(error) },
       { status: 500 }
     );
   }
@@ -161,7 +166,9 @@ export async function DELETE(
       return forbiddenResponse('Sem permissão para excluir pedidos');
     }
 
-    console.log(`🗑️ DELETE /api/pedidos/${id} - Soft-deleting pedido`);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`🗑️ DELETE /api/pedidos/${id} - Soft-deleting pedido`);
+    }
 
     const docSnapshot = await adminDb.collection(PEDIDOS_COLLECTION).doc(id).get();
     if (!docSnapshot.exists) {
@@ -176,9 +183,9 @@ export async function DELETE(
 
     return NextResponse.json({ success: true, message: 'Pedido excluído com sucesso' });
   } catch (error) {
-    console.error('❌ Erro ao excluir pedido:', error);
+    logError('PEDIDO_DELETE', error);
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : 'Erro interno do servidor' },
+      { success: false, error: formatErrorMessage(error) },
       { status: 500 }
     );
   }

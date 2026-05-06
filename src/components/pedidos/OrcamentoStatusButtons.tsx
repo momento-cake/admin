@@ -11,7 +11,7 @@ import {
 } from 'lucide-react'
 import { Orcamento, OrcamentoStatus, ORCAMENTO_STATUS_LABELS } from '@/types/pedido'
 import { toast } from 'sonner'
-import { formatErrorMessage } from '@/lib/error-handler'
+import { parseApiResponse, describeError } from '@/lib/error-handler'
 import { usePedidoOptional } from '@/contexts/PedidoContext'
 
 const ORC_STATUS_TRANSITIONS: Record<OrcamentoStatus, { target: OrcamentoStatus; label: string; icon: typeof Send; variant: 'default' | 'destructive' | 'outline' }[]> = {
@@ -51,15 +51,13 @@ export function OrcamentoStatusButtons({
   const handleStatusTransition = async (newStatus: OrcamentoStatus) => {
     setTransitioning(newStatus)
 
-    // Apply optimistic update
-    if (pedidoCtx) {
-      pedidoCtx.optimisticUpdate((p) => ({
-        ...p,
-        orcamentos: p.orcamentos.map((o) =>
-          o.id === orcamento.id ? { ...o, status: newStatus } : o
-        ),
-      }))
-    }
+    // Apply optimistic update with handle (per-call rollback/commit)
+    const handle = pedidoCtx?.optimisticUpdate((p) => ({
+      ...p,
+      orcamentos: p.orcamentos.map((o) =>
+        o.id === orcamento.id ? { ...o, status: newStatus } : o
+      ),
+    }))
 
     try {
       const response = await fetch(`/api/pedidos/${pedidoId}/orcamento/${orcamento.id}`, {
@@ -67,23 +65,19 @@ export function OrcamentoStatusButtons({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus }),
       })
-      const result = await response.json()
-      if (!result.success) {
-        throw new Error(result.error || 'Erro ao alterar status')
-      }
+      await parseApiResponse(response)
       toast.success(`Status alterado para ${ORCAMENTO_STATUS_LABELS[newStatus]}`)
 
+      handle?.commit()
       if (pedidoCtx) {
-        pedidoCtx.refreshPedido()
+        await pedidoCtx.refreshPedido()
       } else {
         onUpdate()
       }
     } catch (error) {
-      if (pedidoCtx) {
-        pedidoCtx.rollback()
-      }
+      handle?.rollback()
       toast.error('Erro ao alterar status do orcamento', {
-        description: formatErrorMessage(error),
+        description: describeError(error),
       })
     } finally {
       setTransitioning(null)

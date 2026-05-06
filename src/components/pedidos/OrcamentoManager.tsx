@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/dialog'
 import { Plus, Loader2, FileText as FileTextIcon } from 'lucide-react'
 import { Pedido, Orcamento, PedidoItem } from '@/types/pedido'
-import { formatErrorMessage } from '@/lib/error-handler'
+import { parseApiResponse, describeError } from '@/lib/error-handler'
 import { usePedidoOptional } from '@/contexts/PedidoContext'
 import { OrcamentoCard } from './OrcamentoCard'
 import { PedidoItemsTable } from './PedidoItemsTable'
@@ -53,8 +53,7 @@ export function OrcamentoManager({ pedido, onUpdate }: OrcamentoManagerProps) {
           acrescimo: activeOrcamento.acrescimo,
         }),
       })
-      const result = await response.json()
-      if (!result.success) throw new Error(result.error)
+      await parseApiResponse(response)
       toast.success('Nova versão do orçamento criada')
 
       if (pedidoCtx) {
@@ -64,7 +63,7 @@ export function OrcamentoManager({ pedido, onUpdate }: OrcamentoManagerProps) {
       }
     } catch (error) {
       toast.error('Erro ao criar orçamento', {
-        description: formatErrorMessage(error),
+        description: describeError(error),
       })
     } finally {
       setCreating(false)
@@ -74,36 +73,32 @@ export function OrcamentoManager({ pedido, onUpdate }: OrcamentoManagerProps) {
   const handleActivate = async (orcamentoId: string) => {
     setActivating(orcamentoId)
 
-    // Optimistic update: mark the selected orcamento as active
-    if (pedidoCtx) {
-      pedidoCtx.optimisticUpdate((p) => ({
-        ...p,
-        orcamentos: p.orcamentos.map((o) => ({
-          ...o,
-          isAtivo: o.id === orcamentoId,
-        })),
-      }))
-    }
+    // Optimistic update with handle: mark the selected orcamento as active
+    const handle = pedidoCtx?.optimisticUpdate((p) => ({
+      ...p,
+      orcamentos: p.orcamentos.map((o) => ({
+        ...o,
+        isAtivo: o.id === orcamentoId,
+      })),
+    }))
 
     try {
       const response = await fetch(`/api/pedidos/${pedido.id}/orcamento/${orcamentoId}/ativar`, {
         method: 'PUT',
       })
-      const result = await response.json()
-      if (!result.success) throw new Error(result.error)
+      await parseApiResponse(response)
       toast.success('Orçamento ativado')
 
+      handle?.commit()
       if (pedidoCtx) {
         await pedidoCtx.refreshPedido()
       } else {
         onUpdate()
       }
     } catch (error) {
-      if (pedidoCtx) {
-        pedidoCtx.rollback()
-      }
+      handle?.rollback()
       toast.error('Erro ao ativar orçamento', {
-        description: formatErrorMessage(error),
+        description: describeError(error),
       })
     } finally {
       setActivating(null)

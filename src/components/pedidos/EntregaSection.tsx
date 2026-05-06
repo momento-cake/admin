@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Truck, Store } from 'lucide-react'
+import { Truck, Store, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
 import { PedidoEntrega, EntregaTipo, ENTREGA_TIPO_LABELS } from '@/types/pedido'
 import { StoreAddress } from '@/types/store-settings'
@@ -11,12 +11,17 @@ import { Address } from '@/types/client'
 import { AddressSelector } from './AddressSelector'
 import { FreteCalculator } from './FreteCalculator'
 import { usePedidoOptional } from '@/contexts/PedidoContext'
+import { parseApiResponse, logError } from '@/lib/error-handler'
 
 interface EntregaSectionProps {
   pedidoId: string
   entrega: PedidoEntrega
   clientAddresses?: Address[]
-  onUpdate: (entrega: PedidoEntrega) => void
+  /**
+   * Persists the new entrega. May return a Promise that rejects on failure;
+   * EntregaSection awaits it so it can rollback its optimistic update.
+   */
+  onUpdate: (entrega: PedidoEntrega) => void | Promise<void>
 }
 
 export function EntregaSection({
@@ -28,6 +33,7 @@ export function EntregaSection({
   const pedidoCtx = usePedidoOptional()
   const [storeAddresses, setStoreAddresses] = useState<StoreAddress[]>([])
   const [loadingStoreAddresses, setLoadingStoreAddresses] = useState(false)
+  const [storeAddressLoadError, setStoreAddressLoadError] = useState<string | null>(null)
 
   useEffect(() => {
     loadStoreAddresses()
@@ -35,25 +41,35 @@ export function EntregaSection({
 
   const loadStoreAddresses = async () => {
     setLoadingStoreAddresses(true)
+    setStoreAddressLoadError(null)
     try {
       const response = await fetch('/api/store-addresses')
-      const data = await response.json()
-      if (data.success) {
-        setStoreAddresses(data.data || [])
-      }
+      const data = await parseApiResponse<StoreAddress[]>(response)
+      setStoreAddresses(data || [])
     } catch (err) {
-      console.error('Erro ao carregar enderecos da loja:', err)
+      logError('EntregaSection.loadAddresses', err)
+      setStoreAddressLoadError(
+        'Não foi possível carregar endereços. Tente novamente mais tarde.'
+      )
+      setStoreAddresses([])
     } finally {
       setLoadingStoreAddresses(false)
     }
   }
 
-  const applyEntregaUpdate = (newEntrega: PedidoEntrega) => {
-    // Apply optimistic update if context is available
-    if (pedidoCtx) {
-      pedidoCtx.optimisticUpdate((p) => ({ ...p, entrega: newEntrega }))
+  const applyEntregaUpdate = async (newEntrega: PedidoEntrega) => {
+    // Apply optimistic update if context is available; the handle lets us
+    // rollback when the parent's persist call (PedidoDetailView.handleEntregaUpdate)
+    // throws. The parent now re-throws on failure, so awaiting onUpdate is the
+    // signal we need.
+    const handle = pedidoCtx?.optimisticUpdate((p) => ({ ...p, entrega: newEntrega }))
+    try {
+      await onUpdate(newEntrega)
+      handle?.commit()
+    } catch {
+      // Parent already surfaced the toast / logged. We just revert the UI.
+      handle?.rollback()
     }
-    onUpdate(newEntrega)
   }
 
   const handleTipoChange = (tipo: EntregaTipo) => {
@@ -167,6 +183,11 @@ export function EntregaSection({
                     </div>
                   </div>
                 ))}
+              </div>
+            ) : storeAddressLoadError ? (
+              <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+                <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" aria-hidden />
+                <span>{storeAddressLoadError}</span>
               </div>
             ) : storeAddresses.length === 0 ? (
               <p className="text-sm text-muted-foreground italic">

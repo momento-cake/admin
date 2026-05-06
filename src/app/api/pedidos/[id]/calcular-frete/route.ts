@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { getAuthFromRequest, canPerformActionFromRequest, unauthorizedResponse, forbiddenResponse } from '@/lib/api-auth';
+import { formatErrorMessage, logError } from '@/lib/error-handler';
 
 const PEDIDOS_COLLECTION = 'pedidos';
 const SETTINGS_COLLECTION = 'storeSettings';
@@ -222,9 +223,9 @@ export async function POST(
       },
     });
   } catch (error) {
-    console.error('❌ Erro ao calcular frete:', error);
+    logError('PEDIDO_FRETE_POST', error);
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : 'Erro interno do servidor' },
+      { success: false, error: formatErrorMessage(error) },
       { status: 500 }
     );
   }
