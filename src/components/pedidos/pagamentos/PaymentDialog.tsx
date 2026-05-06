@@ -26,10 +26,11 @@ import {
   PAGAMENTO_METODO_LABELS,
   type PagamentoMetodo,
 } from '@/types/pedido'
-import { uploadReceipt } from '@/lib/storage'
+import { uploadReceipt, deleteReceipt } from '@/lib/storage'
 import { validateReceiptFile } from '@/lib/validators/receipt'
 import { formatPrice } from '@/lib/products'
 import { roundCurrency } from '@/lib/payment-logic'
+import { describeError, logError, parseApiResponse } from '@/lib/error-handler'
 
 interface PaymentDialogProps {
   pedidoId: string
@@ -93,7 +94,9 @@ export function PaymentDialog({
     }
     const validation = validateReceiptFile(file)
     if (!validation.isValid) {
-      toast.error(validation.error ?? 'Arquivo inválido')
+      toast.error('Arquivo inválido', {
+        description: validation.error ?? 'Tente um arquivo diferente.',
+      })
       return
     }
     setReceipt(file)
@@ -111,12 +114,23 @@ export function PaymentDialog({
     e.preventDefault()
 
     if (!numericValor || numericValor <= 0) {
-      toast.error('Informe um valor maior que zero')
+      toast.error('Valor inválido', {
+        description: 'Informe um valor maior que zero.',
+      })
+      return
+    }
+
+    if (numericValor > saldo) {
+      toast.error('Valor excede o saldo', {
+        description:
+          'O valor informado é maior que o saldo em aberto. Ajuste o valor antes de salvar.',
+      })
       return
     }
 
     setSubmitting(true)
     let uploaded: Awaited<ReturnType<typeof uploadReceipt>> | null = null
+    let orphanPath: string | null = null
     const pagamentoId = crypto.randomUUID()
 
     try {
@@ -126,6 +140,8 @@ export function PaymentDialog({
           pedidoId,
           pagamentoId,
         })
+        // Track storage path so we can clean up if the metadata POST fails.
+        orphanPath = uploaded.storagePath
       }
 
       const body: Record<string, unknown> = {
@@ -141,14 +157,26 @@ export function PaymentDialog({
         body.comprovanteTipo = uploaded.kind
       }
 
-      const res = await fetch(`/api/pedidos/${pedidoId}/pagamentos`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      })
-      const json = await res.json()
-      if (!res.ok || !json.success) {
-        throw new Error(json.error ?? 'Erro ao registrar pagamento')
+      try {
+        const res = await fetch(`/api/pedidos/${pedidoId}/pagamentos`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        })
+        await parseApiResponse(res)
+        // POST succeeded — comprovante is referenced by the pagamento doc, no longer orphan.
+        orphanPath = null
+      } catch (postErr) {
+        // Best-effort cleanup of the orphaned receipt before surfacing the error.
+        if (orphanPath) {
+          try {
+            await deleteReceipt(orphanPath)
+          } catch (cleanupErr) {
+            logError('PaymentDialog.cleanupOrphanReceipt', cleanupErr)
+          }
+          orphanPath = null
+        }
+        throw postErr
       }
 
       toast.success('Pagamento registrado')
@@ -156,10 +184,10 @@ export function PaymentDialog({
       onRegistered()
       onOpenChange(false)
     } catch (error) {
-      console.error(error)
-      toast.error(
-        error instanceof Error ? error.message : 'Erro ao registrar pagamento'
-      )
+      logError('PaymentDialog.handleSubmit', error)
+      toast.error('Erro ao registrar pagamento', {
+        description: describeError(error),
+      })
     } finally {
       setSubmitting(false)
     }

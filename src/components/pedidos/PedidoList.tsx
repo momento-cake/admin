@@ -178,8 +178,10 @@ export function PedidoList({
       })
       setStatusCounts(counts)
       setSummaryValue(value)
-    } catch {
-      // non-critical
+    } catch (err) {
+      // Non-critical for the page render (stats only), but still log so the
+      // failure is greppable instead of silently swallowed.
+      logError('PedidoList.loadCounts', err)
     }
   }
 

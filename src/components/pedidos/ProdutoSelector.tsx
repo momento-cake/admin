@@ -3,10 +3,11 @@
 import { useState, useEffect } from 'react'
 import { Input } from '@/components/ui/input'
 import { Card } from '@/components/ui/card'
-import { Search, Loader2, Package } from 'lucide-react'
+import { Search, Loader2, Package, AlertCircle } from 'lucide-react'
 import { useDebounce } from '@/hooks/useDebounce'
 import { fetchProducts, formatPrice } from '@/lib/products'
 import { Product } from '@/types/product'
+import { logError } from '@/lib/error-handler'
 
 interface ProdutoSelectorProps {
   onSelect: (product: { id: string; nome: string; preco: number; sku: string }) => void
@@ -17,24 +18,29 @@ export function ProdutoSelector({ onSelect }: ProdutoSelectorProps) {
   const [results, setResults] = useState<Product[]>([])
   const [loading, setLoading] = useState(false)
   const [showResults, setShowResults] = useState(false)
+  const [searchError, setSearchError] = useState<string | null>(null)
 
   const debouncedSearch = useDebounce(searchInput, 300)
 
   useEffect(() => {
     if (!debouncedSearch || debouncedSearch.length < 2) {
       setResults([])
+      setSearchError(null)
       return
     }
 
     const search = async () => {
       setLoading(true)
+      setSearchError(null)
       try {
         const response = await fetchProducts({ searchQuery: debouncedSearch }, 10)
         setResults(response.products)
         setShowResults(true)
       } catch (error) {
-        console.error('Erro ao buscar produtos:', error)
+        logError('ProdutoSelector.search', error)
         setResults([])
+        setSearchError('Erro ao buscar produtos. Tente novamente.')
+        setShowResults(true)
       } finally {
         setLoading(false)
       }
@@ -72,7 +78,16 @@ export function ProdutoSelector({ onSelect }: ProdutoSelectorProps) {
         )}
       </div>
 
-      {showResults && results.length > 0 && (
+      {showResults && searchError && (
+        <Card className="absolute z-50 w-full mt-1 shadow-lg">
+          <div className="flex items-start gap-2 px-4 py-3 text-sm text-destructive">
+            <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" aria-hidden />
+            <span>{searchError}</span>
+          </div>
+        </Card>
+      )}
+
+      {showResults && !searchError && results.length > 0 && (
         <Card className="absolute z-50 w-full mt-1 max-h-60 overflow-y-auto shadow-lg">
           {results.map((product) => (
             <button
@@ -101,7 +116,7 @@ export function ProdutoSelector({ onSelect }: ProdutoSelectorProps) {
         </Card>
       )}
 
-      {showResults && debouncedSearch.length >= 2 && results.length === 0 && !loading && (
+      {showResults && !searchError && debouncedSearch.length >= 2 && results.length === 0 && !loading && (
         <Card className="absolute z-50 w-full mt-1 shadow-lg">
           <div className="flex items-center gap-2 px-4 py-3 text-sm text-muted-foreground">
             <Package className="h-4 w-4" />

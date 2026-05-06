@@ -5,6 +5,10 @@ import {
   isPermissionError,
   isNotFoundError,
   isNetworkError,
+  formatValidationErrors,
+  parseApiResponse,
+  describeError,
+  ApiError,
 } from '@/lib/error-handler';
 
 describe('error-handler', () => {
@@ -134,6 +138,107 @@ describe('error-handler', () => {
     it('returns false otherwise', () => {
       expect(isNetworkError(new Error('other'))).toBe(false);
       expect(isNetworkError(null)).toBe(false);
+    });
+  });
+
+  describe('formatValidationErrors', () => {
+    it('joins field-level errors into a multi-line string', () => {
+      const out = formatValidationErrors([
+        { field: 'clienteId', message: 'Cliente é obrigatório' },
+        { field: 'entrega.cep', message: 'CEP inválido' },
+      ]);
+      expect(out).toBe(
+        'clienteId: Cliente é obrigatório\nentrega.cep: CEP inválido'
+      );
+    });
+
+    it('uses message alone when field is empty', () => {
+      expect(
+        formatValidationErrors([{ field: '', message: 'Algo deu errado' }])
+      ).toBe('Algo deu errado');
+    });
+
+    it('returns null for empty/non-array input', () => {
+      expect(formatValidationErrors([])).toBeNull();
+      expect(formatValidationErrors(null)).toBeNull();
+      expect(formatValidationErrors('not an array')).toBeNull();
+    });
+  });
+
+  describe('ApiError', () => {
+    it('captures status and details', () => {
+      const err = new ApiError('Algo falhou', 409, { saldo: 100 });
+      expect(err).toBeInstanceOf(Error);
+      expect(err.status).toBe(409);
+      expect(err.details).toEqual({ saldo: 100 });
+      expect(err.message).toBe('Algo falhou');
+    });
+  });
+
+  describe('parseApiResponse', () => {
+    const mkResponse = (
+      body: unknown,
+      init: { status?: number } = {}
+    ): Response =>
+      new Response(JSON.stringify(body), {
+        status: init.status ?? 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+    it('returns data on a successful response', async () => {
+      const response = mkResponse({ success: true, data: { id: 'abc' } });
+      const result = await parseApiResponse<{ id: string }>(response);
+      expect(result).toEqual({ id: 'abc' });
+    });
+
+    it('throws ApiError with the server message on success: false', async () => {
+      const response = mkResponse(
+        {
+          success: false,
+          error: 'Pedido tem saldo em aberto.',
+          details: { total: 100, totalPago: 60, saldo: 40 },
+        },
+        { status: 409 }
+      );
+      await expect(parseApiResponse(response)).rejects.toMatchObject({
+        message: 'Pedido tem saldo em aberto.',
+        status: 409,
+        details: { total: 100, totalPago: 60, saldo: 40 },
+      });
+    });
+
+    it('throws ApiError with status fallback for non-JSON failures', async () => {
+      const response = new Response('Internal Error', { status: 500 });
+      await expect(parseApiResponse(response)).rejects.toMatchObject({
+        status: 500,
+      });
+    });
+  });
+
+  describe('describeError', () => {
+    it('renders validation details list', () => {
+      const err = new ApiError('Validação falhou', 400, [
+        { field: 'clienteId', message: 'Obrigatório' },
+      ]);
+      expect(describeError(err)).toBe('clienteId: Obrigatório');
+    });
+
+    it('renders saldo breakdown for ENTREGUE gate', () => {
+      const err = new ApiError(
+        'Pedido tem saldo em aberto. Registre o pagamento antes de marcar como entregue.',
+        409,
+        { total: 831, totalPago: 0, saldo: 831 }
+      );
+      const desc = describeError(err);
+      expect(desc).toContain('Saldo em aberto');
+      expect(desc).toContain('R$');
+      expect(desc).toContain('831');
+    });
+
+    it('falls back to formatErrorMessage for plain errors', () => {
+      expect(describeError(new Error('Algo deu errado'))).toBe(
+        'Algo deu errado'
+      );
     });
   });
 });

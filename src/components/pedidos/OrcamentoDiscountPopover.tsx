@@ -14,7 +14,7 @@ import { Orcamento, DescontoTipo } from '@/types/pedido'
 import { formatPrice } from '@/lib/products'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
-import { formatErrorMessage } from '@/lib/error-handler'
+import { parseApiResponse, describeError } from '@/lib/error-handler'
 import { usePedidoOptional } from '@/contexts/PedidoContext'
 
 interface OrcamentoDiscountPopoverProps {
@@ -42,19 +42,17 @@ export function OrcamentoDiscountPopover({
   const handleSaveDiscounts = async () => {
     setSaving(true)
 
-    // Apply optimistic update
-    if (pedidoCtx) {
-      const newDescontoValor = descontoTipo === 'percentual' ? subtotal * (desconto / 100) : desconto
-      const newTotal = Math.max(0, subtotal - newDescontoValor + acrescimo)
-      pedidoCtx.optimisticUpdate((p) => ({
-        ...p,
-        orcamentos: p.orcamentos.map((o) =>
-          o.id === orcamento.id
-            ? { ...o, desconto, descontoTipo, acrescimo, subtotal, total: newTotal }
-            : o
-        ),
-      }))
-    }
+    // Apply optimistic update with handle (per-call rollback/commit)
+    const newDescontoValor = descontoTipo === 'percentual' ? subtotal * (desconto / 100) : desconto
+    const newTotal = Math.max(0, subtotal - newDescontoValor + acrescimo)
+    const handle = pedidoCtx?.optimisticUpdate((p) => ({
+      ...p,
+      orcamentos: p.orcamentos.map((o) =>
+        o.id === orcamento.id
+          ? { ...o, desconto, descontoTipo, acrescimo, subtotal, total: newTotal }
+          : o
+      ),
+    }))
 
     try {
       const response = await fetch(`/api/pedidos/${pedidoId}/orcamento/${orcamento.id}`, {
@@ -62,24 +60,20 @@ export function OrcamentoDiscountPopover({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ desconto, descontoTipo, acrescimo }),
       })
-      const result = await response.json()
-      if (!result.success) {
-        throw new Error(result.error || 'Erro ao salvar')
-      }
+      await parseApiResponse(response)
       toast.success('Desconto/acrescimo atualizado')
       setEditOpen(false)
 
+      handle?.commit()
       if (pedidoCtx) {
-        pedidoCtx.refreshPedido()
+        await pedidoCtx.refreshPedido()
       } else {
         onUpdate()
       }
     } catch (error) {
-      if (pedidoCtx) {
-        pedidoCtx.rollback()
-      }
+      handle?.rollback()
       toast.error('Erro ao salvar desconto/acrescimo', {
-        description: formatErrorMessage(error),
+        description: describeError(error),
       })
     } finally {
       setSaving(false)

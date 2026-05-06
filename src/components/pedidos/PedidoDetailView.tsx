@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { toast } from 'sonner'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Separator } from '@/components/ui/separator'
@@ -23,6 +24,13 @@ import {
 } from '@/types/pedido'
 import { Address } from '@/types/client'
 import { formatPrice } from '@/lib/products'
+import {
+  parseApiResponse,
+  describeError,
+  formatErrorMessage,
+  logError,
+} from '@/lib/error-handler'
+import { usePedidoOptional } from '@/contexts/PedidoContext'
 import { PedidoStatusBadge } from './PedidoStatusBadge'
 import { PedidoStatusFlow } from './PedidoStatusFlow'
 import { OrcamentoManager } from './OrcamentoManager'
@@ -50,6 +58,7 @@ interface PedidoDetailViewProps {
 
 export function PedidoDetailView({ pedido, onUpdate }: PedidoDetailViewProps) {
   const activeOrcamento = pedido.orcamentos.find((o) => o.isAtivo)
+  const pedidoCtx = usePedidoOptional()
   const [clientAddresses, setClientAddresses] = useState<Address[]>([])
 
   // Fetch client addresses for EntregaSection
@@ -58,44 +67,64 @@ export function PedidoDetailView({ pedido, onUpdate }: PedidoDetailViewProps) {
     const loadClientAddresses = async () => {
       try {
         const response = await fetch(`/api/clients/${pedido.clienteId}`)
-        const data = await response.json()
-        if (data.success && data.data?.addresses) {
-          setClientAddresses(data.data.addresses)
+        const data = await parseApiResponse<{ addresses?: Address[] }>(response)
+        if (data?.addresses) {
+          setClientAddresses(data.addresses)
+        } else {
+          setClientAddresses([])
         }
       } catch (err) {
         console.error('Erro ao carregar endereços do cliente:', err)
+        logError('PedidoDetailView.loadClientAddresses', err)
+        toast.error('Erro ao carregar endereços do cliente', {
+          description: formatErrorMessage(err),
+        })
       }
     }
     loadClientAddresses()
   }, [pedido.clienteId])
 
   const handlePacotesChange = async (pacotes: PedidoPacote[]) => {
+    // Optimistically update via context so the children re-render immediately;
+    // capture the rollback handle to revert on failure.
+    const handle = pedidoCtx?.optimisticUpdate((p) => ({ ...p, pacotes }))
     try {
       const response = await fetch(`/api/pedidos/${pedido.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ pacotes }),
       })
-      const result = await response.json()
-      if (!result.success) throw new Error(result.error)
+      await parseApiResponse(response)
+      handle?.commit()
       onUpdate()
     } catch (err) {
-      console.error('Erro ao salvar embalagens:', err)
+      handle?.rollback()
+      logError('PedidoDetailView.handlePacotesChange', err)
+      toast.error('Erro ao salvar embalagens', {
+        description: describeError(err),
+      })
+      throw err
     }
   }
 
   const handleEntregaUpdate = async (entrega: PedidoEntrega) => {
+    // EntregaSection has already applied its own optimistic update against the
+    // context before calling us. We don't stack a second optimistic mutation —
+    // we just persist and re-throw so EntregaSection can rollback its handle.
     try {
       const response = await fetch(`/api/pedidos/${pedido.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ entrega }),
       })
-      const result = await response.json()
-      if (!result.success) throw new Error(result.error)
+      await parseApiResponse(response)
       onUpdate()
     } catch (err) {
-      console.error('Erro ao salvar entrega:', err)
+      logError('PedidoDetailView.handleEntregaUpdate', err)
+      toast.error('Erro ao salvar entrega', {
+        description: describeError(err),
+      })
+      throw err
     }
   }
 

@@ -13,9 +13,12 @@ import {
 import { CreditCard, Plus, CalendarCog } from 'lucide-react'
 import { toast } from 'sonner'
 import type { Pedido } from '@/types/pedido'
+import type { Timestamp } from 'firebase/firestore'
 import { calcularTotalPedido, roundCurrency } from '@/lib/payment-logic'
 import { formatPrice } from '@/lib/products'
+import { describeError, parseApiResponse } from '@/lib/error-handler'
 import { usePermissions } from '@/hooks/usePermissions'
+import { usePedidoOptional } from '@/contexts/PedidoContext'
 import { PaymentStatusBadge } from './pagamentos/PaymentStatusBadge'
 import { PaymentDialog } from './pagamentos/PaymentDialog'
 import { PaymentList } from './pagamentos/PaymentList'
@@ -64,6 +67,7 @@ export function PaymentSection({ pedido, onUpdate }: PaymentSectionProps) {
   const { canPerformAction } = usePermissions()
   const canDelete = canPerformAction('orders', 'delete')
   const canRegister = canPerformAction('orders', 'update')
+  const pedidoCtx = usePedidoOptional()
 
   const total = useMemo(() => calcularTotalPedido(pedido), [pedido])
   const totalPago = roundCurrency(pedido.totalPago ?? 0)
@@ -77,25 +81,37 @@ export function PaymentSection({ pedido, onUpdate }: PaymentSectionProps) {
   const handleSaveVencimento = async () => {
     if (!newVenc) return
     setSavingVenc(true)
+
+    // Optimistic UI: update dataVencimento immediately, rollback on failure.
+    const newDate = new Date(newVenc)
+    const optimisticVenc = {
+      toDate: () => newDate,
+      seconds: Math.floor(newDate.getTime() / 1000),
+      nanoseconds: 0,
+    } as unknown as Timestamp
+    const handle = pedidoCtx?.optimisticUpdate((p) => ({
+      ...p,
+      dataVencimento: optimisticVenc,
+    }))
+
     try {
       const res = await fetch(`/api/pedidos/${pedido.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          dataVencimento: new Date(newVenc).toISOString(),
+          dataVencimento: newDate.toISOString(),
         }),
       })
-      const json = await res.json()
-      if (!res.ok || !json.success) {
-        throw new Error(json.error ?? 'Erro ao atualizar vencimento')
-      }
+      await parseApiResponse(res)
+      handle?.commit()
       toast.success('Vencimento atualizado')
       setVencPopoverOpen(false)
       onUpdate()
     } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : 'Erro ao atualizar vencimento'
-      )
+      handle?.rollback()
+      toast.error('Erro ao salvar vencimento', {
+        description: describeError(err),
+      })
     } finally {
       setSavingVenc(false)
     }
