@@ -19,6 +19,14 @@ env:
     value: production
     availability:
       - RUNTIME
+  # Public domain for the customer-facing payment portal. Consumed by
+  # ShareOrderButton to emit pedidos.momentocake.com.br/<token> instead of
+  # the admin host. The /<token> rewrite is handled by middleware.ts.
+  - variable: NEXT_PUBLIC_PORTAL_DOMAIN
+    value: pedidos.momentocake.com.br
+    availability:
+      - BUILD
+      - RUNTIME
   # Firebase configuration - available at BUILD and RUNTIME for NEXT_PUBLIC_* vars
   - variable: NEXT_PUBLIC_ENVIRONMENT
     secret: NEXT_PUBLIC_ENVIRONMENT
