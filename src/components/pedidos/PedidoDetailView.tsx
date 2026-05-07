@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { toast } from 'sonner'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -192,7 +193,16 @@ export function PedidoDetailView({ pedido, onUpdate }: PedidoDetailViewProps) {
               <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
                 <span className="flex items-center gap-1">
                   <UserCheck className="h-4 w-4" />
-                  {pedido.clienteNome}
+                  {pedido.clienteId ? (
+                    <Link
+                      href={`/clients/${pedido.clienteId}`}
+                      className="hover:text-foreground hover:underline underline-offset-2 transition-colors"
+                    >
+                      {pedido.clienteNome}
+                    </Link>
+                  ) : (
+                    pedido.clienteNome
+                  )}
                   {pedido.clienteTelefone && (
                     <span className="ml-1">- {pedido.clienteTelefone}</span>
                   )}
