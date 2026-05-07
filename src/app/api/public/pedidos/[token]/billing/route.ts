@@ -4,6 +4,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { billingSchema } from '@/lib/validators/billing';
 import { encryptPii } from '@/lib/billing-encryption';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
+import { formatErrorMessage, logError } from '@/lib/error-handler';
 
 const PEDIDOS_COLLECTION = 'pedidos';
 
@@ -123,9 +124,9 @@ export async function PATCH(
       data: { billing },
     });
   } catch (error) {
-    console.error('❌ Erro ao salvar billing público:', error);
+    logError('PUBLIC_PEDIDO_BILLING_PATCH', error);
     return NextResponse.json(
-      { success: false, error: 'Erro interno do servidor' },
+      { success: false, error: formatErrorMessage(error) },
       { status: 500 },
     );
   }

@@ -2,7 +2,13 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { Loader2, Copy, Check, AlertCircle, RefreshCw, Hourglass } from 'lucide-react'
+import { toast } from 'sonner'
 import type { NormalizedChargeStatus } from '@/lib/payments/types'
+import {
+  describeError,
+  logError,
+  parseApiResponse,
+} from '@/lib/error-handler'
 
 const fontBody = { fontFamily: 'var(--font-dm-sans), system-ui, sans-serif' }
 const fontHeading = { fontFamily: 'var(--font-playfair), Georgia, serif' }
@@ -104,6 +110,8 @@ export function PublicPixCharge({
   })
   const [creating, setCreating] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Surfaced when the 30-minute polling cap is reached without confirmation.
+  const [pollExpiredError, setPollExpiredError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const [now, setNow] = useState(() => Date.now())
   const onPaidCalledRef = useRef(false)
@@ -144,6 +152,7 @@ export function PublicPixCharge({
     if (cancelledRef.current) return
     setCreating(true)
     setError(null)
+    setPollExpiredError(null)
     try {
       const response = await fetch(
         `/api/public/pedidos/${token}/charge/pix`,
@@ -151,15 +160,19 @@ export function PublicPixCharge({
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({}),
+          signal: AbortSignal.timeout(15000),
         },
       )
-      const json = await response.json().catch(() => ({}))
+      const data = await parseApiResponse<{
+        paymentSession?: {
+          pixQrCodeBase64?: string
+          pixCopyPaste?: string
+          expiresAt?: string
+          status: NormalizedChargeStatus
+        }
+      }>(response)
       if (cancelledRef.current) return
-      if (!response.ok || !json?.success) {
-        setError(json?.error || 'Não foi possível gerar o código PIX.')
-        return
-      }
-      const ps = json.data?.paymentSession
+      const ps = data?.paymentSession
       if (!ps) {
         setError('Resposta inválida do servidor.')
         return
@@ -168,12 +181,21 @@ export function PublicPixCharge({
         qrCodeBase64: ps.pixQrCodeBase64,
         copyPaste: ps.pixCopyPaste,
         expiresAt: ps.expiresAt,
-        status: ps.status as NormalizedChargeStatus,
+        status: ps.status,
       })
-    } catch {
-      if (!cancelledRef.current) {
-        setError('Erro de conexão. Tente novamente.')
+    } catch (err) {
+      if (cancelledRef.current) return
+      logError('PublicPixCharge.createSession', err)
+      if (
+        err instanceof DOMException &&
+        (err.name === 'TimeoutError' || err.name === 'AbortError')
+      ) {
+        setError(
+          'O pagamento demorou mais que o esperado. Por favor, tente novamente.',
+        )
+        return
       }
+      setError(describeError(err))
     } finally {
       if (!cancelledRef.current) setCreating(false)
     }
@@ -209,51 +231,58 @@ export function PublicPixCharge({
     const tick = async () => {
       if (cancelled) return
       const elapsed = Date.now() - (pollStartedAtRef.current ?? Date.now())
-      if (elapsed > POLL_MAX_DURATION_MS) return
+      if (elapsed > POLL_MAX_DURATION_MS) {
+        if (!cancelled) {
+          setPollExpiredError(
+            'Não recebemos confirmação do pagamento. O código PIX pode ter expirado — tente gerar um novo.',
+          )
+        }
+        return
+      }
       try {
         const response = await fetch(
           `/api/public/pedidos/${token}/payment-status`,
-          { method: 'GET' },
         )
-        const json = await response.json().catch(() => ({}))
+        const data = await parseApiResponse<{
+          status?: string
+          paymentSession?: {
+            status?: NormalizedChargeStatus
+            method?: string | null
+          } | null
+        }>(response)
         if (cancelled) return
-        if (response.ok && json?.success) {
-          const data = json.data
-          const psStatus: NormalizedChargeStatus | undefined =
-            data?.paymentSession?.status
-          if (
-            psStatus === 'CONFIRMED' ||
-            data?.status === 'CONFIRMADO'
-          ) {
-            if (!onPaidCalledRef.current) {
-              onPaidCalledRef.current = true
-              onPaid()
-            }
-            return
+        const psStatus = data?.paymentSession?.status
+        if (psStatus === 'CONFIRMED' || data?.status === 'CONFIRMADO') {
+          if (!onPaidCalledRef.current) {
+            onPaidCalledRef.current = true
+            onPaid()
           }
-          if (psStatus === 'EXPIRED' || psStatus === 'FAILED') {
-            setSession((prev) => (prev ? { ...prev, status: psStatus } : prev))
-            return
-          }
-          if (psStatus === 'PENDING_RISK_ANALYSIS') {
-            // Defensive: PIX rarely triggers risk analysis, but if Asaas
-            // reports it we swap the QR for the calmer "em análise" panel
-            // and keep polling.
-            setSession((prev) =>
-              prev && prev.status !== psStatus
-                ? { ...prev, status: psStatus }
-                : prev,
-            )
-          } else if (psStatus === 'PENDING') {
-            setSession((prev) =>
-              prev && prev.status !== psStatus
-                ? { ...prev, status: psStatus }
-                : prev,
-            )
-          }
+          return
         }
-      } catch {
-        // ignore transient network errors
+        if (psStatus === 'EXPIRED' || psStatus === 'FAILED') {
+          setSession((prev) => (prev ? { ...prev, status: psStatus } : prev))
+          return
+        }
+        if (psStatus === 'PENDING_RISK_ANALYSIS') {
+          // Defensive: PIX rarely triggers risk analysis, but if Asaas
+          // reports it we swap the QR for the calmer "em análise" panel
+          // and keep polling.
+          setSession((prev) =>
+            prev && prev.status !== psStatus
+              ? { ...prev, status: psStatus }
+              : prev,
+          )
+        } else if (psStatus === 'PENDING') {
+          setSession((prev) =>
+            prev && prev.status !== psStatus
+              ? { ...prev, status: psStatus }
+              : prev,
+          )
+        }
+      } catch (err) {
+        // Transient hiccups during a 3s poll loop must not spam the
+        // customer — log only.
+        logError('PublicPixCharge.poll', err)
       }
       if (!cancelled) {
         timer = window.setTimeout(tick, POLL_INTERVAL_MS)
@@ -274,13 +303,18 @@ export function PublicPixCharge({
       setCopied(true)
       window.setTimeout(() => setCopied(false), 2200)
     } catch {
-      // Fallback: do nothing fancy; user can long-press / select.
+      // Clipboard denied is a user-side concern (permissions, insecure
+      // context), not a server issue — surface a hint without polluting logs.
+      toast.error('Erro ao copiar código', {
+        description: 'Tente copiar manualmente o código abaixo.',
+      })
     }
   }
 
   const handleRegenerate = async () => {
     pollStartedAtRef.current = null
     onPaidCalledRef.current = false
+    setPollExpiredError(null)
     setSession(null)
     await createSession()
   }
@@ -362,6 +396,37 @@ export function PublicPixCharge({
               style={fontBody}
             >
               Tentar novamente
+            </button>
+          </div>
+        )}
+
+        {/* Polling cap reached — surfaced when 30 minutes elapsed without
+            confirmation. The customer may regenerate the code below. */}
+        {pollExpiredError && (
+          <div role="alert" className="space-y-3">
+            <div className="flex items-start gap-2.5 p-3 rounded-xl bg-amber-50/80 border border-amber-200">
+              <AlertCircle className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
+              <p className="text-[13px] text-amber-800" style={fontBody}>
+                {pollExpiredError}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleRegenerate}
+              disabled={creating}
+              className="confirm-btn w-full py-3.5 text-white rounded-2xl disabled:opacity-50 flex items-center justify-center gap-2 min-h-[48px]"
+              style={fontBody}
+            >
+              {creating ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <>
+                  <RefreshCw className="h-4 w-4" />
+                  <span className="text-sm font-semibold tracking-wide">
+                    Gerar novo código
+                  </span>
+                </>
+              )}
             </button>
           </div>
         )}

@@ -2,8 +2,15 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { Loader2, AlertCircle, Sparkles } from 'lucide-react'
+import { toast } from 'sonner'
 import { formatCardNumber } from '@/lib/masks'
 import type { BillingInfo, NormalizedChargeStatus } from '@/lib/payments/types'
+import {
+  ApiError,
+  describeError,
+  logError,
+  parseApiResponse,
+} from '@/lib/error-handler'
 
 const fontBody = { fontFamily: 'var(--font-dm-sans), system-ui, sans-serif' }
 const fontHeading = { fontFamily: 'var(--font-playfair), Georgia, serif' }
@@ -124,6 +131,10 @@ export function PublicCardCharge({
   const [submitting, setSubmitting] = useState(false)
   const [pendingPolling, setPendingPolling] = useState(initialPendingPolling)
   const [riskAnalysis, setRiskAnalysis] = useState(initialRiskAnalysis)
+  // Defensive flag: Stream P-API may set details.riskAnalysisStuck after ~10
+  // minutes of antifraud review. The flag may be absent (older API or unclear
+  // upstream data shape) — we only escalate when it's explicitly true.
+  const [riskAnalysisStuck, setRiskAnalysisStuck] = useState(false)
   const [topError, setTopError] = useState<string | null>(null)
 
   const onPaidCalledRef = useRef(false)
@@ -148,37 +159,58 @@ export function PublicCardCharge({
       try {
         const response = await fetch(
           `/api/public/pedidos/${token}/payment-status`,
-          { method: 'GET' },
         )
-        const json = await response.json().catch(() => ({}))
+        const data = await parseApiResponse<{
+          status?: string
+          paymentSession?: {
+            status?: NormalizedChargeStatus
+            method?: string | null
+          } | null
+          details?: { riskAnalysisStuck?: boolean } | null
+        }>(response)
         if (cancelled) return
-        if (response.ok && json?.success) {
-          const data = json.data
-          const psStatus: NormalizedChargeStatus | undefined =
-            data?.paymentSession?.status
-          if (psStatus === 'CONFIRMED' || data?.status === 'CONFIRMADO') {
-            if (!onPaidCalledRef.current) {
-              onPaidCalledRef.current = true
-              onPaid()
-            }
-            setPendingPolling(false)
-            setRiskAnalysis(false)
-            return
+        const psStatus = data?.paymentSession?.status
+        if (psStatus === 'CONFIRMED' || data?.status === 'CONFIRMADO') {
+          if (!onPaidCalledRef.current) {
+            onPaidCalledRef.current = true
+            onPaid()
           }
-          if (psStatus === 'FAILED') {
-            setPendingPolling(false)
-            setRiskAnalysis(false)
-            setTopError('Pagamento recusado. Tente outro cartão.')
-            return
-          }
-          if (psStatus === 'PENDING_RISK_ANALYSIS') {
-            setRiskAnalysis(true)
-          } else if (psStatus === 'PENDING') {
-            setRiskAnalysis(false)
-          }
+          setPendingPolling(false)
+          setRiskAnalysis(false)
+          setRiskAnalysisStuck(false)
+          return
         }
-      } catch {
-        // ignore transient errors
+        if (psStatus === 'FAILED') {
+          setPendingPolling(false)
+          setRiskAnalysis(false)
+          setRiskAnalysisStuck(false)
+          setTopError('Pagamento recusado. Tente outro cartão.')
+          return
+        }
+        if (psStatus === 'PENDING_RISK_ANALYSIS') {
+          setRiskAnalysis(true)
+        } else if (psStatus === 'PENDING') {
+          setRiskAnalysis(false)
+          setRiskAnalysisStuck(false)
+        }
+        // Defensive: only escalate when the API explicitly flags the
+        // analysis as stuck. If the field is missing (older API or
+        // ambiguous upstream payload) we leave the calmer message in
+        // place.
+        const stuck =
+          data && typeof data === 'object' && data.details
+            ? Boolean(
+                (data.details as { riskAnalysisStuck?: unknown })
+                  .riskAnalysisStuck,
+              )
+            : false
+        if (stuck) {
+          setRiskAnalysisStuck(true)
+        }
+      } catch (err) {
+        // Transient hiccups during a 3s poll loop must not spam the
+        // customer — log only.
+        logError('PublicCardCharge.poll', err)
       }
       if (!cancelled) {
         timer = window.setTimeout(tick, POLL_INTERVAL_MS)
@@ -227,36 +259,15 @@ export function PublicCardCharge({
               cvv,
             },
           }),
+          signal: AbortSignal.timeout(15000),
         },
       )
-      const json = await response.json().catch(() => ({}))
+      const data = await parseApiResponse<{
+        immediatelyConfirmed?: boolean
+        paymentSession?: { status?: NormalizedChargeStatus }
+      }>(response)
 
-      if (response.status === 402 || json?.error === 'CARD_DECLINED') {
-        setTopError(
-          json?.error && typeof json.error === 'string' && json.error !== 'CARD_DECLINED'
-            ? json.error
-            : 'Pagamento recusado pela operadora. Verifique os dados ou use outro cartão.',
-        )
-        return
-      }
-
-      if (!response.ok || !json?.success) {
-        if (json?.details && typeof json.details === 'object') {
-          const detailErrors: CardFieldErrors = {}
-          for (const [key, msg] of Object.entries(json.details)) {
-            if (typeof msg === 'string') {
-              detailErrors[key as keyof CardFieldErrors] = msg
-            }
-          }
-          if (Object.keys(detailErrors).length > 0) {
-            setErrors(detailErrors)
-          }
-        }
-        setTopError(json?.error || 'Não foi possível processar o pagamento.')
-        return
-      }
-
-      if (json.data?.immediatelyConfirmed) {
+      if (data?.immediatelyConfirmed) {
         if (!onPaidCalledRef.current) {
           onPaidCalledRef.current = true
           onPaid()
@@ -266,12 +277,94 @@ export function PublicCardCharge({
 
       // Pending status -> start polling
       const psStatus: NormalizedChargeStatus | undefined =
-        json.data?.paymentSession?.status
+        data?.paymentSession?.status
       if (psStatus === 'PENDING_RISK_ANALYSIS') {
         setRiskAnalysis(true)
       }
       setPendingPolling(true)
-    } catch {
+    } catch (err) {
+      logError('PublicCardCharge.submit', err)
+
+      // Distinguish AbortSignal.timeout firing from generic network failures.
+      if (
+        err instanceof DOMException &&
+        (err.name === 'TimeoutError' || err.name === 'AbortError')
+      ) {
+        setTopError(
+          'O pagamento demorou mais que o esperado. Por favor, tente novamente.',
+        )
+        return
+      }
+
+      // Stream P-API returns 402 for any card decline. Always surface the
+      // friendly Portuguese summary as the topError; if the API also returned
+      // structured details ({ code, providerMessage }) we append them in the
+      // toast for additional context.
+      if (err instanceof ApiError && err.status === 402) {
+        const friendly =
+          'Pagamento recusado pela operadora. Verifique os dados ou use outro cartão.'
+        let reason: string | null = null
+        if (err.details && typeof err.details === 'object') {
+          const det = err.details as {
+            code?: unknown
+            providerMessage?: unknown
+          }
+          if (typeof det.providerMessage === 'string' && det.providerMessage) {
+            reason = det.providerMessage
+          } else if (typeof det.code === 'string' && det.code) {
+            reason = det.code
+          }
+        }
+        const description = reason
+          ? `${friendly}\nMotivo: ${reason}`
+          : friendly
+        setTopError(friendly)
+        toast.error('Pagamento recusado', { description })
+        return
+      }
+
+      // Validation errors come back as a Zod array of {field, message} on the
+      // standard ApiError.details payload. Map the recognized fields to the
+      // per-field error UI; the top-level message stays in `topError`.
+      if (err instanceof ApiError) {
+        if (Array.isArray(err.details)) {
+          const detailErrors: CardFieldErrors = {}
+          for (const entry of err.details) {
+            if (
+              entry &&
+              typeof entry === 'object' &&
+              typeof (entry as { field?: unknown }).field === 'string' &&
+              typeof (entry as { message?: unknown }).message === 'string'
+            ) {
+              const field = (entry as { field: string })
+                .field as keyof CardFieldErrors
+              const message = (entry as { message: string }).message
+              if (field && !detailErrors[field]) detailErrors[field] = message
+            }
+          }
+          if (Object.keys(detailErrors).length > 0) {
+            setErrors(detailErrors)
+          }
+        } else if (err.details && typeof err.details === 'object') {
+          const detailErrors: CardFieldErrors = {}
+          for (const [key, msg] of Object.entries(
+            err.details as Record<string, unknown>,
+          )) {
+            if (typeof msg === 'string') {
+              detailErrors[key as keyof CardFieldErrors] = msg
+            }
+          }
+          if (Object.keys(detailErrors).length > 0) {
+            setErrors(detailErrors)
+          }
+        }
+        setTopError(err.message || 'Não foi possível processar o pagamento.')
+        return
+      }
+
+      // Non-ApiError reaching here is almost always a connectivity failure
+      // (fetch rejected with TypeError, DNS, etc.). Show the standard pt-BR
+      // connectivity message instead of a raw error.message.
       setTopError('Erro de conexão. Tente novamente.')
     } finally {
       setSubmitting(false)
@@ -329,9 +422,9 @@ export function PublicCardCharge({
             className="text-center text-[13px] text-[#7a6552] leading-relaxed px-2"
             style={fontBody}
           >
-            Estamos verificando seu cartão com o sistema antifraude. Isso pode
-            levar alguns minutos. Você pode fechar esta página — vamos te
-            avisar.
+            {riskAnalysisStuck
+              ? 'A análise antifraude está demorando mais que o usual. Você pode fechar esta página — vamos te avisar por WhatsApp ou e-mail assim que houver resposta.'
+              : 'Estamos verificando seu cartão com o sistema antifraude. Isso pode levar alguns minutos. Você pode fechar esta página — vamos te avisar.'}
           </p>
           <div
             className="flex items-center justify-center gap-2 pt-1"

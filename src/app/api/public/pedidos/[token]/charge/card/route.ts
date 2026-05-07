@@ -7,6 +7,8 @@ import { recordChargeConfirmation } from '@/lib/pedido-payment-record';
 import { createCardChargeSchema } from '@/lib/validators/charge';
 import { decryptPii } from '@/lib/billing-encryption';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
+import { formatErrorMessage, logError } from '@/lib/error-handler';
+import { PaymentProviderError } from '@/lib/payments/types';
 import type { PedidoBilling, WebhookEvent } from '@/lib/payments/types';
 
 const PEDIDOS_COLLECTION = 'pedidos';
@@ -174,23 +176,47 @@ export async function POST(
     const numeroPedido = (data.numeroPedido as string) || pedidoDoc.id;
     const remoteIp = getRemoteIp(request);
 
-    const result = await provider.createCardCharge(
-      {
-        pedidoId: pedidoDoc.id,
-        numeroPedido,
-        amount: amountDue,
-        description: `Pedido ${numeroPedido}`,
-        providerCustomerId: customer.providerCustomerId,
-        externalReference: pedidoDoc.id,
-      },
-      { ...validation.data.card, remoteIp },
-      {
-        nome: billing.nome,
-        cpfCnpj: cpfCnpjPlain,
-        email: billing.email,
-        telefone: billing.telefone,
-      },
-    );
+    let result;
+    try {
+      result = await provider.createCardCharge(
+        {
+          pedidoId: pedidoDoc.id,
+          numeroPedido,
+          amount: amountDue,
+          description: `Pedido ${numeroPedido}`,
+          providerCustomerId: customer.providerCustomerId,
+          externalReference: pedidoDoc.id,
+        },
+        { ...validation.data.card, remoteIp },
+        {
+          nome: billing.nome,
+          cpfCnpj: cpfCnpjPlain,
+          email: billing.email,
+          telefone: billing.telefone,
+        },
+      );
+    } catch (providerError) {
+      // Surface Asaas decline context (card declined, anti-fraud, invalid card,
+      // etc.) so the UI can render a specific message under the friendly
+      // Portuguese summary. We only classify when we have a recognizable
+      // provider error; otherwise fall through to the outer 500 path.
+      if (providerError instanceof PaymentProviderError) {
+        logError('PUBLIC_PEDIDO_CARD_POST', providerError);
+        return NextResponse.json(
+          {
+            success: false,
+            error:
+              'Não foi possível processar o pagamento no cartão. Verifique os dados do cartão e tente novamente.',
+            details: {
+              code: providerError.code,
+              providerMessage: providerError.message ?? '',
+            },
+          },
+          { status: 402 },
+        );
+      }
+      throw providerError;
+    }
 
     const paymentSession = {
       provider: provider.name,
@@ -239,11 +265,9 @@ export async function POST(
       },
     });
   } catch (error) {
-    console.error('❌ Erro ao gerar cobrança no cartão:', error);
-    const message =
-      error instanceof Error ? error.message : 'Erro interno do servidor';
+    logError('PUBLIC_PEDIDO_CARD_POST', error);
     return NextResponse.json(
-      { success: false, error: message },
+      { success: false, error: formatErrorMessage(error) },
       { status: 500 },
     );
   }

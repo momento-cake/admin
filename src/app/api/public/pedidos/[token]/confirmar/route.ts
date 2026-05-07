@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
+import { formatErrorMessage, logError } from '@/lib/error-handler';
 
 const PEDIDOS_COLLECTION = 'pedidos';
 
@@ -173,9 +174,9 @@ export async function POST(
 
     return NextResponse.json({ success: true, data: publicPedido });
   } catch (error) {
-    console.error('Erro ao confirmar pedido público:', error);
+    logError('PUBLIC_PEDIDO_CONFIRMAR_POST', error);
     return NextResponse.json(
-      { success: false, error: 'Erro interno do servidor' },
+      { success: false, error: formatErrorMessage(error) },
       { status: 500 }
     );
   }

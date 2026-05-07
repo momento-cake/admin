@@ -5,6 +5,8 @@ import { getPaymentProvider } from '@/lib/payments/registry';
 import { roundCurrency } from '@/lib/payment-logic';
 import { decryptPii } from '@/lib/billing-encryption';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
+import { formatErrorMessage, logError } from '@/lib/error-handler';
+import { PaymentProviderError } from '@/lib/payments/types';
 import type { PedidoBilling } from '@/lib/payments/types';
 
 const PEDIDOS_COLLECTION = 'pedidos';
@@ -246,11 +248,30 @@ export async function POST(
       },
     });
   } catch (error) {
-    console.error('❌ Erro ao gerar cobrança PIX:', error);
-    const message =
-      error instanceof Error ? error.message : 'Erro interno do servidor';
+    // If the Asaas PIX charge call (which runs inside the transaction above)
+    // failed with a recognizable provider error, surface its `code` +
+    // `providerMessage` in `details` so the UI can render a specific message
+    // under the Portuguese summary. Otherwise fall through to the standard
+    // 500 path.
+    if (error instanceof PaymentProviderError) {
+      logError('PUBLIC_PEDIDO_PIX_POST', error);
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            'Não foi possível gerar a cobrança PIX. Tente novamente em instantes.',
+          details: {
+            code: error.code,
+            providerMessage: error.message ?? '',
+          },
+        },
+        { status: 402 },
+      );
+    }
+
+    logError('PUBLIC_PEDIDO_PIX_POST', error);
     return NextResponse.json(
-      { success: false, error: message },
+      { success: false, error: formatErrorMessage(error) },
       { status: 500 },
     );
   }
