@@ -5,6 +5,12 @@ import { useParams } from 'next/navigation'
 import { Loader2, Sparkles } from 'lucide-react'
 import { PublicPedidoView } from '@/components/public/PublicPedidoView'
 import type { PublicPedidoData } from '@/components/public/PublicPedidoView'
+import {
+  ApiError,
+  formatErrorMessage,
+  logError,
+  parseApiResponse,
+} from '@/lib/error-handler'
 
 const fontHeading = { fontFamily: 'var(--font-playfair), Georgia, serif' }
 const fontBody = { fontFamily: 'var(--font-dm-sans), system-ui, sans-serif' }
@@ -20,23 +26,21 @@ export default function PublicPedidoPage() {
   const fetchPedido = React.useCallback(async () => {
     try {
       const response = await fetch(`/api/public/pedidos/${token}`)
-      const json = await response.json()
-
-      if (!response.ok || !json.success) {
-        if (response.status === 404) {
+      const data = await parseApiResponse<PublicPedidoData>(response)
+      setPedido(data)
+    } catch (err) {
+      logError('PublicPedidoPage.fetch', err)
+      if (err instanceof ApiError) {
+        if (err.status === 404) {
           setError('Pedido não encontrado')
-        } else if (response.status === 403) {
+        } else if (err.status === 403) {
           setError('Este pedido não está disponível para visualização')
         } else {
-          setError(json.error || 'Erro ao carregar pedido')
+          setError(err.message || 'Erro ao carregar pedido')
         }
-        return
+      } else {
+        setError(formatErrorMessage(err) || 'Erro ao carregar pedido')
       }
-
-      setPedido(json.data)
-    } catch (err) {
-      console.error('Error loading public pedido:', err)
-      setError('Erro ao carregar pedido')
     } finally {
       setIsLoading(false)
     }

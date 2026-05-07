@@ -6,6 +6,11 @@ import { PublicEntregaToggle } from './PublicEntregaToggle'
 import { PublicCheckoutFlow, type PublicBillingData, type PublicPaymentSessionData } from './PublicCheckoutFlow'
 import { ArrowRight, Loader2, Calendar, Sparkles, MessageSquare, Package } from 'lucide-react'
 import { toast } from 'sonner'
+import {
+  describeError,
+  logError,
+  parseApiResponse,
+} from '@/lib/error-handler'
 
 // Types for the public API response (filtered data)
 export interface PublicPedidoItem {
@@ -192,21 +197,18 @@ export function PublicPedidoView({ pedido, token, onPedidoUpdate }: PublicPedido
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       })
-
-      const json = await response.json()
-
-      if (!response.ok || !json.success) {
-        toast.error(json.error || 'Erro ao confirmar pedido')
-        return
-      }
+      const data = await parseApiResponse<PublicPedidoData>(response)
 
       setShowConfetti(true)
       toast.success('Pedido confirmado! Vamos para o pagamento.')
-      onPedidoUpdate(json.data)
+      onPedidoUpdate(data)
 
       setTimeout(() => setShowConfetti(false), 4000)
-    } catch {
-      toast.error('Erro ao confirmar pedido. Tente novamente.')
+    } catch (err) {
+      logError('PublicPedidoView.handleConfirm', err)
+      toast.error('Erro ao confirmar pedido', {
+        description: describeError(err),
+      })
     } finally {
       setIsConfirming(false)
       confirmingRef.current = false

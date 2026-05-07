@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase-admin';
+import { formatErrorMessage, logError } from '@/lib/error-handler';
 import type { PedidoStatus } from '@/types/pedido';
 
 const PEDIDOS_COLLECTION = 'pedidos';
@@ -157,9 +158,9 @@ export async function GET(
 
     return NextResponse.json({ success: true, data: publicPedido });
   } catch (error) {
-    console.error('Erro ao buscar pedido público:', error);
+    logError('PUBLIC_PEDIDO_GET', error);
     return NextResponse.json(
-      { success: false, error: 'Erro interno do servidor' },
+      { success: false, error: formatErrorMessage(error) },
       { status: 500 }
     );
   }

@@ -4,6 +4,12 @@ import { useState } from 'react'
 import { Loader2, AlertCircle, ArrowRight } from 'lucide-react'
 import { formatCpfCnpj, formatPhone } from '@/lib/masks'
 import { billingSchema } from '@/lib/validators/billing'
+import {
+  ApiError,
+  describeError,
+  logError,
+  parseApiResponse,
+} from '@/lib/error-handler'
 
 const fontBody = { fontFamily: 'var(--font-dm-sans), system-ui, sans-serif' }
 const fontHeading = { fontFamily: 'var(--font-playfair), Georgia, serif' }
@@ -117,11 +123,40 @@ export function PublicBillingForm({
           }),
         },
       )
-      const json = await response.json().catch(() => ({}))
-      if (!response.ok || !json?.success) {
-        if (json?.details && typeof json.details === 'object') {
+      const data = await parseApiResponse<{ billing: ConfirmedBilling }>(
+        response,
+      )
+      onConfirmed(data.billing)
+    } catch (err) {
+      logError('PublicBillingForm.submit', err)
+      if (err instanceof ApiError) {
+        const details = err.details
+        // The billing API may return validation details either as a Zod array
+        // ([{ field, message }]) or as an object map ({ field: message }).
+        // Map both to the per-field error UI; otherwise fall back to a toast-
+        // style top message.
+        if (Array.isArray(details)) {
           const detailErrors: FieldErrors = {}
-          for (const [key, msg] of Object.entries(json.details)) {
+          for (const entry of details) {
+            if (
+              entry &&
+              typeof entry === 'object' &&
+              typeof (entry as { field?: unknown }).field === 'string' &&
+              typeof (entry as { message?: unknown }).message === 'string'
+            ) {
+              const field = (entry as { field: string }).field as keyof FieldErrors
+              const message = (entry as { message: string }).message
+              if (field && !detailErrors[field]) detailErrors[field] = message
+            }
+          }
+          if (Object.keys(detailErrors).length > 0) {
+            setErrors(detailErrors)
+          }
+        } else if (details && typeof details === 'object') {
+          const detailErrors: FieldErrors = {}
+          for (const [key, msg] of Object.entries(
+            details as Record<string, unknown>,
+          )) {
             if (typeof msg === 'string') {
               detailErrors[key as keyof FieldErrors] = msg
             }
@@ -130,12 +165,18 @@ export function PublicBillingForm({
             setErrors(detailErrors)
           }
         }
-        setTopError(json?.error || 'Não foi possível salvar os dados de cobrança.')
-        return
+        setTopError(
+          err.message || 'Não foi possível salvar os dados de cobrança.',
+        )
+      } else {
+        // Non-ApiError reaching here is almost always a connectivity failure
+        // (fetch rejected with TypeError, DNS, AbortSignal timeout, etc.).
+        // Show the standard pt-BR connectivity message instead of a raw
+        // error.message, which is rarely user-friendly.
+        setTopError(
+          'Erro de conexão. Verifique sua internet e tente novamente.',
+        )
       }
-      onConfirmed(json.data.billing as ConfirmedBilling)
-    } catch {
-      setTopError('Erro de conexão. Verifique sua internet e tente novamente.')
     } finally {
       setSubmitting(false)
     }
