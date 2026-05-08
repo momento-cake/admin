@@ -70,6 +70,11 @@ screenshots/
 *.mp4
 *.trace.zip
 
+# Brand and static asset exceptions: anything under public/ is part of the
+# shipped app and must always be tracked, even if its extension matches the
+# screenshot rules above.
+!public/**
+
 # test scripts (keep only essential tests)
 tests/*-manual-*.spec.ts
 tests/*-debug*.spec.ts
