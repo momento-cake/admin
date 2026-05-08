@@ -5,6 +5,7 @@ import { Loader2, AlertCircle, Sparkles } from 'lucide-react'
 import { toast } from 'sonner'
 import { formatCardNumber } from '@/lib/masks'
 import type { BillingInfo, NormalizedChargeStatus } from '@/lib/payments/types'
+import { BrandLogo } from './brand/BrandLogo'
 import {
   ApiError,
   describeError,
@@ -12,8 +13,8 @@ import {
   parseApiResponse,
 } from '@/lib/error-handler'
 
-const fontBody = { fontFamily: 'var(--font-dm-sans), system-ui, sans-serif' }
-const fontHeading = { fontFamily: 'var(--font-playfair), Georgia, serif' }
+const fontBody = { fontFamily: 'var(--font-montserrat), system-ui, sans-serif' }
+const fontHeading = { fontFamily: 'var(--font-cormorant), Georgia, serif' }
 
 const POLL_INTERVAL_MS = 3000
 const POLL_MAX_DURATION_MS = 30 * 60 * 1000
@@ -83,22 +84,22 @@ function validateCardLocal(input: {
   return errors
 }
 
-function CardCrest({ caption, monogram }: { caption: string; monogram: string }) {
+function CardCrest({ caption }: { caption: string }) {
   return (
     <div className="flex flex-col items-center text-center pt-7 pb-4 px-6">
       <div className="relative">
-        <div className="w-12 h-12 rounded-full border border-[#d4c4a8]/50 flex items-center justify-center bg-gradient-to-b from-[#fffdf8] to-[#faf3e6] shadow-[0_2px_8px_-2px_rgba(184,149,106,0.25)]">
-          <span
-            className="text-[#8b7355] text-lg leading-none"
-            style={{ ...fontHeading, fontWeight: 600 }}
-          >
-            {monogram}
-          </span>
+        <div className="w-14 h-14 rounded-full border border-[#C9A96E]/45 flex items-center justify-center bg-gradient-to-b from-[#FFFDF8] to-[#F5EDE4] shadow-[0_2px_10px_-2px_rgba(201,169,110,0.25)]">
+          <BrandLogo
+            variant="monogram"
+            width={32}
+            color="#C9A96E"
+            ariaLabel="Momento Cake"
+          />
         </div>
-        <div className="absolute -right-1 -top-1 w-2.5 h-2.5 rounded-full bg-[#e8c87a] shadow-[0_0_0_2px_#fff]" />
+        <div className="absolute -right-1 -top-1 w-2.5 h-2.5 rounded-full bg-[#C9A96E] shadow-[0_0_0_2px_#fff]" />
       </div>
       <p
-        className="mt-3 text-[10px] text-[#a89b8a] tracking-[0.32em] uppercase"
+        className="mt-3 text-[10px] text-[#8B6F4E] tracking-[0.32em] uppercase"
         style={fontBody}
       >
         {caption}
@@ -384,7 +385,7 @@ export function PublicCardCharge({
       className="premium-card overflow-hidden animate-page-turn"
       noValidate
     >
-      <CardCrest caption="Cartão de Crédito" monogram="✦" />
+      <CardCrest caption="Cartão de Crédito" />
 
       <div className="px-6">
         <h3
@@ -455,38 +456,40 @@ export function PublicCardCharge({
 
       {!riskAnalysis && (
       <>
-      {/* Card visual preview — gives the form a tactile anchor */}
+      {/* Card visual preview — gives the form a tactile anchor. Gradient
+          uses the brand cream + gold pair (#F5EDE4 → #C9A96E) for the same
+          warm finish as the live brand site. */}
       <div className="px-6 mt-5">
         <div
-          className="relative w-full h-32 rounded-2xl overflow-hidden border border-[#d4c4a8]/40 shadow-[0_4px_16px_-6px_rgba(45,35,25,0.18)]"
+          className="relative w-full h-32 rounded-2xl overflow-hidden border border-[#C9A96E]/40 shadow-[0_4px_18px_-6px_rgba(44,24,16,0.18)]"
           style={{
             background:
-              'linear-gradient(135deg, #faf3e6 0%, #f5e9d2 35%, #e8c87a 100%)',
+              'linear-gradient(135deg, #FBF8F4 0%, #F5EDE4 35%, #C9A96E 100%)',
           }}
           aria-hidden="true"
         >
           {/* subtle grain */}
           <div className="absolute inset-0 paper-grain opacity-60" />
-          {/* gold disc */}
-          <div className="absolute top-4 left-5 w-9 h-7 rounded-md bg-gradient-to-br from-[#e8c87a] to-[#b8956a] border border-[#a68559]/40 shadow-inner" />
-          {/* brand mark */}
-          <div className="absolute top-4 right-5 text-[#5c4a2e]/70 text-base tracking-widest font-semibold" style={fontHeading}>
+          {/* gold disc (chip placeholder) */}
+          <div className="absolute top-4 left-5 w-9 h-7 rounded-md bg-gradient-to-br from-[#D4B97A] to-[#B8965A] border border-[#8B6F4E]/40 shadow-inner" />
+          {/* brand mark — Visa/Master/Amex hint or brand monogram fallback */}
+          <div className="absolute top-4 right-5 text-[#2C1810]/75 text-base tracking-widest font-semibold" style={fontHeading}>
             {brandLetter}
           </div>
           <div
-            className="absolute bottom-9 left-5 right-5 text-[#5c4a2e] tracking-[0.28em] tabular-nums text-sm"
+            className="absolute bottom-9 left-5 right-5 text-[#2C1810] tracking-[0.28em] tabular-nums text-sm"
             style={fontBody}
           >
             •••• •••• •••• {lastFour ? lastFour.padStart(4, '•') : '••••'}
           </div>
           <div
-            className="absolute bottom-3 left-5 text-[10px] text-[#5c4a2e]/70 tracking-[0.2em] uppercase truncate max-w-[60%]"
+            className="absolute bottom-3 left-5 text-[10px] text-[#2C1810]/70 tracking-[0.2em] uppercase truncate max-w-[60%]"
             style={fontBody}
           >
             {holderName || 'Nome no cartão'}
           </div>
           <div
-            className="absolute bottom-3 right-5 text-[10px] text-[#5c4a2e]/70 tracking-[0.2em] tabular-nums"
+            className="absolute bottom-3 right-5 text-[10px] text-[#2C1810]/70 tracking-[0.2em] tabular-nums"
             style={fontBody}
           >
             {expiryMonth || 'MM'}/{expiryYear ? expiryYear.slice(-2) : 'AA'}

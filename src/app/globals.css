@@ -419,23 +419,38 @@
 .stagger-6 { animation-delay: 0.3s; }
 .stagger-7 { animation-delay: 0.35s; }
 
-/* ── Public Portal Styles ── */
+/* ── Public Portal Styles ──
+ *
+ * Palette is locked to the live momentocake.com.br brand tokens (extracted
+ * from the public stylesheet at /_next/static/css/57450acf24078119.css):
+ *   --color-primary        #2C1810   (cocoa, deep brown text)
+ *   --color-secondary      #C9A96E   (signature brand gold)
+ *   --color-secondary-hover #B8965A  (darker gold for press / hover)
+ *   --color-accent         #8B6F4E   (warm bronze)
+ *   --color-background     #FBF8F4   (cream)
+ *   --color-surface        #F5EDE4   (lifted cream surface)
+ *   --color-text           #1A1A1A
+ *   --color-text-muted     #6B5B4E
+ *   --color-gold-glow      rgba(201,169,110,0.30)
+ *   --shadow-warm          0 4px 20px rgba(44,24,16,0.08)
+ */
 
-/* Linen texture background */
+/* Linen texture background — cream base + a faint gold weave */
 .linen-bg {
-  background-color: #faf7f2;
-  background-image: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23d4c4a8' fill-opacity='0.06'%3E%3Cpath d='M0 0h1v1H0zM4 4h1v1H4zM8 0h1v1H8zM12 4h1v1h-1zM16 0h1v1h-1zM20 4h1v1h-1zM24 0h1v1h-1zM28 4h1v1h-1zM32 0h1v1h-1zM36 4h1v1h-1zM2 2h1v1H2zM6 6h1v1H6zM10 2h1v1h-1zM14 6h1v1h-1zM18 2h1v1h-1zM22 6h1v1h-1zM26 2h1v1h-1zM30 6h1v1h-1zM34 2h1v1h-1zM38 6h1v1h-1zM0 8h1v1H0zM4 12h1v1H4zM8 8h1v1H8zM12 12h1v1h-1zM16 8h1v1h-1zM20 12h1v1h-1zM24 8h1v1h-1zM28 12h1v1h-1zM32 8h1v1h-1zM36 12h1v1h-1zM2 10h1v1H2zM6 14h1v1H6zM10 10h1v1h-1zM14 14h1v1h-1zM18 10h1v1h-1zM22 14h1v1h-1zM26 10h1v1h-1zM30 14h1v1h-1zM34 10h1v1h-1zM38 14h1v1h-1z'/%3E%3C/g%3E%3C/svg%3E");
+  background-color: #FBF8F4;
+  background-image: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23C9A96E' fill-opacity='0.06'%3E%3Cpath d='M0 0h1v1H0zM4 4h1v1H4zM8 0h1v1H8zM12 4h1v1h-1zM16 0h1v1h-1zM20 4h1v1h-1zM24 0h1v1h-1zM28 4h1v1h-1zM32 0h1v1h-1zM36 4h1v1h-1zM2 2h1v1H2zM6 6h1v1H6zM10 2h1v1h-1zM14 6h1v1h-1zM18 2h1v1h-1zM22 6h1v1h-1zM26 2h1v1h-1zM30 6h1v1h-1zM34 2h1v1h-1zM38 6h1v1h-1zM0 8h1v1H0zM4 12h1v1H4zM8 8h1v1H8zM12 12h1v1h-1zM16 8h1v1h-1zM20 12h1v1h-1zM24 8h1v1h-1zM28 12h1v1h-1zM32 8h1v1h-1zM36 12h1v1h-1zM2 10h1v1H2zM6 14h1v1H6zM10 10h1v1h-1zM14 14h1v1h-1zM18 10h1v1h-1zM22 14h1v1h-1zM26 10h1v1h-1zM30 14h1v1h-1zM34 10h1v1h-1zM38 14h1v1h-1z'/%3E%3C/g%3E%3C/svg%3E");
 }
 
-/* Gold shimmer text effect */
+/* Gold shimmer text effect — anchored on the brand gold #C9A96E with
+   warmer/cooler highlights. */
 .gold-shimmer {
   background: linear-gradient(
     90deg,
-    #b8956a 0%,
-    #e8c87a 25%,
-    #d4a574 50%,
-    #e8c87a 75%,
-    #b8956a 100%
+    #B8965A 0%,
+    #E8D4A6 25%,
+    #C9A96E 50%,
+    #E8D4A6 75%,
+    #B8965A 100%
   );
   background-size: 200% auto;
   -webkit-background-clip: text;
@@ -444,37 +459,40 @@
   animation: shimmerGold 3s linear infinite;
 }
 
-/* Premium card with warm shadow */
+/* Premium card — uses --shadow-warm directly from the brand site so each
+   surface lifts off the cream background with the same softness as
+   momentocake.com.br. */
 .premium-card {
   background: #ffffff;
-  border: 1px solid rgba(212, 196, 168, 0.3);
+  border: 1px solid rgba(201, 169, 110, 0.22);
   box-shadow:
-    0 1px 3px rgba(45, 35, 25, 0.04),
-    0 4px 12px rgba(45, 35, 25, 0.03);
+    0 1px 3px rgba(44, 24, 16, 0.05),
+    0 4px 20px rgba(44, 24, 16, 0.06);
   border-radius: 16px;
 }
 
-/* Confirm button with gold gradient and glow */
+/* Confirm button — solid brand gold (with a tighter highlight at the top)
+   to match the primary CTA on the brand site. */
 .confirm-btn {
-  background: linear-gradient(135deg, #b8956a 0%, #c9a96e 50%, #d4a574 100%);
+  background: linear-gradient(135deg, #B8965A 0%, #C9A96E 55%, #D4B97A 100%);
   box-shadow:
-    0 2px 8px rgba(184, 149, 106, 0.3),
-    0 0 0 0 rgba(184, 149, 106, 0);
+    0 2px 8px rgba(201, 169, 110, 0.32),
+    0 0 0 0 rgba(201, 169, 110, 0);
   transition: all 0.3s ease;
 }
 
 .confirm-btn:hover:not(:disabled) {
   box-shadow:
-    0 4px 16px rgba(184, 149, 106, 0.4),
-    0 0 0 4px rgba(184, 149, 106, 0.1);
+    0 4px 20px rgba(201, 169, 110, 0.42),
+    0 0 0 4px rgba(201, 169, 110, 0.12);
   transform: translateY(-1px);
 }
 
 .confirm-btn:active:not(:disabled) {
   transform: translateY(0);
   box-shadow:
-    0 1px 4px rgba(184, 149, 106, 0.3),
-    0 0 0 2px rgba(184, 149, 106, 0.15);
+    0 1px 4px rgba(201, 169, 110, 0.30),
+    0 0 0 2px rgba(201, 169, 110, 0.18);
 }
 
 /* ── Checkout polish — paper, ribbon, perforation, hourglass ── */
@@ -516,9 +534,9 @@
   padding: 18px 18px 36px;
   border-radius: 4px;
   box-shadow:
-    0 1px 2px rgba(45, 35, 25, 0.06),
-    0 12px 28px -12px rgba(45, 35, 25, 0.18),
-    0 22px 40px -28px rgba(184, 149, 106, 0.35);
+    0 1px 2px rgba(44, 24, 16, 0.06),
+    0 12px 28px -12px rgba(44, 24, 16, 0.16),
+    0 22px 40px -28px rgba(201, 169, 110, 0.40);
 }
 .qr-frame::before,
 .qr-frame::after {
@@ -526,7 +544,7 @@
   position: absolute;
   width: 12px;
   height: 12px;
-  border: 1px solid rgba(139, 115, 85, 0.35);
+  border: 1px solid rgba(139, 111, 78, 0.40);
 }
 .qr-frame::before {
   top: 6px;
@@ -552,11 +570,12 @@
   transform-origin: center;
 }
 
-/* Subtle ambient glow behind grand totals / amount pills */
+/* Subtle ambient glow behind grand totals / amount pills — uses the brand
+   --color-gold-glow value rgba(201,169,110,0.30) softened to taste. */
 .amount-glow {
   background:
-    radial-gradient(120% 120% at 50% 0%, rgba(232, 200, 122, 0.16), transparent 60%),
-    linear-gradient(180deg, #faf7f2, #ffffff);
+    radial-gradient(120% 120% at 50% 0%, rgba(201, 169, 110, 0.18), transparent 60%),
+    linear-gradient(180deg, #FBF8F4, #ffffff);
 }
 
 /* Ribbon underlining the submit button */
@@ -600,28 +619,29 @@
   animation: gentlePulse 1.8s ease-in-out infinite;
 }
 
-/* Floating-label friendly input — used by the checkout cards */
+/* Floating-label friendly input — used by the checkout cards. Border and
+   focus ring tints match the brand gold (#C9A96E). */
 .gilded-input {
   width: 100%;
   padding: 18px 14px 8px;
   font-size: 15px;
   background: #ffffff;
-  color: #2d2319;
-  border: 1px solid rgba(212, 196, 168, 0.55);
+  color: #2C1810;
+  border: 1px solid rgba(201, 169, 110, 0.45);
   border-radius: 12px;
   outline: none;
   transition: border-color 0.25s ease, box-shadow 0.25s ease, background-color 0.25s ease;
 }
 .gilded-input:focus {
-  border-color: rgba(184, 149, 106, 0.7);
+  border-color: rgba(201, 169, 110, 0.85);
   box-shadow:
-    0 0 0 3px rgba(232, 200, 122, 0.18),
-    inset 0 -2px 0 0 rgba(184, 149, 106, 0.5);
-  background: #fffefb;
+    0 0 0 3px rgba(201, 169, 110, 0.20),
+    inset 0 -2px 0 0 rgba(184, 150, 90, 0.55);
+  background: #FFFEFB;
 }
 .gilded-input:disabled {
-  background: #faf7f2;
-  color: #8b7e6e;
+  background: #FBF8F4;
+  color: #6B5B4E;
   cursor: not-allowed;
 }
 .gilded-input::placeholder {
@@ -637,7 +657,7 @@
   left: 14px;
   top: 14px;
   font-size: 14px;
-  color: #a89b8a;
+  color: #6B5B4E;
   pointer-events: none;
   transition: transform 0.2s ease, color 0.2s ease, font-size 0.2s ease;
   background: transparent;
@@ -648,12 +668,12 @@
 .gilded-input.is-filled + .gilded-label {
   transform: translateY(-10px);
   font-size: 11px;
-  color: #8b7355;
+  color: #8B6F4E;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 .gilded-input:focus + .gilded-label {
-  color: #b8956a;
+  color: #C9A96E;
 }
 
 /* Page-turn transition between checkout steps */

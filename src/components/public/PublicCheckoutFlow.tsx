@@ -10,7 +10,7 @@ import { PublicPaymentSuccess } from './PublicPaymentSuccess'
 import type { PublicPedidoData } from './PublicPedidoView'
 import type { NormalizedChargeStatus, PaymentMethod } from '@/lib/payments/types'
 
-const fontBody = { fontFamily: 'var(--font-dm-sans), system-ui, sans-serif' }
+const fontBody = { fontFamily: 'var(--font-montserrat), system-ui, sans-serif' }
 
 export interface PublicBillingData {
   nome: string

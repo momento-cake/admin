@@ -80,8 +80,8 @@ function formatStoreHours(hours: PublicStoreHours[]): { label: string; time: str
   return result
 }
 
-const fontBody = { fontFamily: 'var(--font-dm-sans), system-ui, sans-serif' }
-const fontHeading = { fontFamily: 'var(--font-playfair), Georgia, serif' }
+const fontBody = { fontFamily: 'var(--font-montserrat), system-ui, sans-serif' }
+const fontHeading = { fontFamily: 'var(--font-cormorant), Georgia, serif' }
 
 /**
  * Read-only display of the entrega (delivery / pickup) decision.
@@ -104,9 +104,9 @@ export function PublicEntregaToggle({
       <div className="px-6 pt-6 pb-4">
         <div className="flex items-center gap-2.5">
           {entrega.tipo === 'ENTREGA' ? (
-            <Truck className="w-4 h-4 text-[#b8956a]" />
+            <Truck className="w-4 h-4 text-[#C9A96E]" />
           ) : (
-            <Store className="w-4 h-4 text-[#b8956a]" />
+            <Store className="w-4 h-4 text-[#C9A96E]" />
           )}
           <h3
             className="text-base text-[#2d2319] tracking-wide"
@@ -118,10 +118,10 @@ export function PublicEntregaToggle({
       </div>
       <div className="px-6 pb-6 space-y-3">
         {entrega.tipo === 'ENTREGA' && (
-          <div className="bg-[#faf7f2] rounded-xl p-4">
+          <div className="bg-[#FBF8F4] rounded-xl p-4">
             <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-full bg-[#b8956a]/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                <MapPin className="h-4 w-4 text-[#b8956a]" />
+              <div className="w-8 h-8 rounded-full bg-[#C9A96E]/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <MapPin className="h-4 w-4 text-[#C9A96E]" />
               </div>
               <div>
                 <p className="text-sm text-[#2d2319] font-medium" style={fontBody}>
@@ -133,7 +133,7 @@ export function PublicEntregaToggle({
                   </p>
                 )}
                 {entrega.freteTotal != null && entrega.freteTotal > 0 && (
-                  <p className="text-[13px] text-[#b8956a] mt-1.5 font-medium" style={fontBody}>
+                  <p className="text-[13px] text-[#C9A96E] mt-1.5 font-medium" style={fontBody}>
                     Frete: R$ {entrega.freteTotal.toFixed(2).replace('.', ',')}
                   </p>
                 )}
@@ -143,10 +143,10 @@ export function PublicEntregaToggle({
         )}
         {entrega.tipo === 'RETIRADA' && (
           <>
-            <div className="bg-[#faf7f2] rounded-xl p-4">
+            <div className="bg-[#FBF8F4] rounded-xl p-4">
               <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-full bg-[#b8956a]/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <Store className="h-4 w-4 text-[#b8956a]" />
+                <div className="w-8 h-8 rounded-full bg-[#C9A96E]/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Store className="h-4 w-4 text-[#C9A96E]" />
                 </div>
                 <div>
                   <p className="text-sm text-[#2d2319] font-medium" style={fontBody}>
@@ -166,10 +166,10 @@ export function PublicEntregaToggle({
               </div>
             </div>
             {formattedHours.length > 0 && (
-              <div className="bg-[#faf7f2] rounded-xl p-4">
+              <div className="bg-[#FBF8F4] rounded-xl p-4">
                 <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-full bg-[#b8956a]/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <Clock className="h-4 w-4 text-[#b8956a]" />
+                  <div className="w-8 h-8 rounded-full bg-[#C9A96E]/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <Clock className="h-4 w-4 text-[#C9A96E]" />
                   </div>
                   <div className="flex-1">
                     <p className="text-sm text-[#2d2319] font-medium mb-1.5" style={fontBody}>

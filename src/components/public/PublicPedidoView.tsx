@@ -4,7 +4,9 @@ import { useState, useEffect, useRef } from 'react'
 import { PEDIDO_STATUS_LABELS, type PedidoStatus, type EntregaTipo } from '@/types/pedido'
 import { PublicEntregaToggle } from './PublicEntregaToggle'
 import { PublicCheckoutFlow, type PublicBillingData, type PublicPaymentSessionData } from './PublicCheckoutFlow'
-import { ArrowRight, Loader2, Calendar, Sparkles, MessageSquare, Package } from 'lucide-react'
+import { ArrowRight, Loader2, Calendar, MessageSquare, Package } from 'lucide-react'
+import { BrandLogo } from './brand/BrandLogo'
+import { BrandHairline } from './brand/BrandHairline'
 import { toast } from 'sonner'
 import {
   describeError,
@@ -138,20 +140,6 @@ function getStatusConfig(status: PedidoStatus): { bg: string; text: string; dot:
   return configs[status] || configs.RASCUNHO
 }
 
-// Ornamental divider SVG
-function OrnamentalDivider({ className = '' }: { className?: string }) {
-  return (
-    <div className={`flex items-center justify-center gap-3 ${className}`} aria-hidden="true">
-      <div className="h-px flex-1 bg-gradient-to-r from-transparent via-[#d4c4a8] to-transparent" />
-      <svg width="24" height="12" viewBox="0 0 24 12" fill="none" className="text-[#c9a96e] flex-shrink-0">
-        <path d="M12 0C8 0 5 3 2 6C5 9 8 12 12 12C16 12 19 9 22 6C19 3 16 0 12 0Z" fill="currentColor" opacity="0.2" />
-        <circle cx="12" cy="6" r="2" fill="currentColor" />
-      </svg>
-      <div className="h-px flex-1 bg-gradient-to-r from-transparent via-[#d4c4a8] to-transparent" />
-    </div>
-  )
-}
-
 // Confetti particle for celebration
 function ConfettiParticle({ delay, x, color }: { delay: number; x: number; color: string }) {
   return (
@@ -231,47 +219,22 @@ export function PublicPedidoView({ pedido, token, onPedidoUpdate }: PublicPedido
           </div>
         )}
 
-        {/* Decorative top accent line */}
-        <div className="h-1 bg-gradient-to-r from-[#b8956a] via-[#e8c87a] to-[#b8956a]" aria-hidden="true" />
+        {/* Brand strip — thin gold hairline echoing momentocake.com.br */}
+        <div className="h-[3px] bg-gradient-to-r from-[#B8965A] via-[#C9A96E] to-[#B8965A]" aria-hidden="true" />
 
-        {/* Header */}
-        <header className="bg-white/80 backdrop-blur-md border-b border-[#d4c4a8]/20 sticky top-0 z-10">
-          <div className="max-w-2xl mx-auto px-5 py-4 flex items-center justify-between">
-            <div className="flex items-center gap-3.5">
-              {/* Logo mark */}
-              <div className="relative">
-                <div className="w-11 h-11 rounded-full bg-gradient-to-br from-[#b8956a] to-[#8b7355] flex items-center justify-center shadow-sm">
-                  <span
-                    className="text-white text-lg tracking-tight"
-                    style={{ fontFamily: 'var(--font-playfair), Georgia, serif' }}
-                  >
-                    M
-                  </span>
-                </div>
-                <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-[#e8c87a] flex items-center justify-center">
-                  <Sparkles className="w-2.5 h-2.5 text-[#5c4a2e]" />
-                </div>
-              </div>
-              <div>
-                <h1
-                  className="text-lg text-[#2d2319] tracking-wide"
-                  style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontWeight: 600 }}
-                >
-                  Momento Cake
-                </h1>
-                <p
-                  className="text-[11px] text-[#8b7e6e] tracking-widest uppercase"
-                  style={{ fontFamily: 'var(--font-dm-sans), system-ui, sans-serif' }}
-                >
-                  Confeitaria Artesanal
-                </p>
-              </div>
-            </div>
+        {/* Header — real brand mark, not a circle-M monogram */}
+        <header className="bg-[#FBF8F4]/85 backdrop-blur-md border-b border-[#C9A96E]/20 sticky top-0 z-10">
+          <div className="max-w-2xl mx-auto px-5 py-4 flex items-center justify-between gap-3">
+            <BrandLogo
+              variant="horizontal"
+              width={170}
+              ariaLabel="Momento Cake — Confeitaria Artesanal"
+            />
 
             {/* Status badge */}
             <span
               className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium tracking-wide ${statusConfig.bg} ${statusConfig.text}`}
-              style={{ fontFamily: 'var(--font-dm-sans), system-ui, sans-serif' }}
+              style={{ fontFamily: 'var(--font-montserrat), system-ui, sans-serif' }}
             >
               <span className={`w-1.5 h-1.5 rounded-full ${statusConfig.dot}`} />
               {PEDIDO_STATUS_LABELS[pedido.status]}
@@ -288,19 +251,19 @@ export function PublicPedidoView({ pedido, token, onPedidoUpdate }: PublicPedido
             <div className="text-center mb-4">
               <p
                 className="text-sm text-[#8b7e6e] tracking-wide mb-1"
-                style={{ fontFamily: 'var(--font-dm-sans), system-ui, sans-serif' }}
+                style={{ fontFamily: 'var(--font-montserrat), system-ui, sans-serif' }}
               >
                 Pedido {pedido.numeroPedido}
               </p>
               <h2
                 className="text-2xl text-[#2d2319] mb-0.5"
-                style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontWeight: 600 }}
+                style={{ fontFamily: 'var(--font-cormorant), Georgia, serif', fontWeight: 600 }}
               >
                 {pedido.clienteNome}
               </h2>
             </div>
 
-            <OrnamentalDivider className="my-4" />
+            <BrandHairline variant="wide" className="my-4" />
 
             {/* Delivery Date */}
             {pedido.dataEntrega && (
@@ -308,7 +271,7 @@ export function PublicPedidoView({ pedido, token, onPedidoUpdate }: PublicPedido
                 <Calendar className="h-4 w-4 text-[#b8956a]" />
                 <span
                   className="text-sm text-[#5c4a2e]"
-                  style={{ fontFamily: 'var(--font-dm-sans), system-ui, sans-serif' }}
+                  style={{ fontFamily: 'var(--font-montserrat), system-ui, sans-serif' }}
                 >
                   {formatDate(pedido.dataEntrega)}
                 </span>
@@ -327,7 +290,7 @@ export function PublicPedidoView({ pedido, token, onPedidoUpdate }: PublicPedido
                   <Package className="w-4 h-4 text-[#b8956a]" />
                   <h3
                     className="text-base text-[#2d2319] tracking-wide"
-                    style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontWeight: 600 }}
+                    style={{ fontFamily: 'var(--font-cormorant), Georgia, serif', fontWeight: 600 }}
                   >
                     Itens do Pedido
                   </h3>
@@ -348,7 +311,7 @@ export function PublicPedidoView({ pedido, token, onPedidoUpdate }: PublicPedido
                     <div className="flex items-baseline gap-2 min-w-0">
                       <span
                         className="text-[15px] text-[#2d2319] min-w-0"
-                        style={{ fontFamily: 'var(--font-dm-sans), system-ui, sans-serif', fontWeight: 500 }}
+                        style={{ fontFamily: 'var(--font-montserrat), system-ui, sans-serif', fontWeight: 500 }}
                       >
                         {item.nome}
                       </span>
@@ -359,7 +322,7 @@ export function PublicPedidoView({ pedido, token, onPedidoUpdate }: PublicPedido
                       />
                       <span
                         className="text-[15px] text-[#2d2319] flex-shrink-0 tabular-nums whitespace-nowrap"
-                        style={{ fontFamily: 'var(--font-dm-sans), system-ui, sans-serif', fontWeight: 500 }}
+                        style={{ fontFamily: 'var(--font-montserrat), system-ui, sans-serif', fontWeight: 500 }}
                       >
                         {formatCurrency(item.total)}
                       </span>
@@ -369,7 +332,7 @@ export function PublicPedidoView({ pedido, token, onPedidoUpdate }: PublicPedido
                     {item.descricao && (
                       <p
                         className="text-[13px] text-[#8b7e6e] mt-1 leading-relaxed line-clamp-2"
-                        style={{ fontFamily: 'var(--font-dm-sans), system-ui, sans-serif' }}
+                        style={{ fontFamily: 'var(--font-montserrat), system-ui, sans-serif' }}
                       >
                         {item.descricao}
                       </p>
@@ -378,7 +341,7 @@ export function PublicPedidoView({ pedido, token, onPedidoUpdate }: PublicPedido
                     {/* Quantity detail */}
                     <p
                       className="text-[12px] text-[#a89b8a] mt-1 tabular-nums"
-                      style={{ fontFamily: 'var(--font-dm-sans), system-ui, sans-serif' }}
+                      style={{ fontFamily: 'var(--font-montserrat), system-ui, sans-serif' }}
                     >
                       {item.quantidade} {item.quantidade > 1 ? 'unidades' : 'unidade'} &middot; {formatCurrency(item.precoUnitario)} cada
                     </p>
@@ -390,7 +353,7 @@ export function PublicPedidoView({ pedido, token, onPedidoUpdate }: PublicPedido
               <div className="bg-[#faf7f2] border-t border-[#d4c4a8]/20 px-6 py-5 space-y-2.5">
                 <div
                   className="flex justify-between text-sm"
-                  style={{ fontFamily: 'var(--font-dm-sans), system-ui, sans-serif' }}
+                  style={{ fontFamily: 'var(--font-montserrat), system-ui, sans-serif' }}
                 >
                   <span className="text-[#8b7e6e]">Subtotal</span>
                   <span className="text-[#5c4a2e] tabular-nums">{formatCurrency(orcamento.subtotal)}</span>
@@ -399,7 +362,7 @@ export function PublicPedidoView({ pedido, token, onPedidoUpdate }: PublicPedido
                 {orcamento.desconto > 0 && (
                   <div
                     className="flex justify-between text-sm"
-                    style={{ fontFamily: 'var(--font-dm-sans), system-ui, sans-serif' }}
+                    style={{ fontFamily: 'var(--font-montserrat), system-ui, sans-serif' }}
                   >
                     <span className="text-emerald-600">Desconto</span>
                     <span className="text-emerald-600 tabular-nums">- {formatCurrency(orcamento.desconto)}</span>
@@ -409,7 +372,7 @@ export function PublicPedidoView({ pedido, token, onPedidoUpdate }: PublicPedido
                 {orcamento.acrescimo > 0 && (
                   <div
                     className="flex justify-between text-sm"
-                    style={{ fontFamily: 'var(--font-dm-sans), system-ui, sans-serif' }}
+                    style={{ fontFamily: 'var(--font-montserrat), system-ui, sans-serif' }}
                   >
                     <span className="text-[#8b7e6e]">Acréscimo</span>
                     <span className="text-[#5c4a2e] tabular-nums">+ {formatCurrency(orcamento.acrescimo)}</span>
@@ -419,7 +382,7 @@ export function PublicPedidoView({ pedido, token, onPedidoUpdate }: PublicPedido
                 {/* Freight / Pickup */}
                 <div
                   className="flex justify-between text-sm"
-                  style={{ fontFamily: 'var(--font-dm-sans), system-ui, sans-serif' }}
+                  style={{ fontFamily: 'var(--font-montserrat), system-ui, sans-serif' }}
                 >
                   {entrega.tipo === 'ENTREGA' ? (
                     <>
@@ -439,13 +402,13 @@ export function PublicPedidoView({ pedido, token, onPedidoUpdate }: PublicPedido
                   <div className="flex justify-between items-baseline">
                     <span
                       className="text-base text-[#2d2319]"
-                      style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontWeight: 600 }}
+                      style={{ fontFamily: 'var(--font-cormorant), Georgia, serif', fontWeight: 600 }}
                     >
                       Total
                     </span>
                     <span
                       className="text-2xl gold-shimmer"
-                      style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontWeight: 700 }}
+                      style={{ fontFamily: 'var(--font-cormorant), Georgia, serif', fontWeight: 700 }}
                     >
                       {formatCurrency(grandTotal)}
                     </span>
@@ -465,7 +428,7 @@ export function PublicPedidoView({ pedido, token, onPedidoUpdate }: PublicPedido
               </div>
               <p
                 className="text-[#8b7e6e] text-sm"
-                style={{ fontFamily: 'var(--font-dm-sans), system-ui, sans-serif' }}
+                style={{ fontFamily: 'var(--font-montserrat), system-ui, sans-serif' }}
               >
                 Nenhum item neste pedido ainda.
               </p>
@@ -490,14 +453,14 @@ export function PublicPedidoView({ pedido, token, onPedidoUpdate }: PublicPedido
                 <MessageSquare className="w-4 h-4 text-[#b8956a]" />
                 <h3
                   className="text-base text-[#2d2319] tracking-wide"
-                  style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontWeight: 600 }}
+                  style={{ fontFamily: 'var(--font-cormorant), Georgia, serif', fontWeight: 600 }}
                 >
                   Observações
                 </h3>
               </div>
               <p
                 className="text-sm text-[#5c4a2e] leading-relaxed whitespace-pre-wrap pl-[26px]"
-                style={{ fontFamily: 'var(--font-dm-sans), system-ui, sans-serif' }}
+                style={{ fontFamily: 'var(--font-montserrat), system-ui, sans-serif' }}
               >
                 {pedido.observacoesCliente}
               </p>
@@ -511,7 +474,7 @@ export function PublicPedidoView({ pedido, token, onPedidoUpdate }: PublicPedido
                 onClick={handleConfirm}
                 disabled={isConfirming}
                 className="confirm-btn w-full py-4 text-white rounded-2xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2.5"
-                style={{ fontFamily: 'var(--font-dm-sans), system-ui, sans-serif' }}
+                style={{ fontFamily: 'var(--font-montserrat), system-ui, sans-serif' }}
               >
                 {isConfirming ? (
                   <>
@@ -527,7 +490,7 @@ export function PublicPedidoView({ pedido, token, onPedidoUpdate }: PublicPedido
               </button>
               <p
                 className="text-center text-[11px] text-[#a89b8a] mt-3 tracking-wide"
-                style={{ fontFamily: 'var(--font-dm-sans), system-ui, sans-serif' }}
+                style={{ fontFamily: 'var(--font-montserrat), system-ui, sans-serif' }}
               >
                 Após confirmar, você poderá pagar via PIX ou cartão de crédito
               </p>
@@ -547,31 +510,52 @@ export function PublicPedidoView({ pedido, token, onPedidoUpdate }: PublicPedido
           )}
         </main>
 
-        {/* Footer */}
+        {/* Footer — anchors the page in the live brand. Real wordmark, the
+            year, the Instagram handle (the only verified contact channel on
+            momentocake.com.br), and a link back to the brand site. */}
         <footer className="mt-12 pb-10">
-          <OrnamentalDivider className="max-w-2xl mx-auto px-5 mb-8" />
+          <BrandHairline variant="wide" className="max-w-2xl mx-auto px-5 mb-8" />
           <div className="max-w-2xl mx-auto px-5 text-center">
-            <div className="flex items-center justify-center gap-2.5 mb-2">
-              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#b8956a] to-[#8b7355] flex items-center justify-center">
-                <span
-                  className="text-white text-xs"
-                  style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontWeight: 600 }}
-                >
-                  M
-                </span>
-              </div>
-              <span
-                className="text-sm text-[#5c4a2e] tracking-wide"
-                style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontWeight: 500 }}
-              >
-                Momento Cake
-              </span>
+            <div className="flex justify-center mb-3">
+              <BrandLogo
+                variant="wordmark"
+                width={170}
+                ariaLabel="Momento Cake"
+              />
             </div>
             <p
-              className="text-[11px] text-[#a89b8a] tracking-widest uppercase"
-              style={{ fontFamily: 'var(--font-dm-sans), system-ui, sans-serif' }}
+              className="text-[11px] text-[#8B6F4E] tracking-[0.32em] uppercase"
+              style={{ fontFamily: 'var(--font-montserrat), system-ui, sans-serif' }}
             >
               Feito com carinho para você
+            </p>
+            <p
+              className="mt-3 text-[11px] text-[#6B5B4E]"
+              style={{ fontFamily: 'var(--font-montserrat), system-ui, sans-serif' }}
+            >
+              <a
+                href="https://www.instagram.com/momentocake"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[#8B6F4E] hover:text-[#C9A96E] transition-colors"
+              >
+                @momentocake
+              </a>
+              <span className="mx-2 text-[#C9A96E]/60">·</span>
+              <a
+                href="https://momentocake.com.br"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[#8B6F4E] hover:text-[#C9A96E] transition-colors"
+              >
+                momentocake.com.br
+              </a>
+            </p>
+            <p
+              className="mt-2 text-[10px] text-[#6B5B4E]/70 tracking-wider"
+              style={{ fontFamily: 'var(--font-montserrat), system-ui, sans-serif' }}
+            >
+              © {new Date().getFullYear()} Momento Cake. Todos os direitos reservados.
             </p>
           </div>
         </footer>
