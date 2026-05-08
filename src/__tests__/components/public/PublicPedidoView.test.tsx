@@ -122,8 +122,11 @@ describe('PublicPedidoView', () => {
         <PublicPedidoView pedido={pedido} token="test-token" onPedidoUpdate={mockOnPedidoUpdate} />
       )
 
-      const momentoCakeTexts = screen.getAllByText('Momento Cake')
-      expect(momentoCakeTexts.length).toBeGreaterThanOrEqual(1)
+      // The brand mark is delivered as an <img> rendering the official
+      // Momento Cake logo PNG. The alt text covers both the header lockup
+      // and the footer wordmark.
+      const brandMarks = screen.getAllByAltText(/Momento Cake/i)
+      expect(brandMarks.length).toBeGreaterThanOrEqual(1)
     })
 
     it('renders order number in the header', () => {

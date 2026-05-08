@@ -4,14 +4,15 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { Loader2, Copy, Check, AlertCircle, RefreshCw, Hourglass } from 'lucide-react'
 import { toast } from 'sonner'
 import type { NormalizedChargeStatus } from '@/lib/payments/types'
+import { BrandLogo } from './brand/BrandLogo'
 import {
   describeError,
   logError,
   parseApiResponse,
 } from '@/lib/error-handler'
 
-const fontBody = { fontFamily: 'var(--font-dm-sans), system-ui, sans-serif' }
-const fontHeading = { fontFamily: 'var(--font-playfair), Georgia, serif' }
+const fontBody = { fontFamily: 'var(--font-montserrat), system-ui, sans-serif' }
+const fontHeading = { fontFamily: 'var(--font-cormorant), Georgia, serif' }
 
 const POLL_INTERVAL_MS = 3000
 const POLL_MAX_DURATION_MS = 30 * 60 * 1000 // 30 minutes
@@ -66,25 +67,26 @@ function isUnusableSession(session: ExistingPixSession | null | undefined): bool
 }
 
 /**
- * Crest used at the top of every checkout card — same shape as PublicBillingForm
- * to keep the family resemblance.
+ * Crest used at the top of every checkout card — same shape as the
+ * PublicBillingForm crest for family resemblance, and now carrying the
+ * actual Momento Cake brand monogram instead of a generic glyph.
  */
-function CardCrest({ caption, monogram }: { caption: string; monogram: string }) {
+function CardCrest({ caption }: { caption: string }) {
   return (
     <div className="flex flex-col items-center text-center pt-7 pb-4 px-6">
       <div className="relative">
-        <div className="w-12 h-12 rounded-full border border-[#d4c4a8]/50 flex items-center justify-center bg-gradient-to-b from-[#fffdf8] to-[#faf3e6] shadow-[0_2px_8px_-2px_rgba(184,149,106,0.25)]">
-          <span
-            className="text-[#8b7355] text-lg leading-none"
-            style={{ ...fontHeading, fontWeight: 600 }}
-          >
-            {monogram}
-          </span>
+        <div className="w-14 h-14 rounded-full border border-[#C9A96E]/45 flex items-center justify-center bg-gradient-to-b from-[#FFFDF8] to-[#F5EDE4] shadow-[0_2px_10px_-2px_rgba(201,169,110,0.25)]">
+          <BrandLogo
+            variant="monogram"
+            width={32}
+            color="#C9A96E"
+            ariaLabel="Momento Cake"
+          />
         </div>
-        <div className="absolute -right-1 -top-1 w-2.5 h-2.5 rounded-full bg-[#e8c87a] shadow-[0_0_0_2px_#fff]" />
+        <div className="absolute -right-1 -top-1 w-2.5 h-2.5 rounded-full bg-[#C9A96E] shadow-[0_0_0_2px_#fff]" />
       </div>
       <p
-        className="mt-3 text-[10px] text-[#a89b8a] tracking-[0.32em] uppercase"
+        className="mt-3 text-[10px] text-[#8B6F4E] tracking-[0.32em] uppercase"
         style={fontBody}
       >
         {caption}
@@ -331,7 +333,7 @@ export function PublicPixCharge({
 
   return (
     <div className="premium-card overflow-hidden animate-page-turn">
-      <CardCrest caption="Pagamento via PIX" monogram="◈" />
+      <CardCrest caption="Pagamento via PIX" />
 
       <div className="px-6">
         <h3

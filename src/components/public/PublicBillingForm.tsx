@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Loader2, AlertCircle, ArrowRight } from 'lucide-react'
 import { formatCpfCnpj, formatPhone } from '@/lib/masks'
 import { billingSchema } from '@/lib/validators/billing'
+import { BrandLogo } from './brand/BrandLogo'
 import {
   ApiError,
   describeError,
@@ -11,8 +12,8 @@ import {
   parseApiResponse,
 } from '@/lib/error-handler'
 
-const fontBody = { fontFamily: 'var(--font-dm-sans), system-ui, sans-serif' }
-const fontHeading = { fontFamily: 'var(--font-playfair), Georgia, serif' }
+const fontBody = { fontFamily: 'var(--font-montserrat), system-ui, sans-serif' }
+const fontHeading = { fontFamily: 'var(--font-cormorant), Georgia, serif' }
 
 export interface ConfirmedBilling {
   nome: string
@@ -41,27 +42,31 @@ function formatCurrency(value: number): string {
 }
 
 /**
- * Stationery-style crest used at the top of each checkout card.
- * A tiny ornament + a small caption, sitting above the title — gives the form
- * the feel of a guestbook page or a tasting menu rather than a tax form.
+ * Crest used at the top of each checkout card.
+ *
+ * The crest is the actual Momento Cake brand monogram (line-art "M" in a
+ * cake-stand frame, gold) wrapped in the same soft cream disc the previous
+ * generic-glyph crest used. The caption underneath labels the section so
+ * each step ("Dados de Cobrança", "Pagamento via PIX", etc.) reads like a
+ * page header on the brand site.
  */
-function CardCrest({ caption, monogram }: { caption: string; monogram: string }) {
+function CardCrest({ caption }: { caption: string }) {
   return (
     <div className="flex flex-col items-center text-center pt-7 pb-4 px-6">
       <div className="relative">
-        <div className="w-12 h-12 rounded-full border border-[#d4c4a8]/50 flex items-center justify-center bg-gradient-to-b from-[#fffdf8] to-[#faf3e6] shadow-[0_2px_8px_-2px_rgba(184,149,106,0.25)]">
-          <span
-            className="text-[#8b7355] text-lg leading-none"
-            style={{ ...fontHeading, fontWeight: 600 }}
-          >
-            {monogram}
-          </span>
+        <div className="w-14 h-14 rounded-full border border-[#C9A96E]/45 flex items-center justify-center bg-gradient-to-b from-[#FFFDF8] to-[#F5EDE4] shadow-[0_2px_10px_-2px_rgba(201,169,110,0.25)]">
+          <BrandLogo
+            variant="monogram"
+            width={32}
+            color="#C9A96E"
+            ariaLabel="Momento Cake"
+          />
         </div>
-        {/* tiny gold dot accent */}
-        <div className="absolute -right-1 -top-1 w-2.5 h-2.5 rounded-full bg-[#e8c87a] shadow-[0_0_0_2px_#fff]" />
+        {/* tiny gold dot accent — kept from the previous crest */}
+        <div className="absolute -right-1 -top-1 w-2.5 h-2.5 rounded-full bg-[#C9A96E] shadow-[0_0_0_2px_#fff]" />
       </div>
       <p
-        className="mt-3 text-[10px] text-[#a89b8a] tracking-[0.32em] uppercase"
+        className="mt-3 text-[10px] text-[#8B6F4E] tracking-[0.32em] uppercase"
         style={fontBody}
       >
         {caption}
@@ -200,7 +205,7 @@ export function PublicBillingForm({
       className="premium-card overflow-hidden animate-page-turn"
       noValidate
     >
-      <CardCrest caption="Dados de Cobrança" monogram="✎" />
+      <CardCrest caption="Dados de Cobrança" />
 
       <div className="px-6">
         <h3

@@ -32,8 +32,8 @@ const CONFETTI_SCATTER: ReadonlyArray<{
   { key: 17, delay: 1360, x: 96, color: '#5c8a4d' },
 ]
 
-const fontBody = { fontFamily: 'var(--font-dm-sans), system-ui, sans-serif' }
-const fontHeading = { fontFamily: 'var(--font-playfair), Georgia, serif' }
+const fontBody = { fontFamily: 'var(--font-montserrat), system-ui, sans-serif' }
+const fontHeading = { fontFamily: 'var(--font-cormorant), Georgia, serif' }
 
 interface PublicPaymentSuccessProps {
   pedido: {
@@ -129,41 +129,41 @@ export function PublicPaymentSuccess({ pedido }: PublicPaymentSuccessProps) {
 
       {/* Sealing-wax stamp + ornamental ribbon */}
       <div className="relative pt-9 pb-3 px-6 flex flex-col items-center text-center">
-        {/* Wax-seal style check */}
+        {/* Wax-seal style check — gradient anchored on the brand gold #C9A96E */}
         <div className="relative">
           <div
             className="w-20 h-20 rounded-full flex items-center justify-center animate-celebrate-check"
             style={{
               background:
-                'radial-gradient(circle at 32% 28%, #f5e9d2 0%, #e8c87a 40%, #b8956a 100%)',
+                'radial-gradient(circle at 32% 28%, #F5EDE4 0%, #D4B97A 40%, #B8965A 100%)',
               boxShadow:
-                '0 1px 0 rgba(255,255,255,0.6) inset, 0 -1px 0 rgba(92,74,46,0.25) inset, 0 4px 18px -4px rgba(184,149,106,0.55)',
+                '0 1px 0 rgba(255,255,255,0.65) inset, 0 -1px 0 rgba(44,24,16,0.25) inset, 0 4px 22px -4px rgba(201,169,110,0.55)',
             }}
           >
             <div
-              className="w-14 h-14 rounded-full border border-[#8b7355]/40 flex items-center justify-center"
+              className="w-14 h-14 rounded-full border border-[#8B6F4E]/40 flex items-center justify-center"
               style={{
                 background:
-                  'radial-gradient(circle at 35% 30%, #d4a574 0%, #8b7355 100%)',
+                  'radial-gradient(circle at 35% 30%, #C9A96E 0%, #8B6F4E 100%)',
               }}
             >
-              <Check className="h-7 w-7 text-[#fdf8ee]" strokeWidth={2.5} />
+              <Check className="h-7 w-7 text-[#FBF8F4]" strokeWidth={2.5} />
             </div>
           </div>
-          {/* tiny gold sparkle accents */}
+          {/* tiny gold sparkle accents — kept; brand-tinted */}
           <Sparkles
-            className="absolute -top-1 -right-2 w-3.5 h-3.5 text-[#e8c87a] animate-fade-in"
+            className="absolute -top-1 -right-2 w-3.5 h-3.5 text-[#C9A96E] animate-fade-in"
             aria-hidden="true"
           />
           <Sparkles
-            className="absolute -bottom-1 -left-2 w-3 h-3 text-[#c9a96e] animate-fade-in"
+            className="absolute -bottom-1 -left-2 w-3 h-3 text-[#B8965A] animate-fade-in"
             style={{ animationDelay: '0.3s' }}
             aria-hidden="true"
           />
         </div>
 
         <p
-          className="mt-5 text-[10px] text-[#a89b8a] tracking-[0.32em] uppercase"
+          className="mt-5 text-[10px] text-[#8B6F4E] tracking-[0.32em] uppercase"
           style={fontBody}
         >
           uma carta da Momento Cake
