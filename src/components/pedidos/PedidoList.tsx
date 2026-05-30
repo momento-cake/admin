@@ -40,6 +40,7 @@ import {
   Eye,
   Edit,
   Trash2,
+  Ban,
   List,
   LayoutGrid,
   Phone,
@@ -55,6 +56,8 @@ import { Pedido, PedidoStatus } from '@/types/pedido'
 import { formatPrice } from '@/lib/products'
 import { PedidoStatusBadge } from './PedidoStatusBadge'
 import { PaymentStatusBadge } from './pagamentos/PaymentStatusBadge'
+import { CancelPedidoDialog } from './CancelPedidoDialog'
+import { usePermissions } from '@/hooks/usePermissions'
 import { STATUS_THEME } from './statusTheme'
 import {
   PedidoDateRangeFilter,
@@ -98,7 +101,12 @@ export function PedidoList({
   const [statusFilter, setStatusFilter] = useState<PedidoStatus | 'ALL'>('ALL')
   const [dateFilter, setDateFilter] = useState<PedidoDateFilterValue>({ preset: null })
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [cancelTarget, setCancelTarget] = useState<Pedido | null>(null)
   const [page, setPage] = useState(1)
+
+  const { canPerformAction } = usePermissions()
+  const canCancel = canPerformAction('orders', 'update')
+  const canDelete = canPerformAction('orders', 'delete')
   const [statusCounts, setStatusCounts] = useState<Record<PedidoStatus | 'ALL', number>>({
     ALL: 0,
     RASCUNHO: 0,
@@ -531,10 +539,20 @@ export function PedidoList({
                           <Edit className="h-4 w-4" />
                         </Button>
                       )}
-                      {onPedidoDelete && (
+                      {canCancel && pedido.status !== 'CANCELADO' && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          aria-label="Cancelar pedido"
+                          onClick={() => setCancelTarget(pedido)}
+                        >
+                          <Ban className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {onPedidoDelete && canDelete && (
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="sm">
+                            <Button variant="ghost" size="sm" aria-label="Excluir pedido">
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </AlertDialogTrigger>
@@ -714,12 +732,27 @@ export function PedidoList({
                                 <TooltipContent>Editar pedido</TooltipContent>
                               </Tooltip>
                             )}
-                            {onPedidoDelete && (
+                            {canCancel && pedido.status !== 'CANCELADO' && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    aria-label="Cancelar pedido"
+                                    onClick={() => setCancelTarget(pedido)}
+                                  >
+                                    <Ban className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Cancelar pedido</TooltipContent>
+                              </Tooltip>
+                            )}
+                            {onPedidoDelete && canDelete && (
                               <AlertDialog>
                                 <Tooltip>
                                   <TooltipTrigger asChild>
                                     <AlertDialogTrigger asChild>
-                                      <Button variant="ghost" size="sm">
+                                      <Button variant="ghost" size="sm" aria-label="Excluir pedido">
                                         <Trash2 className="h-4 w-4" />
                                       </Button>
                                     </AlertDialogTrigger>
@@ -791,6 +824,22 @@ export function PedidoList({
             </div>
           )}
         </div>
+      )}
+
+      {cancelTarget && (
+        <CancelPedidoDialog
+          pedidoId={cancelTarget.id}
+          numeroPedido={cancelTarget.numeroPedido}
+          open={!!cancelTarget}
+          onOpenChange={(next) => {
+            if (!next) setCancelTarget(null)
+          }}
+          onCanceled={async () => {
+            setCancelTarget(null)
+            await loadPedidos()
+            await loadCounts()
+          }}
+        />
       )}
     </div>
   )

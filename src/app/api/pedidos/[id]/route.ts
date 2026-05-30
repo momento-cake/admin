@@ -117,11 +117,28 @@ export async function PUT(
       }
     }
 
+    // Hard gate: cancelling a pedido requires a reason.
+    if (validation.data.status === 'CANCELADO' && !validation.data.cancelamento?.motivo?.trim()) {
+      return NextResponse.json(
+        { success: false, error: 'Informe o motivo do cancelamento.' },
+        { status: 400 }
+      );
+    }
+
     const updatePayload: Record<string, unknown> = {
       ...validation.data,
       updatedAt: FieldValue.serverTimestamp(),
       lastModifiedBy: auth.uid,
     };
+
+    // Stamp who/when on the cancellation record (server-authoritative).
+    if (validation.data.cancelamento) {
+      updatePayload.cancelamento = {
+        ...validation.data.cancelamento,
+        canceladoEm: FieldValue.serverTimestamp(),
+        canceladoPor: auth.uid,
+      };
+    }
 
     // Remove undefined fields
     Object.keys(updatePayload).forEach((key) => {

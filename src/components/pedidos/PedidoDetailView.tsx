@@ -22,14 +22,15 @@ import {
   PedidoPacote,
   PedidoEntrega,
   ENTREGA_TIPO_LABELS,
+  PEDIDO_CANCEL_CATEGORIA_LABELS,
 } from '@/types/pedido'
 import { Address } from '@/types/client'
 import { formatPrice } from '@/lib/products'
 import {
   parseApiResponse,
   describeError,
-  formatErrorMessage,
   logError,
+  ApiError,
 } from '@/lib/error-handler'
 import { usePedidoOptional } from '@/contexts/PedidoContext'
 import { PedidoStatusBadge } from './PedidoStatusBadge'
@@ -75,11 +76,13 @@ export function PedidoDetailView({ pedido, onUpdate }: PedidoDetailViewProps) {
           setClientAddresses([])
         }
       } catch (err) {
-        console.error('Erro ao carregar endereços do cliente:', err)
-        logError('PedidoDetailView.loadClientAddresses', err)
-        toast.error('Erro ao carregar endereços do cliente', {
-          description: formatErrorMessage(err),
-        })
+        // Best-effort load: saved addresses are only needed when editing the
+        // delivery. A missing/deleted client (404) or a transient read error
+        // must not surface as a blocking toast/console error on the detail page.
+        setClientAddresses([])
+        if (!(err instanceof ApiError) || err.status !== 404) {
+          logError('PedidoDetailView.loadClientAddresses', err)
+        }
       }
     }
     loadClientAddresses()
@@ -247,6 +250,29 @@ export function PedidoDetailView({ pedido, onUpdate }: PedidoDetailViewProps) {
           </div>
         </CardContent>
       </Card>
+
+      {/* Cancellation reason */}
+      {pedido.status === 'CANCELADO' && pedido.cancelamento && (
+        <Card className="border-destructive/40 bg-destructive/5">
+          <CardHeader>
+            <CardTitle className="text-lg text-destructive">Pedido Cancelado</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-1 text-sm">
+            <p>
+              <span className="font-medium text-muted-foreground">Motivo: </span>
+              {PEDIDO_CANCEL_CATEGORIA_LABELS[pedido.cancelamento.categoria]}
+            </p>
+            {pedido.cancelamento.categoria === 'OUTRO' && (
+              <p className="whitespace-pre-wrap">{pedido.cancelamento.motivo}</p>
+            )}
+            {pedido.cancelamento.canceladoEm && (
+              <p className="text-xs text-muted-foreground">
+                Cancelado em {formatDate(pedido.cancelamento.canceladoEm)}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Customer self-service status (billing + payment session) */}
       <PedidoCheckoutCard pedido={pedido} />

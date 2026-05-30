@@ -216,6 +216,30 @@ describe('POST /api/pedidos/[id]/pagamentos', () => {
     expect(stored.statusPagamento).toBe('PARCIAL')
   })
 
+  it('omits observacao entirely when not provided (no undefined written to Firestore)', async () => {
+    // Regression: Firestore Admin rejects `undefined` field values. A payment
+    // registered without a note must NOT carry an `observacao: undefined` key.
+    seedPedido('p1')
+    const res = await postPagamento(
+      postReq('p1', { data: '2026-04-20', valor: 100, metodo: 'PIX' }),
+      { params: Promise.resolve({ id: 'p1' }) }
+    )
+    expect(res.status).toBe(201)
+    const stored = store.get('pedidos/p1')!
+    expect('observacao' in stored.pagamentos[0]).toBe(false)
+  })
+
+  it('keeps observacao when provided', async () => {
+    seedPedido('p1')
+    const res = await postPagamento(
+      postReq('p1', { data: '2026-04-20', valor: 100, metodo: 'PIX', observacao: 'sinal' }),
+      { params: Promise.resolve({ id: 'p1' }) }
+    )
+    expect(res.status).toBe(201)
+    const stored = store.get('pedidos/p1')!
+    expect(stored.pagamentos[0].observacao).toBe('sinal')
+  })
+
   it('marks status=PAGO when the payment covers the remaining balance', async () => {
     seedPedido('p1', {
       pagamentos: [

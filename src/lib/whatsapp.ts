@@ -149,12 +149,21 @@ export async function fetchConversation(id: string): Promise<WhatsAppConversatio
 }
 
 export function subscribeToConversations(
-  callback: (conversations: WhatsAppConversation[]) => void
+  callback: (conversations: WhatsAppConversation[]) => void,
+  onError?: (error: Error) => void
 ): () => void {
   const q = buildConversationsQuery();
-  return onSnapshot(q, (snapshot: QuerySnapshot<DocumentData>) => {
-    callback(snapshot.docs.map(docToConversation));
-  });
+  return onSnapshot(
+    q,
+    (snapshot: QuerySnapshot<DocumentData>) => {
+      callback(snapshot.docs.map(docToConversation));
+    },
+    (error) => {
+      // Never let a denied/transient read surface as an uncaught snapshot error.
+      if (onError) onError(error);
+      else console.warn('[whatsapp] conversations subscription error:', error.message);
+    }
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -193,12 +202,20 @@ export async function fetchMessages(
 
 export function subscribeToMessages(
   conversationId: string,
-  callback: (messages: WhatsAppMessage[]) => void
+  callback: (messages: WhatsAppMessage[]) => void,
+  onError?: (error: Error) => void
 ): () => void {
   const q = buildMessagesQuery(conversationId);
-  return onSnapshot(q, (snapshot: QuerySnapshot<DocumentData>) => {
-    callback(snapshot.docs.map(docToMessage));
-  });
+  return onSnapshot(
+    q,
+    (snapshot: QuerySnapshot<DocumentData>) => {
+      callback(snapshot.docs.map(docToMessage));
+    },
+    (error) => {
+      if (onError) onError(error);
+      else console.warn('[whatsapp] messages subscription error:', error.message);
+    }
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -215,9 +232,17 @@ export async function getStatus(): Promise<WhatsAppStatus | null> {
 }
 
 export function subscribeToStatus(
-  callback: (status: WhatsAppStatus | null) => void
+  callback: (status: WhatsAppStatus | null) => void,
+  onError?: (error: Error) => void
 ): () => void {
-  return onSnapshot(statusDocRef(), (snap) => {
-    callback(docToStatus(snap));
-  });
+  return onSnapshot(
+    statusDocRef(),
+    (snap) => {
+      callback(docToStatus(snap));
+    },
+    (error) => {
+      if (onError) onError(error);
+      else console.warn('[whatsapp] status subscription error:', error.message);
+    }
+  );
 }

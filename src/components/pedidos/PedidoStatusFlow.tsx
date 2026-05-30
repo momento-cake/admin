@@ -4,17 +4,6 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog'
-import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
@@ -25,6 +14,7 @@ import { PedidoStatus, PEDIDO_STATUS_LABELS } from '@/types/pedido'
 import { parseApiResponse, describeError } from '@/lib/error-handler'
 import { calcularTotalPedido } from '@/lib/payment-logic'
 import { usePedidoOptional } from '@/contexts/PedidoContext'
+import { CancelPedidoDialog } from './CancelPedidoDialog'
 
 const formatBRL = (value: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)
@@ -68,6 +58,7 @@ interface PedidoStatusFlowProps {
 
 export function PedidoStatusFlow({ pedidoId, currentStatus, onStatusChange }: PedidoStatusFlowProps) {
   const [updating, setUpdating] = useState<PedidoStatus | null>(null)
+  const [cancelOpen, setCancelOpen] = useState(false)
   const pedidoCtx = usePedidoOptional()
   const pedido = pedidoCtx?.pedido ?? null
 
@@ -124,39 +115,16 @@ export function PedidoStatusFlow({ pedidoId, currentStatus, onStatusChange }: Pe
 
           if (targetStatus === 'CANCELADO') {
             return (
-              <AlertDialog key={targetStatus}>
-                <AlertDialogTrigger asChild>
-                  <Button
-                    variant={variant}
-                    size="sm"
-                    disabled={updating !== null}
-                  >
-                    {isUpdating ? (
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    ) : (
-                      <ArrowRight className="h-4 w-4 mr-2" />
-                    )}
-                    {TRANSITION_LABELS[targetStatus] || PEDIDO_STATUS_LABELS[targetStatus]}
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Cancelar pedido</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Tem certeza que deseja cancelar este pedido? Esta acao nao pode ser desfeita.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Voltar</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={() => handleTransition(targetStatus)}
-                      className="bg-destructive hover:bg-destructive/90"
-                    >
-                      Cancelar Pedido
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+              <Button
+                key={targetStatus}
+                variant={variant}
+                size="sm"
+                disabled={updating !== null}
+                onClick={() => setCancelOpen(true)}
+              >
+                <ArrowRight className="h-4 w-4 mr-2" />
+                {TRANSITION_LABELS[targetStatus] || PEDIDO_STATUS_LABELS[targetStatus]}
+              </Button>
             )
           }
 
@@ -212,6 +180,20 @@ export function PedidoStatusFlow({ pedidoId, currentStatus, onStatusChange }: Pe
           )
         })}
       </div>
+
+      <CancelPedidoDialog
+        pedidoId={pedidoId}
+        numeroPedido={pedido?.numeroPedido ?? ''}
+        open={cancelOpen}
+        onOpenChange={setCancelOpen}
+        onCanceled={async () => {
+          if (pedidoCtx) {
+            await pedidoCtx.refreshPedido()
+          } else {
+            onStatusChange('CANCELADO')
+          }
+        }}
+      />
     </TooltipProvider>
   )
 }

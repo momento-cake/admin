@@ -18,10 +18,18 @@ export function useWhatsAppConversations(): UseWhatsAppConversationsResult {
   useEffect(() => {
     let unsubscribe: (() => void) | null = null;
     try {
-      unsubscribe = subscribeToConversations((next) => {
-        setConversations(next);
-        setIsLoading(false);
-      });
+      unsubscribe = subscribeToConversations(
+        (next) => {
+          setConversations(next);
+          setIsLoading(false);
+        },
+        (err) => {
+          // Denied/transient read: surface as state and stop loading instead
+          // of letting Firestore log an uncaught snapshot error.
+          setError(err);
+          setIsLoading(false);
+        }
+      );
     } catch (err) {
       setError(err instanceof Error ? err : new Error(String(err)));
       setIsLoading(false);

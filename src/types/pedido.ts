@@ -59,6 +59,17 @@ export type PagamentoMetodo =
 
 export type StatusPagamento = 'PENDENTE' | 'PARCIAL' | 'PAGO' | 'VENCIDO';
 
+/**
+ * Preset categories for an order cancellation. `OUTRO` requires a free-text
+ * reason supplied by the operator.
+ */
+export type PedidoCancelCategoria =
+  | 'CLIENTE_DESISTIU'
+  | 'PEDIDO_DUPLICADO'
+  | 'PAGAMENTO_NAO_REALIZADO'
+  | 'INDISPONIBILIDADE'
+  | 'OUTRO';
+
 // ============================================================================
 // LABELS
 // ============================================================================
@@ -96,6 +107,14 @@ export const ORCAMENTO_STATUS_LABELS: Record<OrcamentoStatus, string> = {
   ENVIADO: 'Enviado',
   APROVADO: 'Aprovado',
   REJEITADO: 'Rejeitado',
+};
+
+export const PEDIDO_CANCEL_CATEGORIA_LABELS: Record<PedidoCancelCategoria, string> = {
+  CLIENTE_DESISTIU: 'Cliente desistiu / solicitou cancelamento',
+  PEDIDO_DUPLICADO: 'Pedido duplicado / erro no cadastro',
+  PAGAMENTO_NAO_REALIZADO: 'Pagamento não realizado',
+  INDISPONIBILIDADE: 'Indisponibilidade de produção',
+  OUTRO: 'Outro',
 };
 
 export const ENTREGA_TIPO_LABELS: Record<EntregaTipo, string> = {
@@ -273,6 +292,9 @@ export interface Pedido {
   nfExternalId?: string | null;
   nfEmittedAt?: Timestamp | null;
 
+  // Cancellation details (set when status === 'CANCELADO')
+  cancelamento?: PedidoCancelamento | null;
+
   // Customer self-service checkout
   billing?: PedidoBilling;
   paymentSession?: PedidoPaymentSession;
@@ -291,6 +313,19 @@ export interface Pedido {
 }
 
 // Store settings types are defined in @/types/store-settings and re-exported above.
+
+/**
+ * Cancellation record embedded in a Pedido once it is moved to CANCELADO.
+ * `motivo` is always required (the preset label for non-OUTRO categories, or
+ * the operator's free text for OUTRO). `canceladoEm`/`canceladoPor` are
+ * stamped server-side.
+ */
+export interface PedidoCancelamento {
+  categoria: PedidoCancelCategoria;
+  motivo: string;
+  canceladoEm: Timestamp;
+  canceladoPor: string;
+}
 
 export interface PedidoCounter {
   lastNumber: number;
@@ -328,6 +363,11 @@ export interface UpdatePedidoData {
   nfProvider?: string | null;
   nfExternalId?: string | null;
   nfEmittedAt?: Timestamp | null;
+  /** Cancellation reason. Required by the API when status is set to CANCELADO. */
+  cancelamento?: {
+    categoria: PedidoCancelCategoria;
+    motivo: string;
+  };
 }
 
 export interface CreatePagamentoData {

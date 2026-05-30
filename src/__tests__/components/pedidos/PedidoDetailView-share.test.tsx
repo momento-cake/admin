@@ -154,3 +154,47 @@ describe('PedidoDetailView - ShareOrderButton integration', () => {
     expect(screen.queryByTestId('share-order-button')).not.toBeInTheDocument();
   });
 });
+
+describe('PedidoDetailView - cancellation reason', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('shows the preset reason for a cancelled order', () => {
+    const pedido = {
+      ...basePedido,
+      status: 'CANCELADO' as const,
+      cancelamento: {
+        categoria: 'CLIENTE_DESISTIU' as const,
+        motivo: 'Cliente desistiu / solicitou cancelamento',
+        canceladoEm: { toDate: () => new Date('2026-05-10T12:00:00Z') } as any,
+        canceladoPor: 'atendente-1',
+      },
+    };
+    render(<PedidoDetailView pedido={pedido} onUpdate={vi.fn()} />);
+    expect(screen.getByText('Pedido Cancelado')).toBeInTheDocument();
+    expect(
+      screen.getByText('Cliente desistiu / solicitou cancelamento')
+    ).toBeInTheDocument();
+  });
+
+  it('shows the free-text motivo for an OUTRO cancellation', () => {
+    const pedido = {
+      ...basePedido,
+      status: 'CANCELADO' as const,
+      cancelamento: {
+        categoria: 'OUTRO' as const,
+        motivo: 'Endereço fora da área de cobertura',
+        canceladoEm: { toDate: () => new Date('2026-05-10T12:00:00Z') } as any,
+        canceladoPor: 'atendente-1',
+      },
+    };
+    render(<PedidoDetailView pedido={pedido} onUpdate={vi.fn()} />);
+    expect(screen.getByText('Endereço fora da área de cobertura')).toBeInTheDocument();
+  });
+
+  it('does not show the cancellation card for non-cancelled orders', () => {
+    render(<PedidoDetailView pedido={basePedido} onUpdate={vi.fn()} />);
+    expect(screen.queryByText('Pedido Cancelado')).not.toBeInTheDocument();
+  });
+});

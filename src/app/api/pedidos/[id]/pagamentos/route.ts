@@ -88,7 +88,9 @@ export async function POST(
       data: Timestamp.fromDate(payload.data) as unknown as Pagamento['data'],
       valor: payload.valor,
       metodo: payload.metodo,
-      observacao: payload.observacao,
+      // Omit when absent — Firestore rejects `undefined` field values, and the
+      // admin instance does not set `ignoreUndefinedProperties`.
+      ...(payload.observacao !== undefined ? { observacao: payload.observacao } : {}),
       comprovanteUrl: payload.comprovanteUrl ?? null,
       comprovantePath: payload.comprovantePath ?? null,
       comprovanteTipo: payload.comprovanteTipo ?? null,

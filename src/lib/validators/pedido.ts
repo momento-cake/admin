@@ -115,6 +115,24 @@ export const createPedidoSchema = z.object({
 });
 
 /**
+ * Cancellation reason validation. `motivo` is always required — it carries the
+ * preset label for non-OUTRO categories or the operator's free text for OUTRO.
+ */
+export const cancelamentoSchema = z.object({
+  categoria: z.enum([
+    'CLIENTE_DESISTIU',
+    'PEDIDO_DUPLICADO',
+    'PAGAMENTO_NAO_REALIZADO',
+    'INDISPONIBILIDADE',
+    'OUTRO',
+  ]),
+  motivo: z.string()
+    .trim()
+    .min(1, 'Motivo do cancelamento é obrigatório')
+    .max(500, 'Motivo deve ter no máximo 500 caracteres'),
+});
+
+/**
  * Update pedido validation — all fields optional for partial updates.
  */
 export const updatePedidoSchema = z.object({
@@ -141,6 +159,7 @@ export const updatePedidoSchema = z.object({
   nfProvider: z.string().nullable().optional(),
   nfExternalId: z.string().nullable().optional(),
   nfEmittedAt: z.any().nullable().optional(),
+  cancelamento: cancelamentoSchema.optional(),
 });
 
 // ============================================================================
@@ -209,6 +228,7 @@ export type PedidoPacoteValidation = z.infer<typeof pedidoPacoteSchema>;
 export type PedidoEntregaValidation = z.infer<typeof pedidoEntregaSchema>;
 export type CreatePedidoValidation = z.infer<typeof createPedidoSchema>;
 export type UpdatePedidoValidation = z.infer<typeof updatePedidoSchema>;
+export type CancelamentoValidation = z.infer<typeof cancelamentoSchema>;
 export type StoreAddressValidation = z.infer<typeof storeAddressSchema>;
 export type StoreSettingsValidation = z.infer<typeof storeSettingsSchema>;
 export type StoreHoursValidation = z.infer<typeof storeHoursSchema>;
