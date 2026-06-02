@@ -295,6 +295,9 @@ export interface Pedido {
   // Cancellation details (set when status === 'CANCELADO')
   cancelamento?: PedidoCancelamento | null;
 
+  // Client-approved reference images (embedded)
+  imagensReferencia?: PedidoImagemReferencia[];
+
   // Customer self-service checkout
   billing?: PedidoBilling;
   paymentSession?: PedidoPaymentSession;
@@ -327,6 +330,37 @@ export interface PedidoCancelamento {
   canceladoPor: string;
 }
 
+/**
+ * A client-approved reference image attached to a Pedido. Files live in
+ * Firebase Storage under `images/gallery/pedido-referencias/`; the order doc
+ * embeds the URL/path plus an optional caption. `uploadedAt`/`uploadedBy` are
+ * stamped server-side.
+ */
+export interface PedidoImagemReferencia {
+  id: string;
+  url: string;
+  storagePath: string;
+  legenda?: string;
+  width?: number;
+  height?: number;
+  uploadedAt: Timestamp;
+  uploadedBy: string;
+}
+
+/**
+ * Client-supplied shape for a reference image (before server stamping). Sent by
+ * the creation wizard and the detail-view editor; `id` is kept when editing an
+ * existing image, omitted for new uploads.
+ */
+export interface PedidoImagemReferenciaInput {
+  id?: string;
+  url: string;
+  storagePath: string;
+  legenda?: string;
+  width?: number;
+  height?: number;
+}
+
 export interface PedidoCounter {
   lastNumber: number;
 }
@@ -346,6 +380,7 @@ export interface CreatePedidoData {
   dataEntrega?: Timestamp;
   observacoes?: string;
   observacoesCliente?: string;
+  imagensReferencia?: PedidoImagemReferenciaInput[];
 }
 
 export interface UpdatePedidoData {
@@ -368,6 +403,7 @@ export interface UpdatePedidoData {
     categoria: PedidoCancelCategoria;
     motivo: string;
   };
+  imagensReferencia?: PedidoImagemReferenciaInput[];
 }
 
 export interface CreatePagamentoData {

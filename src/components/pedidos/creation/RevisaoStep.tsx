@@ -4,7 +4,7 @@ import { Pencil, Truck, Store } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
-import { PedidoItem } from '@/types/pedido'
+import { PedidoItem, PedidoImagemReferenciaInput } from '@/types/pedido'
 import { Address } from '@/types/client'
 import { formatPrice } from '@/lib/products'
 
@@ -16,6 +16,7 @@ interface RevisaoStepProps {
   dataEntrega: string
   observacoes: string
   observacoesCliente: string
+  referenciaImagens?: PedidoImagemReferenciaInput[]
   onEditStep: (step: number) => void // click "Editar" to jump back
 }
 
@@ -45,6 +46,7 @@ export function RevisaoStep({
   dataEntrega,
   observacoes,
   observacoesCliente,
+  referenciaImagens = [],
   onEditStep,
 }: RevisaoStepProps) {
   const subtotal = items.reduce((sum, item) => sum + item.total, 0)
@@ -201,6 +203,41 @@ export function RevisaoStep({
               <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
                 <span className="font-medium">Notas para cliente:</span> {observacoesCliente}
               </p>
+            )}
+          </div>
+
+          <Separator />
+
+          {/* Section 5 - Referências */}
+          <div className="py-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Imagens de Referência
+              </span>
+              <button
+                type="button"
+                onClick={() => onEditStep(4)}
+                className="text-xs text-primary hover:underline flex items-center gap-1"
+              >
+                <Pencil className="h-3 w-3" />
+                Editar
+              </button>
+            </div>
+            {referenciaImagens.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {referenciaImagens.map((img, i) => (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    key={img.storagePath ?? i}
+                    src={img.url}
+                    alt={img.legenda || `Referência ${i + 1}`}
+                    title={img.legenda}
+                    className="h-14 w-14 rounded-md object-cover border"
+                  />
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground italic">Nenhuma imagem adicionada</p>
             )}
           </div>
 

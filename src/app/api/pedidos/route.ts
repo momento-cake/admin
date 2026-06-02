@@ -202,6 +202,19 @@ export async function POST(request: NextRequest) {
       }
     );
 
+    // Stamp client-approved reference images (null defaults — Firestore rejects
+    // undefined inside array elements; serverTimestamp is illegal in arrays).
+    const imagensReferencia = (data.imagensReferencia || []).map((img) => ({
+      id: img.id || crypto.randomUUID(),
+      url: img.url,
+      storagePath: img.storagePath,
+      legenda: img.legenda ?? null,
+      width: img.width ?? null,
+      height: img.height ?? null,
+      uploadedAt: Timestamp.now(),
+      uploadedBy: auth.uid,
+    }));
+
     // Use transaction for atomic counter increment
     const counterRef = adminDb.collection(COUNTER_COLLECTION).doc(COUNTER_DOC_ID);
 
@@ -232,6 +245,7 @@ export async function POST(request: NextRequest) {
         dataEntrega: data.dataEntrega || null,
         observacoes: data.observacoes || null,
         observacoesCliente: data.observacoesCliente || null,
+        imagensReferencia,
         pagamentos: [],
         totalPago: 0,
         dataVencimento,

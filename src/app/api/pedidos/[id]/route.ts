@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase-admin';
-import { FieldValue } from 'firebase-admin/firestore';
+import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { updatePedidoSchema } from '@/lib/validators/pedido';
 import { getAuthFromRequest, canPerformActionFromRequest, unauthorizedResponse, forbiddenResponse } from '@/lib/api-auth';
 import { calcularTotalPedido, roundCurrency } from '@/lib/payment-logic';
@@ -138,6 +138,29 @@ export async function PUT(
         canceladoEm: FieldValue.serverTimestamp(),
         canceladoPor: auth.uid,
       };
+    }
+
+    // Normalize reference images: preserve original uploadedAt/uploadedBy for
+    // images that already exist on the order (matched by id), stamp new ones,
+    // and use null (never undefined) for absent optional fields.
+    if (validation.data.imagensReferencia) {
+      const existingData = existingDoc.data() as Pedido & Record<string, unknown>;
+      const existingById = new Map(
+        (existingData.imagensReferencia || []).map((img) => [img.id, img])
+      );
+      updatePayload.imagensReferencia = validation.data.imagensReferencia.map((img) => {
+        const prior = img.id ? existingById.get(img.id) : undefined;
+        return {
+          id: img.id || crypto.randomUUID(),
+          url: img.url,
+          storagePath: img.storagePath,
+          legenda: img.legenda ?? null,
+          width: img.width ?? null,
+          height: img.height ?? null,
+          uploadedAt: prior?.uploadedAt ?? Timestamp.now(),
+          uploadedBy: prior?.uploadedBy ?? auth.uid,
+        };
+      });
     }
 
     // Remove undefined fields

@@ -32,6 +32,10 @@ vi.mock('@/components/pedidos/EntregaSection', () => ({
   EntregaSection: () => <div data-testid="entrega-section" />,
 }));
 
+vi.mock('@/components/pedidos/ReferenciasSection', () => ({
+  ReferenciasSection: () => <div data-testid="referencias-section" />,
+}));
+
 vi.mock('@/components/pedidos/ShareOrderButton', () => ({
   ShareOrderButton: (props: any) => (
     <div data-testid="share-order-button" data-token={props.publicToken} />

@@ -90,6 +90,22 @@ export const pedidoEntregaSchema = z.object({
 // ============================================================================
 
 /**
+ * Reference image validation — a client-approved image attached to a pedido.
+ * The client sends `url`/`storagePath` (+ optional caption/dimensions); the
+ * server stamps `id`/`uploadedAt`/`uploadedBy`.
+ */
+export const pedidoImagemReferenciaSchema = z.object({
+  id: z.string().optional(),
+  url: z.string().url('URL inválida'),
+  storagePath: z.string().min(1, 'Caminho do arquivo é obrigatório'),
+  legenda: z.string().max(200, 'Legenda deve ter no máximo 200 caracteres').optional(),
+  width: z.number().positive().optional(),
+  height: z.number().positive().optional(),
+  uploadedAt: z.any().optional(),
+  uploadedBy: z.string().optional(),
+});
+
+/**
  * Create pedido validation.
  */
 export const createPedidoSchema = z.object({
@@ -112,6 +128,7 @@ export const createPedidoSchema = z.object({
   dataEntrega: z.any().optional(), // Timestamp validated at runtime
   observacoes: z.string().max(2000, 'Observações muito longas').optional(),
   observacoesCliente: z.string().max(2000, 'Observações do cliente muito longas').optional(),
+  imagensReferencia: z.array(pedidoImagemReferenciaSchema).max(30, 'Máximo de 30 imagens de referência').optional(),
 });
 
 /**
@@ -160,6 +177,7 @@ export const updatePedidoSchema = z.object({
   nfExternalId: z.string().nullable().optional(),
   nfEmittedAt: z.any().nullable().optional(),
   cancelamento: cancelamentoSchema.optional(),
+  imagensReferencia: z.array(pedidoImagemReferenciaSchema).max(30, 'Máximo de 30 imagens de referência').optional(),
 });
 
 // ============================================================================
@@ -229,6 +247,7 @@ export type PedidoEntregaValidation = z.infer<typeof pedidoEntregaSchema>;
 export type CreatePedidoValidation = z.infer<typeof createPedidoSchema>;
 export type UpdatePedidoValidation = z.infer<typeof updatePedidoSchema>;
 export type CancelamentoValidation = z.infer<typeof cancelamentoSchema>;
+export type PedidoImagemReferenciaValidation = z.infer<typeof pedidoImagemReferenciaSchema>;
 export type StoreAddressValidation = z.infer<typeof storeAddressSchema>;
 export type StoreSettingsValidation = z.infer<typeof storeSettingsSchema>;
 export type StoreHoursValidation = z.infer<typeof storeHoursSchema>;

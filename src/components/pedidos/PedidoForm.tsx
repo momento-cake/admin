@@ -14,8 +14,9 @@ import {
   Truck,
   Calendar,
   ClipboardCheck,
+  Image as ImageIcon,
 } from 'lucide-react'
-import { PedidoItem, PedidoEntrega } from '@/types/pedido'
+import { PedidoItem, PedidoEntrega, PedidoImagemReferenciaInput } from '@/types/pedido'
 import { Address } from '@/types/client'
 import { formatErrorMessage, logError } from '@/lib/error-handler'
 import { StepIndicator } from './creation/StepIndicator'
@@ -23,6 +24,7 @@ import { ClienteStep } from './creation/ClienteStep'
 import { ItensStep } from './creation/ItensStep'
 import { EntregaStep } from './creation/EntregaStep'
 import { DetalhesStep } from './creation/DetalhesStep'
+import { ReferenciasStep } from './creation/ReferenciasStep'
 import { RevisaoStep } from './creation/RevisaoStep'
 
 interface PedidoFormProps {
@@ -39,6 +41,7 @@ const STEPS = [
   { label: 'Itens', icon: <Package className="h-4 w-4" /> },
   { label: 'Entrega', icon: <Truck className="h-4 w-4" /> },
   { label: 'Detalhes', icon: <Calendar className="h-4 w-4" /> },
+  { label: 'Referências', icon: <ImageIcon className="h-4 w-4" /> },
   { label: 'Revisão', icon: <ClipboardCheck className="h-4 w-4" /> },
 ]
 
@@ -94,6 +97,9 @@ export function PedidoForm({
   const [dataEntrega, setDataEntrega] = useState('')
   const [observacoes, setObservacoes] = useState('')
   const [observacoesCliente, setObservacoesCliente] = useState('')
+
+  // Reference images (client-approved)
+  const [referenciaImagens, setReferenciaImagens] = useState<PedidoImagemReferenciaInput[]>([])
 
   // Submit state
   const [saving, setSaving] = useState(false)
@@ -187,6 +193,8 @@ export function PedidoForm({
         case 3:
           return true // All fields optional
         case 4:
+          return true // Reference images optional
+        case 5:
           return true // Review is always valid
         default:
           return false
@@ -296,6 +304,7 @@ export function PedidoForm({
         dataEntrega: dataEntrega ? new Date(dataEntrega).toISOString() : undefined,
         observacoes: observacoes || undefined,
         observacoesCliente: observacoesCliente || undefined,
+        imagensReferencia: referenciaImagens.length ? referenciaImagens : undefined,
       }
 
       const response = await fetch('/api/pedidos', {
@@ -441,7 +450,14 @@ export function PedidoForm({
               />
             )}
 
-            {currentStep === 4 && selectedClient && (
+            {currentStep === 4 && (
+              <ReferenciasStep
+                value={referenciaImagens}
+                onChange={setReferenciaImagens}
+              />
+            )}
+
+            {currentStep === 5 && selectedClient && (
               <RevisaoStep
                 client={selectedClient}
                 items={items}
@@ -450,6 +466,7 @@ export function PedidoForm({
                 dataEntrega={dataEntrega}
                 observacoes={observacoes}
                 observacoesCliente={observacoesCliente}
+                referenciaImagens={referenciaImagens}
                 onEditStep={goToStep}
               />
             )}

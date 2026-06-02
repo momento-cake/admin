@@ -16,6 +16,7 @@ import {
   UserCheck,
   Calendar,
   Clock,
+  Image as ImageIcon,
 } from 'lucide-react'
 import {
   Pedido,
@@ -40,6 +41,7 @@ import { PaymentSection } from './PaymentSection'
 import { NfSection } from './NfSection'
 import { PacoteManager } from './PacoteManager'
 import { EntregaSection } from './EntregaSection'
+import { ReferenciasSection } from './ReferenciasSection'
 import { ShareOrderButton } from './ShareOrderButton'
 import { PedidoCheckoutCard } from './PedidoCheckoutCard'
 
@@ -298,6 +300,15 @@ export function PedidoDetailView({ pedido, onUpdate }: PedidoDetailViewProps) {
                 <CreditCard className="h-4 w-4" />
                 Pagamento
               </TabsTrigger>
+              <TabsTrigger value="referencias" className="gap-1 flex-shrink-0">
+                <ImageIcon className="h-4 w-4" />
+                Referências
+                {pedido.imagensReferencia && pedido.imagensReferencia.length > 0 && (
+                  <Badge variant="secondary" className="text-[10px] ml-1 py-0 px-1.5">
+                    {pedido.imagensReferencia.length}
+                  </Badge>
+                )}
+              </TabsTrigger>
               <TabsTrigger value="nf" className="gap-1 flex-shrink-0">
                 <Receipt className="h-4 w-4" />
                 NF
@@ -335,6 +346,11 @@ export function PedidoDetailView({ pedido, onUpdate }: PedidoDetailViewProps) {
         {/* Pagamento tab */}
         <TabsContent value="pagamento" className="mt-4">
           <PaymentSection pedido={pedido} onUpdate={onUpdate} />
+        </TabsContent>
+
+        {/* Referências tab */}
+        <TabsContent value="referencias" className="mt-4">
+          <ReferenciasSection pedido={pedido} onUpdate={onUpdate} />
         </TabsContent>
 
         {/* NF tab */}

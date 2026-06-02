@@ -19,6 +19,12 @@ vi.mock('sonner', () => ({
   },
 }));
 
+// Mock storage so the Referências step's editor doesn't pull in real Firebase.
+vi.mock('@/lib/storage', () => ({
+  uploadMultipleImages: vi.fn(async () => ({ successful: [], failed: [] })),
+  deleteImage: vi.fn(async () => {}),
+}));
+
 // Mock child components so we can drive form state directly
 vi.mock('@/components/pedidos/ClienteSelector', () => ({
   ClienteSelector: ({ onSelect }: any) => (
@@ -300,6 +306,9 @@ describe('PedidoForm - Wizard', () => {
     await clickNext(user);
 
     // Step 4: Revisão
+    // Step 4: Referências (optional) → continue to Revisão
+    expect(screen.getByText('Imagens de Referência')).toBeInTheDocument();
+    await clickNext(user);
     expect(screen.getByText('Resumo do Pedido')).toBeInTheDocument();
 
     // Click "Criar Pedido"
@@ -362,6 +371,9 @@ describe('PedidoForm - Wizard', () => {
     await clickNext(user);
     await clickNext(user);
 
+    // Step 4: Referências (optional) → continue to Revisão
+    expect(screen.getByText('Imagens de Referência')).toBeInTheDocument();
+    await clickNext(user);
     expect(screen.getByText('Resumo do Pedido')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /criar pedido/i }));
@@ -484,6 +496,9 @@ describe('PedidoForm - Wizard', () => {
     // Continue to step 3 and 4
     await clickNext(user);
     expect(screen.getByText('Detalhes do Pedido')).toBeInTheDocument();
+    await clickNext(user);
+    // Step 4: Referências (optional) → continue to Revisão
+    expect(screen.getByText('Imagens de Referência')).toBeInTheDocument();
     await clickNext(user);
     expect(screen.getByText('Resumo do Pedido')).toBeInTheDocument();
 
