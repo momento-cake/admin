@@ -91,9 +91,6 @@ function OrderPrint({ pedido, comValores }: { pedido: Pedido; comValores: boolea
               {comValores ? ` — ${formatBRL(it.total)}` : ''}
             </div>
           ))}
-          {comValores && finance.frete > 0 && (
-            <div style={bulletStyle}>• Frete: {formatBRL(finance.frete)}</div>
-          )}
           {comValores && finance.total > 0 && (
             <div style={totalsStyle}>
               Total: {formatBRL(finance.total)} | Sinal: {formatBRL(finance.sinal)}
@@ -151,14 +148,12 @@ export function ResumoPrintView({ pedidos, rangeLabel, comValores }: ResumoPrint
               <div style={{ fontSize: 13, fontWeight: 600 }}>
                 {item.nome} — {item.totalQuantidade} un.
               </div>
-              <div style={{ ...metaStyle, marginLeft: 14 }}>
-                {item.contribs
-                  .map(
-                    (c) =>
-                      `${c.clienteNome}${c.dataEntrega ? ` (${formatResumoDayHeader(c.dataEntrega).slice(0, 5)})` : ''}: ${c.quantidade}`
-                  )
-                  .join(' | ')}
-              </div>
+              {item.contribs.map((c, i) => (
+                <div key={`${c.pedidoId}-${i}`} style={{ ...metaStyle, marginLeft: 14 }}>
+                  • {c.clienteNome}
+                  {c.dataEntrega ? ` (${formatResumoDayHeader(c.dataEntrega).slice(0, 5)})` : ''}: {c.quantidade}
+                </div>
+              ))}
             </div>
           ))}
         </section>

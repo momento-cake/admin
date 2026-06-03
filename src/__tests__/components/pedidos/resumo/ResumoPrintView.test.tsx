@@ -57,15 +57,40 @@ describe('ResumoPrintView — sem valores (produção)', () => {
     )
     expect(screen.getByText(/ORÇAMENTO A FAZER/i)).toBeInTheDocument()
   })
+
+  it('lists each contributing order on its own line (not pipe-separated) in the items summary', () => {
+    const shared = (id: string, cliente: string, qty: number) =>
+      pedido({
+        id,
+        clienteNome: cliente,
+        orcamentos: [orc([{ id: 'i', nome: 'Brigadeiro ao leite', precoUnitario: 1, quantidade: qty, total: qty }], qty)],
+      })
+    render(
+      <ResumoPrintView
+        pedidos={[shared('a', 'Fernanda', 25), shared('b', 'Viviane', 50)]}
+        rangeLabel="Semana X"
+        comValores={false}
+      />
+    )
+    // Aggregated header + one line per contributor.
+    expect(screen.getByText(/Brigadeiro ao leite — 75 un\./)).toBeInTheDocument()
+    const fernanda = screen.getByText(/Fernanda.*: 25/)
+    const viviane = screen.getByText(/Viviane.*: 50/)
+    // Distinct elements (separate lines), and neither line uses a pipe separator.
+    expect(fernanda).not.toBe(viviane)
+    expect(fernanda.textContent).not.toContain('|')
+    expect(viviane.textContent).not.toContain('|')
+  })
 })
 
 describe('ResumoPrintView — com valores (financeiro)', () => {
-  it('renders prices and totals but NOT the items summary or the (Produção) suffix', () => {
+  it('renders prices and totals (frete folded into Total, not listed) and no items summary', () => {
     render(<ResumoPrintView pedidos={[pedido()]} rangeLabel="Semana X" comValores={true} />)
     expect(screen.queryByText(/\(Produção\)/)).not.toBeInTheDocument()
     expect(screen.queryByText(/RESUMO DE ITENS/i)).not.toBeInTheDocument()
+    // Total still includes frete (195 + 23), but frete is no longer listed as its own line.
     expect(screen.getByText(/Total: R\$\s?218,00/)).toBeInTheDocument()
-    expect(screen.getByText(/Frete: R\$\s?23,00/)).toBeInTheDocument()
+    expect(screen.queryByText(/Frete:/)).not.toBeInTheDocument()
   })
 
   it('omits the ✓ when no sinal has been paid', () => {
