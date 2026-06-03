@@ -109,6 +109,16 @@ describe('GET /api/pedidos/resumo', () => {
     expect(ids(data)).toEqual(['dated', 'undated-open'])
   })
 
+  it('excludes a CANCELADO order even when its dataEntrega is within range', async () => {
+    docsFixture = [
+      pedido('ok', { dataEntrega: tsFromDate(new Date(2026, 4, 20)) }),
+      pedido('cancel-in-range', { dataEntrega: tsFromDate(new Date(2026, 4, 20)), status: 'CANCELADO' }),
+    ]
+    const res = await GET(makeRequest('http://localhost:4000/api/pedidos/resumo?from=2026-05-19&to=2026-05-23'))
+    const data = await res.json()
+    expect(ids(data)).toEqual(['ok'])
+  })
+
   it('excludes undated orders that are cancelled or already delivered', async () => {
     docsFixture = [
       pedido('undated-cancel', { dataEntrega: null, status: 'CANCELADO' }),
