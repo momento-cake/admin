@@ -33,6 +33,24 @@ describe('pedido-date-presets', () => {
         expect(typeof PEDIDO_DATE_PRESET_LABELS[k]).toBe('string')
       })
     })
+
+    it('includes labels for the Resumo-only week presets', () => {
+      expect(PEDIDO_DATE_PRESET_LABELS.NEXT_WEEK).toBeTruthy()
+      expect(PEDIDO_DATE_PRESET_LABELS.THIS_AND_NEXT_WEEK).toBeTruthy()
+    })
+  })
+
+  describe('RESUMO_PRESET_ORDER', () => {
+    it('lists exactly the five requested ranges, in order', async () => {
+      const { RESUMO_PRESET_ORDER } = await import('@/lib/pedido-date-presets')
+      expect(RESUMO_PRESET_ORDER).toEqual([
+        'THIS_WEEK',
+        'NEXT_WEEK',
+        'THIS_AND_NEXT_WEEK',
+        'THIS_MONTH',
+        'NEXT_MONTH',
+      ])
+    })
   })
 
   describe('getPresetRange', () => {
@@ -104,6 +122,35 @@ describe('pedido-date-presets', () => {
       expect(end.getFullYear()).toBe(2025)
       expect(end.getMonth()).toBe(11)
       expect(end.getDate()).toBe(31)
+    })
+
+    it('NEXT_WEEK: Monday..Sunday of the following week', () => {
+      // FIXED_NOW = Wed Apr 15 2026; this week = Apr 13..19, next week = Apr 20..26.
+      const { start, end } = getPresetRange('NEXT_WEEK', FIXED_NOW)
+      expect(start.getMonth()).toBe(3)
+      expect(start.getDate()).toBe(20)
+      expect(start.getHours()).toBe(0)
+      expect(end.getDate()).toBe(26)
+      expect(end.getHours()).toBe(23)
+      expect(end.getMinutes()).toBe(59)
+      expect(end.getSeconds()).toBe(59)
+    })
+
+    it('THIS_AND_NEXT_WEEK: this Monday..next Sunday (two full weeks)', () => {
+      const { start, end } = getPresetRange('THIS_AND_NEXT_WEEK', FIXED_NOW)
+      expect(start.getDate()).toBe(13)
+      expect(start.getHours()).toBe(0)
+      expect(end.getDate()).toBe(26)
+      expect(end.getHours()).toBe(23)
+    })
+
+    it('NEXT_WEEK rolls across a month boundary correctly', () => {
+      // Wed Apr 29 2026: this week Apr 27..May 3, next week May 4..10.
+      const { start, end } = getPresetRange('NEXT_WEEK', new Date(2026, 3, 29))
+      expect(start.getMonth()).toBe(4) // May
+      expect(start.getDate()).toBe(4)
+      expect(end.getMonth()).toBe(4)
+      expect(end.getDate()).toBe(10)
     })
 
     it('throws for CUSTOM (callers must supply explicit dates)', () => {

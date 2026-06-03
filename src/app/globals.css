@@ -679,3 +679,18 @@
   animation: pageTurn 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
   perspective: 1000px;
 }
+
+/* Print view (Pedidos → Resumo). The print route group renders chrome-free,
+   so we only need page setup + sensible break behaviour. */
+@media print {
+  .print-root {
+    background: #fff !important;
+  }
+  .resumo-day {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  @page {
+    margin: 14mm;
+  }
+}
