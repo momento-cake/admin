@@ -89,6 +89,8 @@ export async function GET(request: NextRequest) {
     >;
 
     const selected = all.filter((p) => {
+      // Cancelled orders never appear in the resumo (dated or undated).
+      if (p.status === 'CANCELADO') return false;
       const ms = extractTimestampMs(p.dataEntrega);
       if (ms === null) {
         // Undated: keep only still-open orders for the sem-data bucket.
