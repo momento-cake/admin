@@ -35,6 +35,7 @@ import {
   ShoppingCart,
   Plus,
   LayoutGrid,
+  ClipboardList,
   MessageCircle
 } from 'lucide-react'
 
@@ -163,6 +164,11 @@ const navigation: NavItem[] = [
         name: 'Quadro Kanban',
         href: '/orders/kanban',
         icon: LayoutGrid
+      },
+      {
+        name: 'Resumo',
+        href: '/orders/resumo',
+        icon: ClipboardList
       },
       {
         name: 'Novo Pedido',

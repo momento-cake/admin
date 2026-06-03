@@ -16,6 +16,8 @@ import { ptBR } from 'date-fns/locale'
 
 export type PedidoDatePreset =
   | 'THIS_WEEK'
+  | 'NEXT_WEEK'
+  | 'THIS_AND_NEXT_WEEK'
   | 'THIS_MONTH'
   | 'NEXT_2_WEEKS'
   | 'NEXT_MONTH'
@@ -24,12 +26,28 @@ export type PedidoDatePreset =
 
 export const PEDIDO_DATE_PRESET_LABELS: Record<PedidoDatePreset, string> = {
   THIS_WEEK: 'Esta semana',
+  NEXT_WEEK: 'Próxima semana',
+  THIS_AND_NEXT_WEEK: 'Esta e próxima semana',
   THIS_MONTH: 'Este mês',
   NEXT_2_WEEKS: 'Próximas 2 semanas',
   NEXT_MONTH: 'Próximo mês',
   PREVIOUS_MONTH: 'Mês anterior',
   CUSTOM: 'Personalizado',
 }
+
+/**
+ * The presets surfaced (in display order) by the Pedidos → Resumo range
+ * selector. Kept separate from the full PedidoDatePreset union so other
+ * screens can keep using NEXT_2_WEEKS / PREVIOUS_MONTH without polluting the
+ * Resumo dropdown.
+ */
+export const RESUMO_PRESET_ORDER = [
+  'THIS_WEEK',
+  'NEXT_WEEK',
+  'THIS_AND_NEXT_WEEK',
+  'THIS_MONTH',
+  'NEXT_MONTH',
+] as const satisfies readonly PedidoDatePreset[]
 
 export interface DateRange {
   start: Date
@@ -50,6 +68,20 @@ export function getPresetRange(preset: PedidoDatePreset, now: Date = new Date())
       return {
         start: startOfWeek(now, { weekStartsOn: 1 }),
         end: endOfWeek(now, { weekStartsOn: 1 }),
+      }
+    case 'NEXT_WEEK': {
+      // The Monday-start week that follows the current one.
+      const next = addDays(now, 7)
+      return {
+        start: startOfWeek(next, { weekStartsOn: 1 }),
+        end: endOfWeek(next, { weekStartsOn: 1 }),
+      }
+    }
+    case 'THIS_AND_NEXT_WEEK':
+      // This Monday through the end of next week (two full weeks).
+      return {
+        start: startOfWeek(now, { weekStartsOn: 1 }),
+        end: endOfWeek(addDays(now, 7), { weekStartsOn: 1 }),
       }
     case 'THIS_MONTH':
       return { start: startOfMonth(now), end: endOfMonth(now) }
