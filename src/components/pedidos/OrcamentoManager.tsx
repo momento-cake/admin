@@ -207,7 +207,7 @@ export function OrcamentoManager({ pedido, onUpdate }: OrcamentoManagerProps) {
 
       {/* Edit-items dialog → saves as a new active version */}
       <Dialog open={editOpen} onOpenChange={(open) => { if (!savingEdit) setEditOpen(open) }}>
-        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="w-full sm:max-w-3xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Editar Itens do Pedido</DialogTitle>
             <DialogDescription>
@@ -314,7 +314,7 @@ export function OrcamentoManager({ pedido, onUpdate }: OrcamentoManagerProps) {
 
       {/* Items view dialog */}
       <Dialog open={!!viewingOrcamento} onOpenChange={() => setViewingOrcamento(null)}>
-        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="w-full sm:max-w-3xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               Orçamento Versão {viewingOrcamento?.versao}
