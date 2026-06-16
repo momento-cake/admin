@@ -35,7 +35,16 @@ const PORTAL_SUBDOMAIN = 'pedidos.momentocake.com.br'
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
-  const hostname = request.headers.get('host') || ''
+
+  // Behind Firebase App Hosting's proxy, `host` is the internal *.hosted.app
+  // backend host — the original requested domain (e.g. pedidos.momentocake.com.br)
+  // arrives in `x-forwarded-host`. Prefer it (taking the first value and
+  // stripping any port) so the portal rewrite still fires in production.
+  const rawHost =
+    request.headers.get('x-forwarded-host') ||
+    request.headers.get('host') ||
+    ''
+  const hostname = rawHost.split(',')[0].trim().split(':')[0]
 
   // Subdomain routing for pedidos.momentocake.com.br
   if (hostname === PORTAL_SUBDOMAIN) {
@@ -44,11 +53,15 @@ export function middleware(request: NextRequest) {
       return NextResponse.next()
     }
 
-    // Single path segment like /{token} — rewrite to /pedido/{token}
+    // Single path segment like /{token} — rewrite to /pedido/{token}/.
+    // The trailing slash is REQUIRED: next.config has `trailingSlash: true`,
+    // so the page route is canonically registered at /pedido/{token}/. A
+    // middleware rewrite is server-side with no client redirect to normalize
+    // the slash, so rewriting to the slash-less path 404s. See subdomain test.
     const segments = pathname.split('/').filter(Boolean)
     if (segments.length === 1) {
       const token = segments[0]
-      const rewriteUrl = new URL(`/pedido/${token}`, request.url)
+      const rewriteUrl = new URL(`/pedido/${token}/`, request.url)
       return NextResponse.rewrite(rewriteUrl)
     }
 
