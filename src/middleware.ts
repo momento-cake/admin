@@ -48,6 +48,14 @@ export function middleware(request: NextRequest) {
 
   // Subdomain routing for pedidos.momentocake.com.br
   if (hostname === PORTAL_SUBDOMAIN) {
+    // Static assets and Next internals must serve normally. Without this they
+    // hit the multi-segment catch-all 404 below — e.g. /brand/logo.png (the
+    // brand mark) and /_next/* chunks would 404, breaking the portal page.
+    // Tokens are UUIDs (no dots), so the extension check never catches them.
+    if (pathname.startsWith('/_next/') || pathname.includes('.')) {
+      return NextResponse.next()
+    }
+
     // Already on /pedido/* path — let it through
     if (pathname.startsWith('/pedido/')) {
       return NextResponse.next()

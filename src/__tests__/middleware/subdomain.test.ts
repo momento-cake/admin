@@ -78,6 +78,31 @@ describe('Subdomain Routing Middleware', () => {
 
       expect(response.status).toBe(404);
     });
+
+    it('should serve static assets (e.g. /brand/logo.png) without rewriting or 404ing', () => {
+      const request = new NextRequest('https://pedidos.momentocake.com.br/brand/logo.png', {
+        headers: { host: 'pedidos.momentocake.com.br' },
+      });
+
+      const response = middleware(request);
+
+      // Must pass through (NextResponse.next()) — not the multi-segment 404,
+      // and not rewritten into /pedido/*.
+      expect(response.status).toBe(200);
+      expect(response.headers.get('x-middleware-rewrite')).toBeNull();
+    });
+
+    it('should let Next internals (/_next/*) through on the subdomain', () => {
+      const request = new NextRequest(
+        'https://pedidos.momentocake.com.br/_next/static/chunks/main.js',
+        { headers: { host: 'pedidos.momentocake.com.br' } }
+      );
+
+      const response = middleware(request);
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get('x-middleware-rewrite')).toBeNull();
+    });
   });
 
   // Behind Firebase App Hosting the proxy rewrites Host to the internal
