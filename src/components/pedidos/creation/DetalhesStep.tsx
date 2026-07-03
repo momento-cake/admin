@@ -1,6 +1,6 @@
 'use client'
 
-import { Calendar, Lock, Globe, AlertCircle } from 'lucide-react'
+import { Calendar, Lock, Globe } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -15,19 +15,6 @@ interface DetalhesStepProps {
   onObservacoesClienteChange: (text: string) => void
 }
 
-function getTodayString(): string {
-  const now = new Date()
-  const y = now.getFullYear()
-  const m = String(now.getMonth() + 1).padStart(2, '0')
-  const d = String(now.getDate()).padStart(2, '0')
-  return `${y}-${m}-${d}`
-}
-
-function isDateInPast(dateStr: string): boolean {
-  if (!dateStr) return false
-  return dateStr < getTodayString()
-}
-
 export function DetalhesStep({
   entregaTipo,
   dataEntrega,
@@ -38,7 +25,6 @@ export function DetalhesStep({
   onObservacoesClienteChange,
 }: DetalhesStepProps) {
   const dateLabel = entregaTipo === 'ENTREGA' ? 'Data de Entrega' : 'Data de Retirada'
-  const pastDate = isDateInPast(dataEntrega)
 
   return (
     <div className="space-y-6">
@@ -59,16 +45,12 @@ export function DetalhesStep({
           id="dataEntrega"
           type="date"
           value={dataEntrega}
-          min={getTodayString()}
           onChange={(e) => onDataEntregaChange(e.target.value)}
-          className={`max-w-xs ${pastDate ? 'border-red-400 focus-visible:ring-red-400' : ''}`}
+          className="max-w-xs"
         />
-        {pastDate && (
-          <p className="flex items-center gap-1.5 text-xs text-red-600">
-            <AlertCircle className="h-3.5 w-3.5" />
-            A data deve ser hoje ou uma data futura
-          </p>
-        )}
+        <p className="text-xs text-muted-foreground">
+          Pode ser uma data passada (para registrar pedidos antigos) ou futura.
+        </p>
       </div>
 
       {/* Internal notes */}
