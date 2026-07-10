@@ -43,6 +43,7 @@ import { PacoteManager } from './PacoteManager'
 import { EntregaSection } from './EntregaSection'
 import { ReferenciasSection } from './ReferenciasSection'
 import { ShareOrderButton } from './ShareOrderButton'
+import { ReciboButton } from './ReciboButton'
 import { PedidoCheckoutCard } from './PedidoCheckoutCard'
 
 const CUSTOMER_HANDOFF_STATUSES = new Set([
@@ -187,6 +188,7 @@ export function PedidoDetailView({ pedido, onUpdate }: PedidoDetailViewProps) {
                     variant="primary"
                   />
                 )}
+                <ReciboButton pedido={pedido} />
               </div>
 
               {isCustomerHandoff && (

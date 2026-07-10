@@ -42,6 +42,12 @@ vi.mock('@/components/pedidos/ShareOrderButton', () => ({
   ),
 }));
 
+vi.mock('@/components/pedidos/ReciboButton', () => ({
+  ReciboButton: (props: any) => (
+    <div data-testid="recibo-button" data-numero={props.pedido?.numeroPedido} />
+  ),
+}));
+
 vi.mock('@/components/pedidos/PedidoCheckoutCard', () => ({
   PedidoCheckoutCard: () => <div data-testid="checkout-card" />,
 }));
