@@ -352,13 +352,21 @@ describe('buildReciboModel — telefone edge cases', () => {
 // --- buildReciboModel: observações -----------------------------------------
 
 describe('buildReciboModel — observações', () => {
-  it('includes internal observações when present', () => {
-    const model = buildReciboModel(pedido({ observacoes: 'Retirada às 11:30' }), null)
+  it('uses the client-facing notes (observacoesCliente)', () => {
+    const model = buildReciboModel(pedido({ observacoesCliente: 'Retirada às 11:30' }), null)
     expect(model.observacoes).toBe('Retirada às 11:30')
   })
 
-  it('omits blank observações', () => {
-    const model = buildReciboModel(pedido({ observacoes: '   ' }), null)
+  it('never exposes the internal observacoes on the receipt', () => {
+    const model = buildReciboModel(
+      pedido({ observacoes: 'NOTA INTERNA: cliente caloteiro', observacoesCliente: undefined }),
+      null,
+    )
+    expect(model.observacoes).toBeUndefined()
+  })
+
+  it('omits blank client notes', () => {
+    const model = buildReciboModel(pedido({ observacoesCliente: '   ' }), null)
     expect(model.observacoes).toBeUndefined()
   })
 })
@@ -381,7 +389,7 @@ describe('generateReciboPDF', () => {
           { id: 'pg1', data: ts(new Date(2026, 6, 5)), valor: 100, metodo: 'PIX', observacao: 'sinal', createdAt: ts(new Date(2026, 6, 5)), createdBy: 'u1' } as any,
         ],
         totalPago: 100,
-        observacoes: 'Retirada às 11:30',
+        observacoesCliente: 'Retirada às 11:30',
       }),
       personalClient({
         addresses: [{ id: 'a1', endereco: 'Rua Samurais', numero: '25', cidade: 'São Paulo', estado: 'SP', cep: '02131-080' }],
@@ -433,7 +441,7 @@ describe('generateReciboPDF', () => {
     const model = buildReciboModel(
       pedido({
         orcamentos: [orcamento({ itens: [item('A', 1, 10)] })],
-        observacoes: longObs,
+        observacoesCliente: longObs,
       }),
       null,
     )

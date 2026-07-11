@@ -84,6 +84,7 @@ export interface ReciboModel {
   totalPago: number
   restante: number
   dataVencimento: Date | null
+  /** Client-facing notes only (never the internal `observacoes`). */
   observacoes?: string
 }
 
@@ -184,7 +185,9 @@ export function buildReciboModel(pedido: Pedido, client: Client | null): ReciboM
     totalPago,
     restante,
     dataVencimento: toDateOrNull(pedido.dataVencimento),
-    observacoes: nonEmpty(pedido.observacoes) ? pedido.observacoes : undefined,
+    // Client-facing notes only — the internal `observacoes` must never appear
+    // on a receipt handed to the customer.
+    observacoes: nonEmpty(pedido.observacoesCliente) ? pedido.observacoesCliente : undefined,
   }
 }
 

@@ -137,12 +137,20 @@ describe('buildThermalReceipt', () => {
     expect(contains(bytes, 'Nenhum pagamento registrado.')).toBe(true)
   })
 
-  it('includes observações when present and omits the section otherwise', () => {
-    const withObs = buildThermalReceipt(buildReciboModel(pedido({ observacoes: 'Retirada as 11h' }), null), null)
+  it('includes client-facing observações when present and omits the section otherwise', () => {
+    const withObs = buildThermalReceipt(buildReciboModel(pedido({ observacoesCliente: 'Retirada as 11h' }), null), null)
     expect(contains(withObs, 'OBSERVACOES')).toBe(true)
     expect(contains(withObs, 'Retirada as 11h')).toBe(true)
-    const without = buildThermalReceipt(buildReciboModel(pedido({ observacoes: undefined }), null), null)
+    const without = buildThermalReceipt(buildReciboModel(pedido({ observacoesCliente: undefined }), null), null)
     expect(contains(without, 'OBSERVACOES')).toBe(false)
+  })
+
+  it('never prints the internal observacoes', () => {
+    const bytes = buildThermalReceipt(
+      buildReciboModel(pedido({ observacoes: 'NOTA INTERNA secreta', observacoesCliente: undefined }), null),
+      null,
+    )
+    expect(contains(bytes, 'NOTA INTERNA')).toBe(false)
   })
 
   it('handles a missing active orçamento without throwing', () => {
