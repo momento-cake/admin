@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Receipt, Loader2, FileText, Printer, ChevronDown } from 'lucide-react'
+import { Receipt, Loader2, FileText, Printer, Usb, ChevronDown } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
@@ -73,19 +73,26 @@ export function ReciboButton({ pedido, className }: ReciboButtonProps) {
     }
   }
 
-  const openBrowserPrintFallback = () => {
-    toast.info('Impressora USB não encontrada — abrindo impressão 80mm.')
+  // Opens the 80mm print page in a new tab; the browser print dialog lets the
+  // user pick the thermal printer via its installed system driver. This is the
+  // reliable path on Windows, where a driver-bound printer (e.g. Elgin i9) is
+  // invisible to WebUSB.
+  const openThermalPrint = () => {
     window.open(`/orders/${pedido.id}/recibo/termico`, '_blank')
   }
 
-  const handleThermal = async () => {
+  // Direct raw ESC/POS over USB. Only works where the printer is exposed to
+  // WebUSB (Chrome/Edge + a WinUSB-bound device); otherwise falls back to the
+  // 80mm system-driver print page.
+  const handleThermalUsb = async () => {
     setLoading('thermal')
     try {
       const { isWebUsbSupported, printEscPos, PrinterUnavailableError } = await import(
         '@/lib/webusb-printer'
       )
       if (!isWebUsbSupported()) {
-        openBrowserPrintFallback()
+        toast.info('WebUSB indisponível — abrindo impressão 80mm.')
+        openThermalPrint()
         return
       }
 
@@ -99,7 +106,8 @@ export function ReciboButton({ pedido, className }: ReciboButtonProps) {
         toast.success('Recibo enviado para a impressora.')
       } catch (err) {
         if (err instanceof PrinterUnavailableError) {
-          openBrowserPrintFallback()
+          toast.info('Impressora USB não encontrada — abrindo impressão 80mm.')
+          openThermalPrint()
         } else {
           throw err
         }
@@ -132,9 +140,13 @@ export function ReciboButton({ pedido, className }: ReciboButtonProps) {
           <FileText className="h-4 w-4 mr-2" />
           Baixar PDF
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={handleThermal} disabled={busy}>
+        <DropdownMenuItem onClick={openThermalPrint} disabled={busy}>
           <Printer className="h-4 w-4 mr-2" />
-          Imprimir térmico (Elgin i9)
+          Imprimir térmica 80mm
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={handleThermalUsb} disabled={busy}>
+          <Usb className="h-4 w-4 mr-2" />
+          USB direto (ESC/POS)
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
