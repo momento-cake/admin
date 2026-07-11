@@ -8,8 +8,10 @@ import type { ReciboModel } from '@/lib/pedido-recibo'
 // CSS support (same rationale as ResumoPrintView). Sized for an 80mm roll.
 const C = { ink: '#000', muted: '#333', rule: '#000' }
 
+// 72mm roll: keep the content a touch narrower than the paper so nothing clips
+// at the edges (thermal heads have a small unprintable margin).
 const wrap: CSSProperties = {
-  width: '72mm',
+  width: '68mm',
   margin: '0 auto',
   padding: '2mm 0 4mm',
   color: C.ink,
@@ -48,7 +50,7 @@ export function ReciboThermalPrintView({ model }: { model: ReciboModel }) {
   return (
     <div style={wrap}>
       {/* Force an 80mm page with no margins. */}
-      <style>{`@page { size: 80mm auto; margin: 0; } @media print { html, body { margin: 0; } }`}</style>
+      <style>{`@page { size: 72mm auto; margin: 0; } @media print { html, body { margin: 0; } }`}</style>
 
       {/* Letterhead */}
       <div style={center}>

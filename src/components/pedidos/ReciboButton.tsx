@@ -142,7 +142,7 @@ export function ReciboButton({ pedido, className }: ReciboButtonProps) {
         </DropdownMenuItem>
         <DropdownMenuItem onClick={openThermalPrint} disabled={busy}>
           <Printer className="h-4 w-4 mr-2" />
-          Imprimir térmica 80mm
+          Imprimir térmica 72mm
         </DropdownMenuItem>
         <DropdownMenuItem onClick={handleThermalUsb} disabled={busy}>
           <Usb className="h-4 w-4 mr-2" />
