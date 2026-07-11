@@ -1,12 +1,19 @@
 'use client'
 
 import { useState } from 'react'
-import { Receipt, Loader2 } from 'lucide-react'
+import { Receipt, Loader2, FileText, Printer, ChevronDown } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
 import type { Pedido } from '@/types/pedido'
 import type { Client } from '@/types/client'
+import type { ReciboModel } from '@/lib/pedido-recibo'
 import { COMPANY_INFO } from '@/lib/company-info'
 import { buildReciboModel, generateReciboPDF, loadLogoDataUrl } from '@/lib/pedido-recibo'
 
@@ -16,32 +23,37 @@ interface ReciboButtonProps {
 }
 
 /**
- * Generates a downloadable PDF receipt (recibo/venda) for an order. Fetches the
- * full client record for the client block (falling back to the order snapshot
- * when unavailable), builds the receipt model, renders it with jsPDF, and
- * triggers a browser download.
+ * Produces the order receipt (recibo/venda) in one of two formats, chosen from a
+ * dropdown:
+ *  - PDF: A4 document downloaded via jsPDF.
+ *  - Thermal: raw ESC/POS sent to an 80mm USB printer (Elgin i9); if no printer
+ *    is reachable it falls back to an 80mm browser-print page.
+ * Both share the same view-model, so the outputs stay in sync.
  */
 export function ReciboButton({ pedido, className }: ReciboButtonProps) {
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState<null | 'pdf' | 'thermal'>(null)
 
-  const handleGenerate = async () => {
-    setLoading(true)
-    try {
-      // Full client details are best-effort — the receipt still renders from
-      // the order snapshot if the client can't be fetched.
-      let client: Client | null = null
-      if (pedido.clienteId) {
-        try {
-          // Deferred import keeps the Firebase-backed clients module out of
-          // this component's load-time graph (mirrors the jsPDF dynamic import).
-          const { fetchClient } = await import('@/lib/clients')
-          client = await fetchClient(pedido.clienteId)
-        } catch {
-          client = null
-        }
+  // Full client details are best-effort — the receipt still renders from the
+  // order snapshot if the client can't be fetched.
+  const buildModel = async (): Promise<ReciboModel> => {
+    let client: Client | null = null
+    if (pedido.clienteId) {
+      try {
+        // Deferred import keeps the Firebase-backed clients module out of this
+        // component's load-time graph (mirrors the jsPDF dynamic import).
+        const { fetchClient } = await import('@/lib/clients')
+        client = await fetchClient(pedido.clienteId)
+      } catch {
+        client = null
       }
+    }
+    return buildReciboModel(pedido, client)
+  }
 
-      const model = buildReciboModel(pedido, client)
+  const handlePdf = async () => {
+    setLoading('pdf')
+    try {
+      const model = await buildModel()
       const logoDataUrl = await loadLogoDataUrl(COMPANY_INFO.logoPath)
       const blob = await generateReciboPDF(model, logoDataUrl)
 
@@ -54,27 +66,77 @@ export function ReciboButton({ pedido, className }: ReciboButtonProps) {
       anchor.remove()
       URL.revokeObjectURL(url)
     } catch (error) {
-      console.error('Erro ao gerar recibo:', error)
-      toast.error('Não foi possível gerar o recibo. Tente novamente.')
+      console.error('Erro ao gerar recibo em PDF:', error)
+      toast.error('Não foi possível gerar o recibo em PDF. Tente novamente.')
     } finally {
-      setLoading(false)
+      setLoading(null)
     }
   }
 
+  const openBrowserPrintFallback = () => {
+    toast.info('Impressora USB não encontrada — abrindo impressão 80mm.')
+    window.open(`/orders/${pedido.id}/recibo/termico`, '_blank')
+  }
+
+  const handleThermal = async () => {
+    setLoading('thermal')
+    try {
+      const { isWebUsbSupported, printEscPos, PrinterUnavailableError } = await import(
+        '@/lib/webusb-printer'
+      )
+      if (!isWebUsbSupported()) {
+        openBrowserPrintFallback()
+        return
+      }
+
+      const model = await buildModel()
+      const { buildThermalReceipt, loadLogoImageData } = await import('@/lib/pedido-recibo-thermal')
+      const logo = await loadLogoImageData(COMPANY_INFO.logoPath)
+      const bytes = buildThermalReceipt(model, logo)
+
+      try {
+        await printEscPos(bytes)
+        toast.success('Recibo enviado para a impressora.')
+      } catch (err) {
+        if (err instanceof PrinterUnavailableError) {
+          openBrowserPrintFallback()
+        } else {
+          throw err
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao imprimir recibo térmico:', error)
+      toast.error('Não foi possível imprimir o recibo. Tente novamente.')
+    } finally {
+      setLoading(null)
+    }
+  }
+
+  const busy = loading !== null
+
   return (
-    <Button
-      variant="outline"
-      size="sm"
-      onClick={handleGenerate}
-      disabled={loading}
-      className={cn(className)}
-    >
-      {loading ? (
-        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-      ) : (
-        <Receipt className="h-4 w-4 mr-2" />
-      )}
-      Gerar Recibo
-    </Button>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="outline" size="sm" disabled={busy} className={cn(className)}>
+          {busy ? (
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          ) : (
+            <Receipt className="h-4 w-4 mr-2" />
+          )}
+          Recibo
+          <ChevronDown className="h-4 w-4 ml-1" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onClick={handlePdf} disabled={busy}>
+          <FileText className="h-4 w-4 mr-2" />
+          Baixar PDF
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={handleThermal} disabled={busy}>
+          <Printer className="h-4 w-4 mr-2" />
+          Imprimir térmico (Elgin i9)
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }
