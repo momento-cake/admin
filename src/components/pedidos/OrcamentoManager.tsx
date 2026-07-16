@@ -14,8 +14,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Pencil, Loader2, FileText as FileTextIcon } from 'lucide-react'
-import { Orcamento, PedidoItem, DescontoTipo, Pedido } from '@/types/pedido'
+import { Pencil, Loader2, History, FileText as FileTextIcon } from 'lucide-react'
+import { PedidoItem, DescontoTipo, Pedido } from '@/types/pedido'
 import { parseApiResponse, describeError } from '@/lib/error-handler'
 import { usePedidoOptional } from '@/contexts/PedidoContext'
 import { OrcamentoCard } from './OrcamentoCard'
@@ -31,7 +31,7 @@ interface OrcamentoManagerProps {
 export function OrcamentoManager({ pedido, onUpdate }: OrcamentoManagerProps) {
   const pedidoCtx = usePedidoOptional()
   const [, setActivating] = useState<string | null>(null)
-  const [viewingOrcamento, setViewingOrcamento] = useState<Orcamento | null>(null)
+  const [historyOpen, setHistoryOpen] = useState(false)
 
   // Edit-items dialog state
   const [editOpen, setEditOpen] = useState(false)
@@ -168,7 +168,7 @@ export function OrcamentoManager({ pedido, onUpdate }: OrcamentoManagerProps) {
             orcamento={activeOrcamento}
             pedidoId={pedido.id}
             showActivateButton={false}
-            onView={() => setViewingOrcamento(activeOrcamento)}
+            showItems
             onUpdate={onUpdate}
           />
         ) : (
@@ -190,20 +190,37 @@ export function OrcamentoManager({ pedido, onUpdate }: OrcamentoManagerProps) {
           <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
             Histórico de Orçamentos
           </h3>
+          <Button variant="outline" size="sm" onClick={() => setHistoryOpen(true)}>
+            <History className="h-4 w-4 mr-2" />
+            Ver histórico ({historicalOrcamentos.length})
+          </Button>
+        </div>
+      )}
+
+      {/* Superseded versions, newest first */}
+      <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
+        <DialogContent className="w-full sm:max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Histórico de Orçamentos</DialogTitle>
+            <DialogDescription>
+              Versões anteriores deste pedido. Ative uma delas para torná-la o orçamento atual.
+            </DialogDescription>
+          </DialogHeader>
+
           <div className="space-y-3">
             {historicalOrcamentos.map((orc) => (
               <OrcamentoCard
                 key={orc.id}
                 orcamento={orc}
                 pedidoId={pedido.id}
+                showItems
                 onActivate={() => handleActivate(orc.id)}
-                onView={() => setViewingOrcamento(orc)}
                 onUpdate={onUpdate}
               />
             ))}
           </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
 
       {/* Edit-items dialog → saves as a new active version */}
       <Dialog open={editOpen} onOpenChange={(open) => { if (!savingEdit) setEditOpen(open) }}>
@@ -309,27 +326,6 @@ export function OrcamentoManager({ pedido, onUpdate }: OrcamentoManagerProps) {
               Salvar Alterações
             </Button>
           </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Items view dialog */}
-      <Dialog open={!!viewingOrcamento} onOpenChange={() => setViewingOrcamento(null)}>
-        <DialogContent className="w-full sm:max-w-3xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              Orçamento Versão {viewingOrcamento?.versao}
-            </DialogTitle>
-            <DialogDescription>
-              {viewingOrcamento?.itens.length} {viewingOrcamento?.itens.length !== 1 ? 'itens' : 'item'} | Total: {formatPrice(viewingOrcamento?.total ?? 0)}
-            </DialogDescription>
-          </DialogHeader>
-          {viewingOrcamento && (
-            <PedidoItemsTable
-              items={viewingOrcamento.itens}
-              onChange={() => {}}
-              readOnly
-            />
-          )}
         </DialogContent>
       </Dialog>
     </div>

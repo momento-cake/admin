@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 vi.mock('@/lib/firebase', () => ({ auth: {}, db: {}, storage: {} }))
@@ -59,8 +59,8 @@ describe('OrcamentoManager — edit items', () => {
 
     await user.click(screen.getByRole('button', { name: /editar itens/i }))
     expect(await screen.findByText(/editar itens do pedido/i)).toBeInTheDocument()
-    // prefilled item visible
-    expect(screen.getByText('Bolo')).toBeInTheDocument()
+    // Prefilled item visible inside the dialog (the card also lists it inline now).
+    expect(within(screen.getByRole('dialog')).getByText('Bolo')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: /salvar alterações/i }))
 
@@ -146,6 +146,12 @@ describe('OrcamentoManager — edit items', () => {
     render(<OrcamentoManager pedido={pedido} onUpdate={onUpdate} />)
 
     expect(screen.getByText(/histórico de orçamentos/i)).toBeInTheDocument()
+    // Superseded versions live behind the history modal now.
+    expect(screen.queryByText('Antigo')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /ver histórico/i }))
+    expect(await screen.findByText('Antigo')).toBeInTheDocument()
+
     await user.click(screen.getByRole('button', { name: /ativar/i }))
 
     await waitFor(() => expect(global.fetch).toHaveBeenCalled())
@@ -153,11 +159,17 @@ describe('OrcamentoManager — edit items', () => {
     await waitFor(() => expect(onUpdate).toHaveBeenCalled())
   })
 
-  it('opens the read-only items view for the active orçamento', async () => {
-    const user = userEvent.setup()
+  it('shows the active orçamento items inline, with no "Ver Itens" click', () => {
     render(<OrcamentoManager pedido={makePedido()} onUpdate={vi.fn()} />)
 
-    await user.click(screen.getByRole('button', { name: /ver itens/i }))
-    expect(await screen.findByText(/orçamento versão 1/i)).toBeInTheDocument()
+    expect(screen.getByText('Bolo')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /ver itens/i })).not.toBeInTheDocument()
+  })
+
+  it('does not render a history trigger when there is only one orçamento', () => {
+    render(<OrcamentoManager pedido={makePedido()} onUpdate={vi.fn()} />)
+
+    expect(screen.queryByText(/histórico de orçamentos/i)).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /ver histórico/i })).not.toBeInTheDocument()
   })
 })

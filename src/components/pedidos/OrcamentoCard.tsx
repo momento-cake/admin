@@ -8,23 +8,24 @@ import { cn } from '@/lib/utils'
 import { OrcamentoSummary } from './OrcamentoSummary'
 import { OrcamentoDiscountPopover } from './OrcamentoDiscountPopover'
 import { OrcamentoStatusButtons } from './OrcamentoStatusButtons'
+import { PedidoItemsTable } from './PedidoItemsTable'
 
 interface OrcamentoCardProps {
   orcamento: Orcamento
   pedidoId: string
   onActivate?: () => void
-  onView?: () => void
   onUpdate: () => void
   showActivateButton?: boolean
+  showItems?: boolean
 }
 
 export function OrcamentoCard({
   orcamento,
   pedidoId,
   onActivate,
-  onView,
   onUpdate,
   showActivateButton = true,
+  showItems = false,
 }: OrcamentoCardProps) {
   return (
     <Card className={cn(orcamento.isAtivo && 'ring-2 ring-primary')}>
@@ -32,13 +33,14 @@ export function OrcamentoCard({
         <OrcamentoSummary orcamento={orcamento} />
       </CardHeader>
       <CardContent className="pt-0">
+        {showItems && (
+          <div className="mb-4">
+            <PedidoItemsTable items={orcamento.itens} onChange={() => {}} readOnly />
+          </div>
+        )}
+
         {/* Action buttons */}
         <div className="flex flex-wrap gap-2">
-          {onView && (
-            <Button variant="outline" size="sm" onClick={onView}>
-              Ver Itens
-            </Button>
-          )}
           {orcamento.isAtivo && (
             <OrcamentoDiscountPopover
               orcamento={orcamento}
