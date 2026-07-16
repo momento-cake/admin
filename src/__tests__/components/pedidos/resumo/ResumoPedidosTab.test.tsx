@@ -84,4 +84,59 @@ describe('ResumoPedidosTab', () => {
     render(<ResumoPedidosTab pedidos={[]} />)
     expect(screen.getByText(/Nenhum pedido/i)).toBeInTheDocument()
   })
+
+  it('renders reference image thumbnails, using the legenda as alt text', () => {
+    render(
+      <ResumoPedidosTab
+        pedidos={[
+          pedido({
+            id: 'ref',
+            imagensReferencia: [
+              { id: 'img1', url: 'https://cdn.test/a.jpg', storagePath: 'p/a.jpg', legenda: 'Topo do bolo', uploadedAt: ts(new Date()) as any, uploadedBy: 'u' },
+              { id: 'img2', url: 'https://cdn.test/b.jpg', storagePath: 'p/b.jpg', uploadedAt: ts(new Date()) as any, uploadedBy: 'u' },
+            ],
+          }),
+        ]}
+      />
+    )
+    expect(screen.getByText(/Referências:/i)).toBeInTheDocument()
+
+    const withLegenda = screen.getByAltText('Topo do bolo')
+    expect(withLegenda).toHaveAttribute('src', 'https://cdn.test/a.jpg')
+    expect(withLegenda).toHaveAttribute('loading', 'lazy')
+
+    // The caption-less image still gets a usable alt.
+    expect(screen.getAllByRole('img')).toHaveLength(2)
+  })
+
+  it('renders no thumbnails when the order has no reference images', () => {
+    render(<ResumoPedidosTab pedidos={[pedido({ id: 'none' })]} />)
+    expect(screen.queryByText(/Referências:/i)).not.toBeInTheDocument()
+    expect(screen.queryAllByRole('img')).toHaveLength(0)
+  })
+
+  it('renders no thumbnails when imagensReferencia is an empty array', () => {
+    render(<ResumoPedidosTab pedidos={[pedido({ id: 'empty', imagensReferencia: [] })]} />)
+    expect(screen.queryByText(/Referências:/i)).not.toBeInTheDocument()
+    expect(screen.queryAllByRole('img')).toHaveLength(0)
+  })
+
+  it('renders thumbnails as static images with no click handler', () => {
+    render(
+      <ResumoPedidosTab
+        pedidos={[
+          pedido({
+            id: 'static',
+            imagensReferencia: [
+              { id: 'img1', url: 'https://cdn.test/a.jpg', storagePath: 'p/a.jpg', legenda: 'Topo do bolo', uploadedAt: ts(new Date()) as any, uploadedBy: 'u' },
+            ],
+          }),
+        ]}
+      />
+    )
+    // No lightbox affordance: the thumbnail is not a button/link and isn't wrapped in one.
+    const img = screen.getByAltText('Topo do bolo')
+    expect(img.closest('button')).toBeNull()
+    expect(img.closest('a')).toBeNull()
+  })
 })

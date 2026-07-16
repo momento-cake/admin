@@ -78,6 +78,21 @@ function OrderBlock({ pedido, showPrices }: { pedido: Pedido; showPrices: boolea
         </ul>
       )}
 
+      {!!pedido.imagensReferencia?.length && (
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <span className="text-sm text-muted-foreground">Referências:</span>
+          {pedido.imagensReferencia.map((img, i) => (
+            <img
+              key={img.id}
+              src={img.url}
+              alt={img.legenda || `Referência ${i + 1}`}
+              loading="lazy"
+              className="h-16 w-16 rounded border object-cover"
+            />
+          ))}
+        </div>
+      )}
+
       {showPrices && !aguardandoOrcamento && finance.total > 0 && (
         <p className="mt-1 text-sm font-medium">
           Total: {formatBRL(finance.total)}

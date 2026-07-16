@@ -45,6 +45,21 @@ const orderWrap: CSSProperties = {
   padding: '6px 0',
   borderBottom: `1px solid ${C.rule}`,
 }
+const imageRowStyle: CSSProperties = {
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: 6,
+  margin: '4px 0 2px 14px',
+  breakInside: 'avoid',
+  pageBreakInside: 'avoid',
+}
+const thumbStyle: CSSProperties = {
+  width: 72,
+  height: 72,
+  objectFit: 'cover',
+  border: `1px solid ${C.rule}`,
+  borderRadius: 4,
+}
 
 function Tags({ pedido }: { pedido: Pedido }) {
   const tags = getResumoTags(pedido)
@@ -98,6 +113,19 @@ function OrderPrint({ pedido, comValores }: { pedido: Pedido; comValores: boolea
             </div>
           )}
         </>
+      )}
+
+      {!comValores && !!pedido.imagensReferencia?.length && (
+        <div style={imageRowStyle}>
+          {pedido.imagensReferencia.map((img, i) => (
+            <img
+              key={img.id}
+              src={img.url}
+              alt={img.legenda || `Referência ${i + 1}`}
+              style={thumbStyle}
+            />
+          ))}
+        </div>
       )}
     </div>
   )

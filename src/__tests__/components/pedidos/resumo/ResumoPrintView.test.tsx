@@ -58,6 +58,30 @@ describe('ResumoPrintView — sem valores (produção)', () => {
     expect(screen.getByText(/ORÇAMENTO A FAZER/i)).toBeInTheDocument()
   })
 
+  it('renders reference image thumbnails on the production sheet', () => {
+    render(
+      <ResumoPrintView
+        pedidos={[
+          pedido({
+            imagensReferencia: [
+              { id: 'img1', url: 'https://cdn.test/a.jpg', storagePath: 'p/a.jpg', legenda: 'Topo do bolo', uploadedAt: ts(new Date()) as any, uploadedBy: 'u' },
+              { id: 'img2', url: 'https://cdn.test/b.jpg', storagePath: 'p/b.jpg', uploadedAt: ts(new Date()) as any, uploadedBy: 'u' },
+            ],
+          }),
+        ]}
+        rangeLabel="Semana X"
+        comValores={false}
+      />
+    )
+    expect(screen.getAllByRole('img')).toHaveLength(2)
+    expect(screen.getByAltText('Topo do bolo')).toHaveAttribute('src', 'https://cdn.test/a.jpg')
+  })
+
+  it('renders no thumbnails when the order has no reference images', () => {
+    render(<ResumoPrintView pedidos={[pedido()]} rangeLabel="Semana X" comValores={false} />)
+    expect(screen.queryAllByRole('img')).toHaveLength(0)
+  })
+
   it('lists each contributing order on its own line (not pipe-separated) in the items summary', () => {
     const shared = (id: string, cliente: string, qty: number) =>
       pedido({
@@ -91,6 +115,24 @@ describe('ResumoPrintView — com valores (financeiro)', () => {
     // Total still includes frete (195 + 23), but frete is no longer listed as its own line.
     expect(screen.getByText(/Total: R\$\s?218,00/)).toBeInTheDocument()
     expect(screen.queryByText(/Frete:/)).not.toBeInTheDocument()
+  })
+
+  it('omits reference image thumbnails from the financial sheet', () => {
+    render(
+      <ResumoPrintView
+        pedidos={[
+          pedido({
+            imagensReferencia: [
+              { id: 'img1', url: 'https://cdn.test/a.jpg', storagePath: 'p/a.jpg', legenda: 'Topo do bolo', uploadedAt: ts(new Date()) as any, uploadedBy: 'u' },
+            ],
+          }),
+        ]}
+        rangeLabel="Semana X"
+        comValores={true}
+      />
+    )
+    expect(screen.queryAllByRole('img')).toHaveLength(0)
+    expect(screen.queryByAltText('Topo do bolo')).not.toBeInTheDocument()
   })
 
   it('omits the ✓ when no sinal has been paid', () => {
