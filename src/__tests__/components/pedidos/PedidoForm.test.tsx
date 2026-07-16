@@ -277,6 +277,38 @@ describe('PedidoForm - Wizard', () => {
     expect(mockPush).toHaveBeenCalledWith('/orders');
   });
 
+  it('calls onCancel instead of navigating when onCancel is provided', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    const onCancel = vi.fn();
+    render(<PedidoForm onCancel={onCancel} />);
+
+    await user.click(screen.getByRole('button', { name: /cancelar/i }));
+
+    expect(onCancel).toHaveBeenCalledTimes(1);
+    expect(mockPush).not.toHaveBeenCalled();
+  });
+
+  it('renders the card chrome by default', () => {
+    const { container } = render(<PedidoForm />);
+    expect(container.querySelector('.bg-card')).not.toBeNull();
+    expect(container.querySelector('.max-w-3xl')).not.toBeNull();
+  });
+
+  it('omits the card chrome and outer width constraint with variant="plain"', () => {
+    const { container } = render(<PedidoForm variant="plain" />);
+    // DialogContent owns width, centering and the surface in the modal.
+    expect(container.querySelector('.bg-card')).toBeNull();
+    expect(container.querySelector('.rounded-2xl')).toBeNull();
+    expect(container.querySelector('.max-w-3xl')).toBeNull();
+  });
+
+  it('keeps every wizard step reachable in variant="plain"', () => {
+    render(<PedidoForm variant="plain" />);
+    for (const label of ['Cliente', 'Itens', 'Entrega', 'Detalhes', 'Referências', 'Revisão']) {
+      expect(screen.getByRole('button', { name: new RegExp(`^${label}`) })).toBeInTheDocument();
+    }
+  });
+
   it('completes full wizard flow and submits order', async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     render(<PedidoForm />);

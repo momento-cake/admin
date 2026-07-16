@@ -1,18 +1,22 @@
 'use client'
 
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Pedido } from '@/types/pedido'
 import { KanbanBoard } from '@/components/pedidos/KanbanBoard'
+import { PedidoFormDialog } from '@/components/pedidos/PedidoFormDialog'
 import { usePermissions } from '@/hooks/usePermissions'
 
 export default function OrdersKanbanPage() {
   const router = useRouter()
   const { canPerformAction } = usePermissions()
+  const [createOpen, setCreateOpen] = useState(false)
+  const [refreshToken, setRefreshToken] = useState(0)
 
   const canUpdate = canPerformAction('orders', 'update')
 
   const handleCreate = () => {
-    router.push('/orders/new')
+    setCreateOpen(true)
   }
 
   const handleView = (pedido: Pedido) => {
@@ -32,6 +36,16 @@ export default function OrdersKanbanPage() {
         onPedidoView={handleView}
         onPedidoCreate={handleCreate}
         canUpdate={canUpdate}
+        refreshToken={refreshToken}
+      />
+
+      <PedidoFormDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        onCreated={() => {
+          setCreateOpen(false)
+          setRefreshToken((t) => t + 1)
+        }}
       />
     </div>
   )

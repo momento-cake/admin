@@ -125,3 +125,15 @@ describe('permissions: custom override can revoke whatsapp from atendente', () =
     expect(canAccessFeature(user, 'whatsapp')).toBe(false);
   });
 });
+
+describe('permissions: PATH_TO_FEATURE after removing the /orders/new page', () => {
+  it('no longer maps the deleted /orders/new route', () => {
+    expect(PATH_TO_FEATURE['/orders/new']).toBeUndefined();
+  });
+
+  it('still maps the surviving orders routes', () => {
+    expect(PATH_TO_FEATURE['/orders']).toBe('orders');
+    expect(PATH_TO_FEATURE['/orders/kanban']).toBe('orders');
+    expect(PATH_TO_FEATURE['/orders/resumo']).toBe('orders');
+  });
+});

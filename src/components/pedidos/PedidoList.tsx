@@ -82,6 +82,8 @@ interface PedidoListProps {
   onPedidoEdit?: (pedido: Pedido) => void
   onPedidoDelete?: (pedido: Pedido) => Promise<void>
   onRefresh?: () => void
+  /** Bump to force a refetch (e.g. after an order is created elsewhere). */
+  refreshToken?: number
   className?: string
 }
 
@@ -91,6 +93,7 @@ export function PedidoList({
   onPedidoEdit,
   onPedidoDelete,
   onRefresh,
+  refreshToken,
   className,
 }: PedidoListProps) {
   const [pedidos, setPedidos] = useState<Pedido[]>([])
@@ -200,12 +203,12 @@ export function PedidoList({
   useEffect(() => {
     loadPedidos()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedSearch, statusFilter, dateFilter.dateFrom, dateFilter.dateTo, page])
+  }, [debouncedSearch, statusFilter, dateFilter.dateFrom, dateFilter.dateTo, page, refreshToken])
 
   useEffect(() => {
     loadCounts()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedSearch, dateFilter.dateFrom, dateFilter.dateTo])
+  }, [debouncedSearch, dateFilter.dateFrom, dateFilter.dateTo, refreshToken])
 
   const getActiveOrcamentoTotal = (pedido: Pedido): number => {
     const active = pedido.orcamentos.find((o) => o.isAtivo)

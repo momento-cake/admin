@@ -1,15 +1,20 @@
 'use client'
 
+import { useState } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { usePermissions } from '@/hooks/usePermissions'
 import { FeatureKey, ActionKey } from '@/lib/permissions'
 import { LucideIcon, UserPlus, ClipboardPlus, PackagePlus, Clock, Users, CalendarHeart, Image, CalendarDays, ShoppingBag, ClipboardList, CookingPot, Settings, UserCog, Leaf, Package } from 'lucide-react'
 import Link from 'next/link'
+import { PedidoFormDialog } from '@/components/pedidos/PedidoFormDialog'
 
 interface Shortcut {
   label: string
   description: string
-  href: string
+  /** Omitted for shortcuts that open a modal instead of navigating. */
+  href?: string
+  /** Opens a modal rather than navigating. Mutually exclusive with href. */
+  modal?: 'novo-pedido'
   icon: LucideIcon
   feature: FeatureKey
   action: ActionKey
@@ -28,7 +33,7 @@ const ALL_SHORTCUTS: Shortcut[] = [
   {
     label: 'Novo Pedido',
     description: 'Criar um novo pedido',
-    href: '/orders/new',
+    modal: 'novo-pedido',
     icon: ClipboardPlus,
     feature: 'orders',
     action: 'create',
@@ -183,6 +188,7 @@ const FALLBACK_PRIORITY = 50
 
 export function DashboardShortcuts() {
   const { role, canAccess, canPerformAction: canAction } = usePermissions()
+  const [novoPedidoOpen, setNovoPedidoOpen] = useState(false)
 
   const visibleShortcuts = ALL_SHORTCUTS
     .filter((s) => {
@@ -205,29 +211,53 @@ export function DashboardShortcuts() {
       <h2 className="text-lg font-semibold text-foreground mb-3">Atalhos</h2>
       <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
         {visibleShortcuts.map((shortcut) => (
-          <ShortcutCard key={shortcut.href + shortcut.label} shortcut={shortcut} />
+          <ShortcutCard
+            key={shortcut.label}
+            shortcut={shortcut}
+            onOpenModal={() => setNovoPedidoOpen(true)}
+          />
         ))}
       </div>
+
+      <PedidoFormDialog open={novoPedidoOpen} onOpenChange={setNovoPedidoOpen} />
     </div>
   )
 }
 
-function ShortcutCard({ shortcut }: { shortcut: Shortcut }) {
+function ShortcutCard({
+  shortcut,
+  onOpenModal,
+}: {
+  shortcut: Shortcut
+  onOpenModal: () => void
+}) {
   const Icon = shortcut.icon
+
+  const body = (
+    <Card className="h-full transition-all duration-200 group-hover:shadow-md group-hover:-translate-y-0.5 group-hover:border-primary/30">
+      <CardContent className="flex items-center gap-3 p-4">
+        <div className="shrink-0 rounded-lg bg-primary/10 p-2.5 transition-colors group-hover:bg-primary/20">
+          <Icon className="h-5 w-5 text-primary" />
+        </div>
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-foreground truncate">{shortcut.label}</p>
+          <p className="text-xs text-muted-foreground truncate">{shortcut.description}</p>
+        </div>
+      </CardContent>
+    </Card>
+  )
+
+  if (!shortcut.href) {
+    return (
+      <button type="button" onClick={onOpenModal} className="block group w-full text-left">
+        {body}
+      </button>
+    )
+  }
 
   return (
     <Link href={shortcut.href} className="block group">
-      <Card className="h-full transition-all duration-200 group-hover:shadow-md group-hover:-translate-y-0.5 group-hover:border-primary/30">
-        <CardContent className="flex items-center gap-3 p-4">
-          <div className="shrink-0 rounded-lg bg-primary/10 p-2.5 transition-colors group-hover:bg-primary/20">
-            <Icon className="h-5 w-5 text-primary" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-sm font-medium text-foreground truncate">{shortcut.label}</p>
-            <p className="text-xs text-muted-foreground truncate">{shortcut.description}</p>
-          </div>
-        </CardContent>
-      </Card>
+      {body}
     </Link>
   )
 }

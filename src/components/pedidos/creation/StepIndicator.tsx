@@ -36,7 +36,7 @@ export function StepIndicator({
                   className={`
                     flex items-center justify-center rounded-full
                     transition-all duration-300 font-medium text-xs
-                    h-8 w-8 sm:h-10 sm:w-10 sm:text-sm
+                    h-7 w-7 sm:h-10 sm:w-10 sm:text-sm
                     ${
                       isCompleted
                         ? 'bg-primary text-primary-foreground shadow-sm group-hover:shadow-md group-hover:scale-105'
@@ -64,7 +64,7 @@ export function StepIndicator({
 
               {/* Connecting line */}
               {index < steps.length - 1 && (
-                <div className="flex-1 mx-2 sm:mx-3">
+                <div className="flex-1 mx-1 sm:mx-3">
                   <div className="h-[2px] rounded-full bg-muted overflow-hidden">
                     <div
                       className={`h-full rounded-full transition-all duration-500 ${

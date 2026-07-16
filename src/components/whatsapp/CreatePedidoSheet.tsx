@@ -1,14 +1,7 @@
 'use client';
 
 import { toast } from 'sonner';
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet';
-import { PedidoForm } from '@/components/pedidos/PedidoForm';
+import { PedidoFormDialog } from '@/components/pedidos/PedidoFormDialog';
 import { formatPhoneForDisplay } from '@/lib/phone';
 import type { WhatsAppConversation } from '@/types/whatsapp';
 
@@ -20,6 +13,11 @@ interface CreatePedidoSheetProps {
   clienteNome: string;
 }
 
+/**
+ * WhatsApp's entry point into order creation. Keeps its name and props so the
+ * chat call sites don't move, but delegates to the shared dialog — which also
+ * fixes Cancel navigating the whole app to /orders from inside the chat.
+ */
 export function CreatePedidoSheet({
   open,
   onOpenChange,
@@ -33,38 +31,28 @@ export function CreatePedidoSheet({
     formatPhoneForDisplay(conversation.phone);
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        side="right"
-        className="w-full overflow-y-auto sm:max-w-2xl"
-      >
-        <SheetHeader>
-          <SheetTitle>Criar pedido — WhatsApp</SheetTitle>
-          <SheetDescription>{subtitle}</SheetDescription>
-        </SheetHeader>
-        <div className="px-2 pb-6">
-          <PedidoForm
-            initialClienteId={clienteId}
-            initialClienteNome={clienteNome}
-            initialClienteTelefone={conversation.phone}
-            redirectOnSuccess={false}
-            onCreated={(pedido) => {
-              toast.success(`Pedido ${pedido.numeroPedido} criado`, {
-                description: 'Abrir pedido',
-                action: {
-                  label: 'Abrir',
-                  onClick: () => {
-                    if (typeof window !== 'undefined') {
-                      window.location.href = `/orders/${pedido.id}`;
-                    }
-                  },
-                },
-              });
-              onOpenChange(false);
-            }}
-          />
-        </div>
-      </SheetContent>
-    </Sheet>
+    <PedidoFormDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title="Criar pedido — WhatsApp"
+      description={subtitle}
+      initialClienteId={clienteId}
+      initialClienteNome={clienteNome}
+      initialClienteTelefone={conversation.phone}
+      onCreated={(pedido) => {
+        toast.success(`Pedido ${pedido.numeroPedido} criado`, {
+          description: 'Abrir pedido',
+          action: {
+            label: 'Abrir',
+            onClick: () => {
+              if (typeof window !== 'undefined') {
+                window.location.href = `/orders/${pedido.id}`;
+              }
+            },
+          },
+        });
+        onOpenChange(false);
+      }}
+    />
   );
 }

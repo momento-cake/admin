@@ -34,6 +34,10 @@ interface PedidoFormProps {
   initialClienteTelefone?: string
   onCreated?: (pedido: { id: string; numeroPedido: string }) => void
   redirectOnSuccess?: boolean
+  /** Called instead of navigating to /orders when the user cancels. */
+  onCancel?: () => void
+  /** 'plain' drops the card surface and outer width for hosts that own them (e.g. a dialog). */
+  variant?: 'card' | 'plain'
 }
 
 const STEPS = [
@@ -52,8 +56,28 @@ export function PedidoForm({
   initialClienteTelefone,
   onCreated,
   redirectOnSuccess = true,
+  onCancel,
+  variant = 'card',
 }: PedidoFormProps) {
   const router = useRouter()
+  const isPlain = variant === 'plain'
+
+  // Variant differences are class strings only, so the step tree below stays
+  // structurally identical on both surfaces.
+  const rootClass = isPlain ? 'w-full' : 'w-full max-w-3xl mx-auto'
+  const surfaceClass = isPlain
+    ? 'overflow-hidden'
+    : 'rounded-2xl border border-border/60 bg-card shadow-sm overflow-hidden'
+  const contentClass = isPlain
+    ? 'sm:min-h-[360px] px-0 py-6 sm:px-2 sm:py-8'
+    : 'min-h-[360px] px-5 py-6 sm:px-8 sm:py-8'
+  const gutterClass = isPlain ? 'px-0 sm:px-2' : 'px-5 sm:px-8'
+  const headerClass = isPlain
+    ? 'border-b border-border/40 bg-muted/30 px-0 py-5 sm:px-2 sm:py-6'
+    : 'border-b border-border/40 bg-muted/30 px-4 py-5 sm:px-8 sm:py-6'
+  const footerClass = isPlain
+    ? 'border-t border-border/40 bg-muted/20 px-0 py-4 sm:px-2'
+    : 'border-t border-border/40 bg-muted/20 px-5 py-4 sm:px-8'
 
   // Step navigation
   const [currentStep, setCurrentStep] = useState(0)
@@ -370,11 +394,11 @@ export function PedidoForm({
   }
 
   return (
-    <div className="w-full max-w-3xl mx-auto">
+    <div className={rootClass}>
       {/* Stepper card */}
-      <div className="rounded-2xl border border-border/60 bg-card shadow-sm overflow-hidden">
+      <div className={surfaceClass}>
         {/* Step indicator header */}
-        <div className="border-b border-border/40 bg-muted/30 px-4 py-5 sm:px-8 sm:py-6">
+        <div className={headerClass}>
           <StepIndicator
             steps={STEPS}
             currentStep={currentStep}
@@ -384,7 +408,7 @@ export function PedidoForm({
         </div>
 
         {/* Step content area */}
-        <div className="min-h-[360px] px-5 py-6 sm:px-8 sm:py-8">
+        <div className={contentClass}>
           <div className={`transition-all duration-200 ${getAnimationClass()}`}>
             {currentStep === 0 && (
               <ClienteStep
@@ -475,7 +499,7 @@ export function PedidoForm({
 
         {/* Inline submit error */}
         {submitError && (
-          <div className="px-5 sm:px-8 pb-4">
+          <div className={`${gutterClass} pb-4`}>
             <div
               role="alert"
               className="rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700"
@@ -487,7 +511,7 @@ export function PedidoForm({
         )}
 
         {/* Navigation footer */}
-        <div className="border-t border-border/40 bg-muted/20 px-5 py-4 sm:px-8">
+        <div className={footerClass}>
           <div className="flex items-center justify-end gap-3">
             {currentStep > 0 ? (
               <Button variant="ghost" size="sm" onClick={handlePrev} disabled={saving}>
@@ -498,7 +522,7 @@ export function PedidoForm({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => router.push('/orders')}
+                onClick={onCancel ?? (() => router.push('/orders'))}
                 disabled={saving}
               >
                 Cancelar

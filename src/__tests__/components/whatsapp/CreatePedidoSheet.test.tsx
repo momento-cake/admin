@@ -2,19 +2,22 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 
-// Stub the heavy PedidoForm to keep this a thin-wrapper smoke test
-vi.mock('@/components/pedidos/PedidoForm', () => ({
-  PedidoForm: (props: any) => (
-    <div data-testid="pedido-form-stub">
-      <span data-testid="initial-cliente-id">{props.initialClienteId}</span>
-      <span data-testid="initial-cliente-nome">{props.initialClienteNome}</span>
-      <span data-testid="initial-cliente-tel">{props.initialClienteTelefone}</span>
-      <span data-testid="redirect-on-success">{String(props.redirectOnSuccess)}</span>
-      <button onClick={() => props.onCreated?.({ id: 'p1', numeroPedido: 'PED-01' })}>
-        fake-submit
-      </button>
-    </div>
-  ),
+// Stub the shared dialog so this stays a thin-wrapper test: we assert what
+// CreatePedidoSheet hands down, not how PedidoFormDialog renders it.
+vi.mock('@/components/pedidos/PedidoFormDialog', () => ({
+  PedidoFormDialog: (props: any) =>
+    props.open ? (
+      <div data-testid="pedido-form-dialog">
+        <span data-testid="dialog-title">{props.title}</span>
+        <span data-testid="dialog-description">{props.description}</span>
+        <span data-testid="initial-cliente-id">{props.initialClienteId}</span>
+        <span data-testid="initial-cliente-nome">{props.initialClienteNome}</span>
+        <span data-testid="initial-cliente-tel">{props.initialClienteTelefone}</span>
+        <button onClick={() => props.onCreated?.({ id: 'p1', numeroPedido: 'PED-01' })}>
+          fake-submit
+        </button>
+      </div>
+    ) : null,
 }));
 
 const toastSuccess = vi.fn();
@@ -23,14 +26,6 @@ vi.mock('sonner', () => ({
     error: vi.fn(),
     success: (...args: any[]) => toastSuccess(...args),
   },
-}));
-
-vi.mock('@/components/ui/sheet', () => ({
-  Sheet: ({ open, children }: any) => (open ? <div data-testid="sheet">{children}</div> : null),
-  SheetContent: ({ children }: any) => <div>{children}</div>,
-  SheetHeader: ({ children }: any) => <div>{children}</div>,
-  SheetTitle: ({ children }: any) => <h2>{children}</h2>,
-  SheetDescription: ({ children }: any) => <p data-testid="sheet-description">{children}</p>,
 }));
 
 import { CreatePedidoSheet } from '@/components/whatsapp/CreatePedidoSheet';
@@ -66,10 +61,10 @@ describe('CreatePedidoSheet', () => {
         clienteNome="Maria Silva"
       />
     );
-    expect(screen.queryByTestId('sheet')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('pedido-form-dialog')).not.toBeInTheDocument();
   });
 
-  it('passes initial cliente props to PedidoForm', () => {
+  it('passes initial cliente props and the WhatsApp title through to the dialog', () => {
     render(
       <CreatePedidoSheet
         open
@@ -79,10 +74,10 @@ describe('CreatePedidoSheet', () => {
         clienteNome="Maria Silva"
       />
     );
+    expect(screen.getByTestId('dialog-title')).toHaveTextContent('Criar pedido — WhatsApp');
     expect(screen.getByTestId('initial-cliente-id')).toHaveTextContent('c1');
     expect(screen.getByTestId('initial-cliente-nome')).toHaveTextContent('Maria Silva');
     expect(screen.getByTestId('initial-cliente-tel')).toHaveTextContent('5511999999999');
-    expect(screen.getByTestId('redirect-on-success')).toHaveTextContent('false');
   });
 
   it('falls back subtitle to whatsappName then phone when clienteNome missing', () => {
@@ -95,10 +90,10 @@ describe('CreatePedidoSheet', () => {
         clienteNome="WAName"
       />
     );
-    expect(screen.getByTestId('sheet-description')).toHaveTextContent('WAName');
+    expect(screen.getByTestId('dialog-description')).toHaveTextContent('WAName');
   });
 
-  it('closes sheet and toasts on successful creation', async () => {
+  it('closes and toasts on successful creation', async () => {
     const onOpenChange = vi.fn();
     render(
       <CreatePedidoSheet

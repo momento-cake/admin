@@ -11,7 +11,20 @@ vi.mock('next/navigation', () => ({
   }),
 }));
 
+// src/lib/firebase.ts calls getStorage() at import time, which blows up under
+// vitest (no env vars, storage not mocked in setup.ts). useAuth pulls it in.
+vi.mock('@/lib/firebase', () => ({ auth: {}, db: {}, storage: {} }));
+
 vi.mock('@/hooks/useAuth');
+
+// usePermissions reads AuthContext, which isn't provided here.
+vi.mock('@/hooks/usePermissions', () => ({
+  usePermissions: () => ({ canAccess: () => true, role: 'admin' }),
+}));
+
+vi.mock('@/hooks/useWhatsAppConversations', () => ({
+  useWhatsAppConversations: () => ({ conversations: [] }),
+}));
 
 // Mock UI components
 vi.mock('@/components/ui/button', () => ({
@@ -80,6 +93,31 @@ describe('Sidebar Component', () => {
 
       const usersMenu = screen.queryByText(/usuários|usuarios/i);
       expect(usersMenu || document.body).toBeTruthy();
+    });
+  });
+
+  describe('Pedidos submenu', () => {
+    /** The submenu only renders once its parent is expanded. */
+    async function expandPedidos() {
+      const user = userEvent.setup();
+      render(<Sidebar />);
+      await user.click(screen.getAllByText('Pedidos')[0]);
+    }
+
+    it('lists exactly the three destination entries', async () => {
+      await expandPedidos();
+
+      expect(screen.getAllByText('Todos os Pedidos').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('Quadro Kanban').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('Resumo').length).toBeGreaterThan(0);
+    });
+
+    it('no longer offers "Novo Pedido" as a destination', async () => {
+      await expandPedidos();
+
+      // Creating an order is an action (a modal), not a page.
+      expect(screen.queryByText('Novo Pedido')).not.toBeInTheDocument();
+      expect(document.querySelector('a[href="/orders/new"]')).toBeNull();
     });
   });
 

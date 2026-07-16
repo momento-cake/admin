@@ -33,9 +33,16 @@ interface KanbanBoardProps {
   onPedidoView?: (pedido: Pedido) => void
   onPedidoCreate?: () => void
   canUpdate?: boolean
+  /** Bump to force a refetch (e.g. after an order is created elsewhere). */
+  refreshToken?: number
 }
 
-export function KanbanBoard({ onPedidoView, onPedidoCreate, canUpdate = true }: KanbanBoardProps) {
+export function KanbanBoard({
+  onPedidoView,
+  onPedidoCreate,
+  canUpdate = true,
+  refreshToken,
+}: KanbanBoardProps) {
   const [pedidos, setPedidos] = useState<Pedido[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -72,7 +79,8 @@ export function KanbanBoard({ onPedidoView, onPedidoCreate, canUpdate = true }: 
     } finally {
       setLoading(false)
     }
-  }, [debouncedSearch, dateFilter.dateFrom, dateFilter.dateTo])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedSearch, dateFilter.dateFrom, dateFilter.dateTo, refreshToken])
 
   useEffect(() => {
     loadPedidos()

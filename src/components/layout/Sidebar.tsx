@@ -33,7 +33,6 @@ import {
   Settings,
   MapPin,
   ShoppingCart,
-  Plus,
   LayoutGrid,
   ClipboardList,
   MessageCircle
@@ -169,11 +168,6 @@ const navigation: NavItem[] = [
         name: 'Resumo',
         href: '/orders/resumo',
         icon: ClipboardList
-      },
-      {
-        name: 'Novo Pedido',
-        href: '/orders/new',
-        icon: Plus
       }
     ]
   },

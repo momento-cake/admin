@@ -1,16 +1,20 @@
 'use client'
 
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { Pedido } from '@/types/pedido'
 import { PedidoList } from '@/components/pedidos/PedidoList'
+import { PedidoFormDialog } from '@/components/pedidos/PedidoFormDialog'
 import { formatErrorMessage } from '@/lib/error-handler'
 
 export default function OrdersPage() {
   const router = useRouter()
+  const [createOpen, setCreateOpen] = useState(false)
+  const [refreshToken, setRefreshToken] = useState(0)
 
   const handleCreate = () => {
-    router.push('/orders/new')
+    setCreateOpen(true)
   }
 
   const handleView = (pedido: Pedido) => {
@@ -50,6 +54,16 @@ export default function OrdersPage() {
         onPedidoView={handleView}
         onPedidoEdit={handleEdit}
         onPedidoDelete={handleDelete}
+        refreshToken={refreshToken}
+      />
+
+      <PedidoFormDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        onCreated={() => {
+          setCreateOpen(false)
+          setRefreshToken((t) => t + 1)
+        }}
       />
     </div>
   )
