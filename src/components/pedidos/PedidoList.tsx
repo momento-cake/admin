@@ -54,6 +54,7 @@ import { cn } from '@/lib/utils'
 import { formatErrorMessage, logError } from '@/lib/error-handler'
 import { Pedido, PedidoStatus } from '@/types/pedido'
 import { formatPrice } from '@/lib/products'
+import { toCalendarDate } from '@/lib/calendar-date'
 import { PedidoStatusBadge } from './PedidoStatusBadge'
 import { PaymentStatusBadge } from './pagamentos/PaymentStatusBadge'
 import { CancelPedidoDialog } from './CancelPedidoDialog'
@@ -524,7 +525,7 @@ export function PedidoList({
                       <span className="flex items-center gap-1 text-xs text-muted-foreground">
                         <Calendar className="h-3 w-3" aria-hidden />
                         {pedido.dataEntrega
-                          ? formatDate(pedido.dataEntrega, { short: true })
+                          ? formatDate(toCalendarDate(pedido.dataEntrega), { short: true })
                           : formatDate(pedido.createdAt)}
                       </span>
                       <span className="font-semibold tabular-nums">
@@ -691,7 +692,7 @@ export function PedidoList({
                           </span>
                           {pedido.dataEntrega && (
                             <span className="text-muted-foreground">
-                              {formatDate(pedido.dataEntrega, { short: true })}
+                              {formatDate(toCalendarDate(pedido.dataEntrega), { short: true })}
                             </span>
                           )}
                         </div>

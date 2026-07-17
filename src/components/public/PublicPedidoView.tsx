@@ -5,6 +5,7 @@ import { PEDIDO_STATUS_LABELS, type PedidoStatus, type EntregaTipo } from '@/typ
 import { PublicEntregaToggle } from './PublicEntregaToggle'
 import { PublicCheckoutFlow, type PublicBillingData, type PublicPaymentSessionData } from './PublicCheckoutFlow'
 import { ArrowRight, Loader2, Calendar, MessageSquare, Package } from 'lucide-react'
+import { toCalendarDate } from '@/lib/calendar-date'
 import { BrandLogo } from './brand/BrandLogo'
 import { BrandHairline } from './brand/BrandHairline'
 import { toast } from 'sonner'
@@ -116,9 +117,10 @@ function formatCurrency(value: number): string {
 }
 
 function formatDate(dateStr: string): string {
-  // Handle both 'YYYY-MM-DD' and ISO strings like '2026-03-15T14:00:00.000Z'
-  const date = dateStr.includes('T') ? new Date(dateStr) : new Date(dateStr + 'T00:00:00')
-  if (isNaN(date.getTime())) return dateStr // fallback to raw string if invalid
+  // `dataEntrega` is a calendar date, stored either as 'YYYY-MM-DD' or as an ISO
+  // instant; anchor it to its calendar day so it never shifts by a timezone.
+  const date = toCalendarDate(dateStr)
+  if (!date) return dateStr // fallback to raw string if invalid
   return date.toLocaleDateString('pt-BR', {
     day: '2-digit',
     month: 'long',

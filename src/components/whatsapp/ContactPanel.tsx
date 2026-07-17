@@ -21,6 +21,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useDebounce } from '@/hooks/useDebounce';
 import { formatPhoneForDisplay } from '@/lib/phone';
+import { toCalendarDate } from '@/lib/calendar-date';
 import { CreatePedidoSheet } from '@/components/whatsapp/CreatePedidoSheet';
 import {
   PEDIDO_STATUS_LABELS,
@@ -54,9 +55,11 @@ const BRL = new Intl.NumberFormat('pt-BR', {
   currency: 'BRL',
 });
 
-function formatDateShort(seconds: number | undefined | null): string | null {
-  if (!seconds) return null;
-  const date = new Date(seconds * 1000);
+function formatDateShort(value: { seconds: number } | null | undefined): string | null {
+  // `dataEntrega` is a calendar date — anchor it to its calendar day so it
+  // doesn't slip to the previous day when formatted in local time.
+  const date = toCalendarDate(value);
+  if (!date) return null;
   return date.toLocaleDateString('pt-BR', {
     day: '2-digit',
     month: 'short',
@@ -67,7 +70,7 @@ function PedidoCard({ pedido }: { pedido: PedidoSummary }) {
   const status = pedido.status as PedidoStatus | undefined;
   const theme = status && STATUS_THEME[status] ? STATUS_THEME[status] : null;
   const label = status ? PEDIDO_STATUS_LABELS[status as PedidoStatus] ?? status : null;
-  const dateLabel = formatDateShort(pedido.dataEntrega?.seconds);
+  const dateLabel = formatDateShort(pedido.dataEntrega);
 
   return (
     <Link

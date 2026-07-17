@@ -13,6 +13,7 @@
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import type { Orcamento, Pedido, PedidoItem } from '@/types/pedido'
+import { toCalendarDate } from '@/lib/calendar-date'
 
 // ---------------------------------------------------------------------------
 // Date coercion
@@ -150,7 +151,7 @@ export function groupPedidosByDeliveryDay(pedidos: Pedido[]): DayGroup[] {
   const semData: Pedido[] = []
 
   for (const p of pedidos) {
-    const d = toDateOrNull(p.dataEntrega)
+    const d = toCalendarDate(p.dataEntrega)
     if (!d) {
       semData.push(p)
       continue
@@ -205,7 +206,7 @@ export function aggregateItems(pedidos: Pedido[]): AggregatedItem[] {
 
   for (const p of pedidos) {
     if (p.status === 'CANCELADO') continue
-    const dataEntrega = toDateOrNull(p.dataEntrega)
+    const dataEntrega = toCalendarDate(p.dataEntrega)
     for (const it of getActiveItens(p)) {
       const key = normalizeName(it.nome)
       let agg = map.get(key)

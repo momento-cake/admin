@@ -15,6 +15,7 @@ import { toast } from 'sonner'
 import type { Pedido } from '@/types/pedido'
 import type { Timestamp } from 'firebase/firestore'
 import { calcularTotalPedido, roundCurrency } from '@/lib/payment-logic'
+import { calendarDateToISO, calendarInputValue, toCalendarDate } from '@/lib/calendar-date'
 import { formatPrice } from '@/lib/products'
 import { describeError, parseApiResponse } from '@/lib/error-handler'
 import { usePermissions } from '@/hooks/usePermissions'
@@ -28,33 +29,12 @@ interface PaymentSectionProps {
   onUpdate: () => void
 }
 
-function toDateLoose(value: unknown): Date | null {
-  if (!value) return null
-  if (value instanceof Date) return value
-  const v = value as {
-    toDate?: () => Date
-    _seconds?: number
-    seconds?: number
-  }
-  if (typeof v.toDate === 'function') return v.toDate()
-  if (typeof v._seconds === 'number') return new Date(v._seconds * 1000)
-  if (typeof v.seconds === 'number') return new Date(v.seconds * 1000)
-  if (typeof value === 'string' || typeof value === 'number') {
-    const d = new Date(value)
-    return isNaN(d.getTime()) ? null : d
-  }
-  return null
-}
-
-function toInputDate(value: unknown): string {
-  const d = toDateLoose(value)
-  if (!d) return ''
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
-}
+// `dataVencimento` is a calendar date (no time-of-day), so read/write it through
+// the shared calendar-date helpers to avoid the local-timezone off-by-one.
+const toInputDate = calendarInputValue
 
 function formatDisplayDate(value: unknown): string {
-  const d = toDateLoose(value)
+  const d = toCalendarDate(value)
   if (!d) return '-'
   return new Intl.DateTimeFormat('pt-BR', {
     day: '2-digit',
@@ -83,7 +63,10 @@ export function PaymentSection({ pedido, onUpdate }: PaymentSectionProps) {
     setSavingVenc(true)
 
     // Optimistic UI: update dataVencimento immediately, rollback on failure.
-    const newDate = new Date(newVenc)
+    // Anchor the picked calendar day at noon UTC so it survives the round trip.
+    const newVencIso = calendarDateToISO(newVenc)
+    if (!newVencIso) return
+    const newDate = new Date(newVencIso)
     const optimisticVenc = {
       toDate: () => newDate,
       seconds: Math.floor(newDate.getTime() / 1000),
@@ -99,7 +82,7 @@ export function PaymentSection({ pedido, onUpdate }: PaymentSectionProps) {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          dataVencimento: newDate.toISOString(),
+          dataVencimento: newVencIso,
         }),
       })
       await parseApiResponse(res)

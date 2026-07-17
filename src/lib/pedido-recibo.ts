@@ -25,6 +25,7 @@ import {
   toDateOrNull,
 } from '@/lib/pedido-resumo'
 import { COMPANY_INFO, type CompanyInfo } from '@/lib/company-info'
+import { toCalendarDate } from '@/lib/calendar-date'
 
 // ---------------------------------------------------------------------------
 // Model
@@ -171,7 +172,7 @@ export function buildReciboModel(pedido: Pedido, client: Client | null): ReciboM
     emissao: toDateOrNull(pedido.createdAt),
     entregaLabel: entrega.label,
     entregaDetalhe: entrega.detail,
-    dataEntrega: toDateOrNull(pedido.dataEntrega),
+    dataEntrega: toCalendarDate(pedido.dataEntrega),
     client: {
       nome: clientNome,
       documento: resolveDocumento(client),
@@ -184,7 +185,7 @@ export function buildReciboModel(pedido: Pedido, client: Client | null): ReciboM
     pagamentos,
     totalPago,
     restante,
-    dataVencimento: toDateOrNull(pedido.dataVencimento),
+    dataVencimento: toCalendarDate(pedido.dataVencimento),
     // Client-facing notes only — the internal `observacoes` must never appear
     // on a receipt handed to the customer.
     observacoes: nonEmpty(pedido.observacoesCliente) ? pedido.observacoesCliente : undefined,

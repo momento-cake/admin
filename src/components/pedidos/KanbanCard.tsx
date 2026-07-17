@@ -3,6 +3,7 @@
 import { Pedido } from '@/types/pedido'
 import { formatPrice } from '@/lib/products'
 import { cn } from '@/lib/utils'
+import { toCalendarDate } from '@/lib/calendar-date'
 import { Calendar, GripVertical, Package2, Phone, Truck, Store } from 'lucide-react'
 import { STATUS_THEME } from './statusTheme'
 import { PaymentStatusBadge } from './pagamentos/PaymentStatusBadge'
@@ -56,7 +57,7 @@ export function KanbanCard({
   const theme = STATUS_THEME[pedido.status]
   const total = activeTotal(pedido)
   const itemCount = activeItemCount(pedido)
-  const entregaDate = formatDate(pedido.dataEntrega)
+  const entregaDate = formatDate(toCalendarDate(pedido.dataEntrega))
   const tipo = pedido.entrega?.tipo
 
   return (

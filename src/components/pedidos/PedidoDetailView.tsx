@@ -27,6 +27,7 @@ import {
 } from '@/types/pedido'
 import { Address } from '@/types/client'
 import { formatPrice } from '@/lib/products'
+import { toCalendarDate } from '@/lib/calendar-date'
 import {
   parseApiResponse,
   describeError,
@@ -221,7 +222,7 @@ export function PedidoDetailView({ pedido, onUpdate }: PedidoDetailViewProps) {
                 {pedido.dataEntrega && (
                   <span className="flex items-center gap-1">
                     <Clock className="h-4 w-4" />
-                    Entrega: {formatDateShort(pedido.dataEntrega)}
+                    Entrega: {formatDateShort(toCalendarDate(pedido.dataEntrega))}
                   </span>
                 )}
               </div>

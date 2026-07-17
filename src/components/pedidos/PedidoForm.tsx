@@ -19,6 +19,7 @@ import {
 import { PedidoItem, PedidoEntrega, PedidoImagemReferenciaInput } from '@/types/pedido'
 import { Address } from '@/types/client'
 import { formatErrorMessage, logError } from '@/lib/error-handler'
+import { calendarDateToISO } from '@/lib/calendar-date'
 import { StepIndicator } from './creation/StepIndicator'
 import { ClienteStep } from './creation/ClienteStep'
 import { ItensStep } from './creation/ItensStep'
@@ -325,7 +326,7 @@ export function PedidoForm({
             acrescimo: 0,
           },
         ],
-        dataEntrega: dataEntrega ? new Date(dataEntrega).toISOString() : undefined,
+        dataEntrega: calendarDateToISO(dataEntrega) ?? undefined,
         observacoes: observacoes || undefined,
         observacoesCliente: observacoesCliente || undefined,
         imagensReferencia: referenciaImagens.length ? referenciaImagens : undefined,

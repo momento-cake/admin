@@ -14,6 +14,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { AlertCircle, Loader2, ArrowLeft, Save } from 'lucide-react'
 import { Pedido } from '@/types/pedido'
 import { formatErrorMessage } from '@/lib/error-handler'
+import { calendarDateToISO, calendarInputValue } from '@/lib/calendar-date'
 import { useAuthContext } from '@/contexts/AuthContext'
 import { ClienteSelector } from '@/components/pedidos/ClienteSelector'
 
@@ -60,15 +61,7 @@ export default function EditOrderPage() {
         })
         setEntregaTipo(result.entrega.tipo)
         if (result.dataEntrega) {
-          let date: Date
-          if ((result.dataEntrega as any).toDate) {
-            date = (result.dataEntrega as any).toDate()
-          } else if ((result.dataEntrega as any)._seconds) {
-            date = new Date((result.dataEntrega as any)._seconds * 1000)
-          } else {
-            date = new Date(result.dataEntrega as any)
-          }
-          setDataEntrega(date.toISOString().split('T')[0])
+          setDataEntrega(calendarInputValue(result.dataEntrega))
         }
         setObservacoes(result.observacoes || '')
         setObservacoesCliente(result.observacoesCliente || '')
@@ -98,9 +91,7 @@ export default function EditOrderPage() {
           ...pedido!.entrega,
           tipo: entregaTipo,
         },
-        dataEntrega: dataEntrega
-          ? new Date(dataEntrega).toISOString()
-          : null,
+        dataEntrega: calendarDateToISO(dataEntrega),
         observacoes: observacoes || undefined,
         observacoesCliente: observacoesCliente || undefined,
       }

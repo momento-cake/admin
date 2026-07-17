@@ -206,6 +206,13 @@ describe('groupPedidosByDeliveryDay', () => {
     const groups = groupPedidosByDeliveryDay([a])
     expect(groups.some((g) => g.dayKey === 'sem-data')).toBe(false)
   })
+  it('groups a legacy UTC-midnight delivery date under its own calendar day (no off-by-one)', () => {
+    // Orders saved before the timezone fix stored dataEntrega as UTC midnight.
+    // Grouping in local time (UTC-3) used to bucket this under 2026-05-19.
+    const a = pedido({ id: 'a', dataEntrega: '2026-05-20T00:00:00.000Z' as any })
+    const groups = groupPedidosByDeliveryDay([a])
+    expect(groups.map((g) => g.dayKey)).toEqual(['2026-05-20'])
+  })
 })
 
 // --- aggregateItems ---------------------------------------------------------
