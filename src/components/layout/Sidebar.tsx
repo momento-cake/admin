@@ -35,7 +35,8 @@ import {
   ShoppingCart,
   LayoutGrid,
   ClipboardList,
-  MessageCircle
+  MessageCircle,
+  Cake
 } from 'lucide-react'
 
 interface NavSubmenuItem {
@@ -168,6 +169,11 @@ const navigation: NavItem[] = [
         name: 'Resumo',
         href: '/orders/resumo',
         icon: ClipboardList
+      },
+      {
+        name: 'Mesversários',
+        href: '/orders/mesversarios',
+        icon: Cake
       }
     ]
   },

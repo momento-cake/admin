@@ -291,6 +291,15 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // Mesversarios collection - Monthly anniversary order management
+    // Mirrors the pedidos access model: authenticated admin/atendente only.
+    match /mesversarios/{mesversarioId} {
+      allow read: if isViewer();
+      allow create: if isAdmin() || (isUserActive());
+      allow update: if isAdmin() || (isUserActive());
+      allow delete: if isAdmin();
+    }
+
     // Store Addresses collection - Store location management
     match /storeAddresses/{addressId} {
       allow read: if isViewer();

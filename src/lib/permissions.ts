@@ -159,6 +159,7 @@ export const PATH_TO_FEATURE: Record<string, FeatureKey> = {
   '/orders': 'orders',
   '/orders/kanban': 'orders',
   '/orders/resumo': 'orders',
+  '/orders/mesversarios': 'orders',
   '/reports': 'reports',
   '/settings': 'settings',
   '/settings/store-addresses': 'settings',
