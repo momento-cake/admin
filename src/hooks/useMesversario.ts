@@ -11,6 +11,7 @@ interface UseMesversarioResult {
   refresh: () => Promise<void>;
   updateMes: (numero: number, patch: UpdateMesData) => Promise<void>;
   linkPedido: (numero: number, pedidoId: string, pedidoNumero: string) => Promise<void>;
+  unlinkPedido: (numero: number) => Promise<void>;
   updateMesversario: (data: UpdateMesversarioData) => Promise<void>;
 }
 
@@ -73,6 +74,11 @@ export function useMesversario(id: string): UseMesversarioResult {
     [putMes]
   );
 
+  const unlinkPedido = useCallback(
+    (numero: number) => putMes(numero, { desvincular: true }),
+    [putMes]
+  );
+
   const updateMesversario = useCallback(
     async (data: UpdateMesversarioData) => {
       const response = await fetch(`/api/mesversarios/${id}`, {
@@ -97,6 +103,7 @@ export function useMesversario(id: string): UseMesversarioResult {
     refresh,
     updateMes,
     linkPedido,
+    unlinkPedido,
     updateMesversario,
   };
 }

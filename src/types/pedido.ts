@@ -307,6 +307,12 @@ export interface Pedido {
   // Optional and append-only.
   paymentAnomalies?: PaymentAnomaly[];
 
+  // Mesversário back-reference — set when this order was created for, or later
+  // linked to, a monthly milestone. Lets the Pedidos screens surface a badge
+  // that links back to the journey. `mesNumero` is the milestone (1..12).
+  mesversarioId?: string;
+  mesNumero?: number;
+
   // Metadata
   isActive: boolean;
   createdAt: Timestamp;
@@ -381,6 +387,10 @@ export interface CreatePedidoData {
   observacoes?: string;
   observacoesCliente?: string;
   imagensReferencia?: PedidoImagemReferenciaInput[];
+  /** Set when the order is created for a monthly milestone — drives MES-XXXX numbering. */
+  mesversarioId?: string;
+  /** The milestone (1..12) this order belongs to. */
+  mesNumero?: number;
 }
 
 export interface UpdatePedidoData {
@@ -404,6 +414,9 @@ export interface UpdatePedidoData {
     motivo: string;
   };
   imagensReferencia?: PedidoImagemReferenciaInput[];
+  /** Mesversário back-reference — patched when linking/unlinking an order to a month. `null` clears it. */
+  mesversarioId?: string | null;
+  mesNumero?: number | null;
 }
 
 export interface CreatePagamentoData {

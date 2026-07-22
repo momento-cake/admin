@@ -36,6 +36,7 @@ import {
 } from '@/lib/error-handler'
 import { usePedidoOptional } from '@/contexts/PedidoContext'
 import { PedidoStatusBadge } from './PedidoStatusBadge'
+import { MesversarioBadge } from './MesversarioBadge'
 import { PedidoStatusFlow } from './PedidoStatusFlow'
 import { OrcamentoManager } from './OrcamentoManager'
 import { PaymentSection } from './PaymentSection'
@@ -180,6 +181,12 @@ export function PedidoDetailView({ pedido, onUpdate }: PedidoDetailViewProps) {
                   {pedido.numeroPedido}
                 </code>
                 <PedidoStatusBadge status={pedido.status} />
+                {pedido.mesversarioId && (
+                  <MesversarioBadge
+                    mesversarioId={pedido.mesversarioId}
+                    mesNumero={pedido.mesNumero}
+                  />
+                )}
                 {isCustomerHandoff && (
                   <ShareOrderButton
                     publicToken={pedido.publicToken}

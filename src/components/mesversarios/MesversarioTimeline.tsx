@@ -7,6 +7,7 @@ interface MesversarioTimelineProps {
   mesversario: Mesversario;
   onUpdateMes: (numero: number, patch: UpdateMesData) => Promise<void>;
   onLinkPedido: (numero: number, pedidoId: string, pedidoNumero: string) => Promise<void>;
+  onUnlinkPedido?: (numero: number) => Promise<void>;
 }
 
 /**
@@ -17,6 +18,7 @@ export function MesversarioTimeline({
   mesversario,
   onUpdateMes,
   onLinkPedido,
+  onUnlinkPedido,
 }: MesversarioTimelineProps) {
   const meses = [...mesversario.meses].sort((a, b) => a.numero - b.numero);
 
@@ -29,12 +31,14 @@ export function MesversarioTimeline({
             aria-hidden
           />
           <MesversarioMesCard
+            mesversarioId={mesversario.id}
             mes={mes}
             clienteId={mesversario.clienteId}
             clienteNome={mesversario.clienteNome}
             clienteTelefone={mesversario.clienteTelefone}
             onUpdateMes={onUpdateMes}
             onLinkPedido={onLinkPedido}
+            onUnlinkPedido={onUnlinkPedido}
           />
         </li>
       ))}

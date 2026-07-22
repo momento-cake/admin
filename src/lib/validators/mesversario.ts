@@ -80,7 +80,9 @@ export const updateMesversarioSchema = z.object({
 /**
  * Update a single month: status/acordo/observacoes plus an optional pedido
  * link. When pedidoId/pedidoNumero are present the route moves the month to
- * PEDIDO_CRIADO.
+ * PEDIDO_CRIADO and stamps the back-reference onto the pedido. When
+ * `desvincular` is true the route clears the month's link (back to ACORDADO)
+ * and strips the back-reference off the previously-linked pedido.
  */
 export const updateMesSchema = z.object({
   status: mesStatusEnum.optional(),
@@ -88,6 +90,7 @@ export const updateMesSchema = z.object({
   observacoes: z.string().max(2000, 'Observações muito longas').optional(),
   pedidoId: z.string().optional(),
   pedidoNumero: z.string().optional(),
+  desvincular: z.boolean().optional(),
 });
 
 export const linkPedidoSchema = z.object({

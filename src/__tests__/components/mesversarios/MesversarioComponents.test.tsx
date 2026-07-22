@@ -26,6 +26,21 @@ vi.mock('@/components/pedidos/PedidoFormDialog', () => ({
     ) : null,
 }));
 
+// VincularPedidoDialog fetches the client's orders — stub it to a lightweight
+// surface that exposes the onPick callback with a fixed existing order.
+vi.mock('@/components/mesversarios/VincularPedidoDialog', () => ({
+  VincularPedidoDialog: ({ open, onPick }: any) =>
+    open ? (
+      <button
+        type="button"
+        data-testid="mock-vincular-pedido"
+        onClick={() => onPick({ id: 'ped-existing', numeroPedido: 'PED-0042' })}
+      >
+        Simular seleção de pedido existente
+      </button>
+    ) : null,
+}));
+
 // ReferenciaImagesEditor reaches for Firebase storage — stub it out.
 vi.mock('@/components/pedidos/ReferenciaImagesEditor', () => ({
   ReferenciaImagesEditor: () => <div data-testid="ref-images" />,
@@ -139,6 +154,7 @@ describe('MesversarioMesCard', () => {
   it('highlights month 12 as the 1-year milestone', () => {
     render(
       <MesversarioMesCard
+        mesversarioId="m1"
         mes={baseMes(12, { dataComemoracao: '2026-01-15' })}
         clienteId="c1"
         clienteNome="Maria"
@@ -154,6 +170,7 @@ describe('MesversarioMesCard', () => {
     const user = userEvent.setup();
     render(
       <MesversarioMesCard
+        mesversarioId="m1"
         mes={baseMes(1)}
         clienteId="c1"
         clienteNome="Maria"
@@ -182,6 +199,7 @@ describe('MesversarioMesCard', () => {
     const user = userEvent.setup();
     render(
       <MesversarioMesCard
+        mesversarioId="m1"
         mes={baseMes(1)}
         clienteId="c1"
         clienteNome="Maria"
@@ -197,6 +215,7 @@ describe('MesversarioMesCard', () => {
   it('renders an existing agreement summary', () => {
     render(
       <MesversarioMesCard
+        mesversarioId="m1"
         mes={baseMes(3, {
           status: 'ACORDADO',
           acordo: {
@@ -225,6 +244,7 @@ describe('MesversarioMesCard', () => {
     const user = userEvent.setup();
     render(
       <MesversarioMesCard
+        mesversarioId="m1"
         mes={baseMes(1)}
         clienteId="c1"
         clienteNome="Maria"
@@ -247,6 +267,7 @@ describe('MesversarioMesCard', () => {
     const user = userEvent.setup();
     render(
       <MesversarioMesCard
+        mesversarioId="m1"
         mes={baseMes(2)}
         clienteId="c1"
         clienteNome="Maria"
@@ -266,6 +287,7 @@ describe('MesversarioMesCard', () => {
   it('hides "Criar pedido" once a pedido is linked', () => {
     render(
       <MesversarioMesCard
+        mesversarioId="m1"
         mes={baseMes(2, { status: 'PEDIDO_CRIADO', pedidoId: 'p1', pedidoNumero: 'PED-0001' })}
         clienteId="c1"
         clienteNome="Maria"
@@ -274,6 +296,62 @@ describe('MesversarioMesCard', () => {
       />
     );
     expect(screen.queryByRole('button', { name: /criar pedido/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /vincular pedido existente/i })).not.toBeInTheDocument();
     expect(screen.getByText('Pedido PED-0001')).toBeInTheDocument();
+  });
+
+  it('links an already-existing order through onLinkPedido', async () => {
+    const onLinkPedido = vi.fn(async () => {});
+    const user = userEvent.setup();
+    render(
+      <MesversarioMesCard
+        mesversarioId="m1"
+        mes={baseMes(2)}
+        clienteId="c1"
+        clienteNome="Maria"
+        onUpdateMes={noop}
+        onLinkPedido={onLinkPedido}
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: /vincular pedido existente/i }));
+    await user.click(screen.getByTestId('mock-vincular-pedido'));
+
+    await waitFor(() =>
+      expect(onLinkPedido).toHaveBeenCalledWith(2, 'ped-existing', 'PED-0042')
+    );
+  });
+
+  it('shows "Desvincular" only when linked and onUnlinkPedido is provided', async () => {
+    const onUnlinkPedido = vi.fn(async () => {});
+    const user = userEvent.setup();
+    render(
+      <MesversarioMesCard
+        mesversarioId="m1"
+        mes={baseMes(2, { status: 'PEDIDO_CRIADO', pedidoId: 'p1', pedidoNumero: 'PED-0001' })}
+        clienteId="c1"
+        clienteNome="Maria"
+        onUpdateMes={noop}
+        onLinkPedido={noop}
+        onUnlinkPedido={onUnlinkPedido}
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: /desvincular/i }));
+    await waitFor(() => expect(onUnlinkPedido).toHaveBeenCalledWith(2));
+  });
+
+  it('hides "Desvincular" when onUnlinkPedido is absent', () => {
+    render(
+      <MesversarioMesCard
+        mesversarioId="m1"
+        mes={baseMes(2, { status: 'PEDIDO_CRIADO', pedidoId: 'p1', pedidoNumero: 'PED-0001' })}
+        clienteId="c1"
+        clienteNome="Maria"
+        onUpdateMes={noop}
+        onLinkPedido={noop}
+      />
+    );
+    expect(screen.queryByRole('button', { name: /desvincular/i })).not.toBeInTheDocument();
   });
 });

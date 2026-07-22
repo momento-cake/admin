@@ -35,6 +35,9 @@ import {
 const COLLECTION_NAME = 'pedidos';
 const COUNTER_COLLECTION = 'pedidoCounters';
 const COUNTER_DOC_ID = 'counter';
+// Mesversário-linked orders draw from a separate counter (MES- prefix). Mirrors
+// the API route so both creation paths number milestone orders consistently.
+const MESVERSARIO_COUNTER_DOC_ID = 'mesversario';
 
 // ============================================================================
 // HELPER FUNCTIONS
@@ -218,7 +221,10 @@ export async function createPedido(
   userId: string
 ): Promise<Pedido> {
   try {
-    const counterRef = doc(db, COUNTER_COLLECTION, COUNTER_DOC_ID);
+    const isMesversario = Boolean(data.mesversarioId);
+    const counterDocId = isMesversario ? MESVERSARIO_COUNTER_DOC_ID : COUNTER_DOC_ID;
+    const numeroPrefix = isMesversario ? 'MES-' : 'PED-';
+    const counterRef = doc(db, COUNTER_COLLECTION, counterDocId);
     const now = Timestamp.now();
     const publicToken = crypto.randomUUID();
 
@@ -270,7 +276,7 @@ export async function createPedido(
         transaction.set(counterRef, { lastNumber: nextNumber });
       }
 
-      const numeroPedido = `PED-${String(nextNumber).padStart(4, '0')}`;
+      const numeroPedido = `${numeroPrefix}${String(nextNumber).padStart(4, '0')}`;
 
       // Compute the default due date from delivery date (or +7d fallback)
       const dataEntregaDate = data.dataEntrega?.toDate?.() ?? null;
@@ -294,6 +300,8 @@ export async function createPedido(
         dataEntrega: data.dataEntrega || null,
         observacoes: data.observacoes || null,
         observacoesCliente: data.observacoesCliente || null,
+        mesversarioId: data.mesversarioId ?? null,
+        mesNumero: data.mesNumero ?? null,
         pagamentos: [],
         totalPago: 0,
         dataVencimento: Timestamp.fromDate(dataVencimentoDate),

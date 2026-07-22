@@ -33,6 +33,9 @@ interface PedidoFormProps {
   initialClienteId?: string
   initialClienteNome?: string
   initialClienteTelefone?: string
+  /** When set, the created order is numbered MES-XXXX and back-references this milestone. */
+  mesversarioId?: string
+  mesNumero?: number
   onCreated?: (pedido: { id: string; numeroPedido: string }) => void
   redirectOnSuccess?: boolean
   /** Called instead of navigating to /orders when the user cancels. */
@@ -55,6 +58,8 @@ export function PedidoForm({
   initialClienteId,
   initialClienteNome,
   initialClienteTelefone,
+  mesversarioId,
+  mesNumero,
   onCreated,
   redirectOnSuccess = true,
   onCancel,
@@ -330,6 +335,9 @@ export function PedidoForm({
         observacoes: observacoes || undefined,
         observacoesCliente: observacoesCliente || undefined,
         imagensReferencia: referenciaImagens.length ? referenciaImagens : undefined,
+        // When created from a mesversário month, carry the milestone link so the
+        // order is numbered MES-XXXX and back-references the journey.
+        ...(mesversarioId ? { mesversarioId, mesNumero } : {}),
       }
 
       const response = await fetch('/api/pedidos', {

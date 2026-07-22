@@ -56,6 +56,7 @@ import { Pedido, PedidoStatus } from '@/types/pedido'
 import { formatPrice } from '@/lib/products'
 import { toCalendarDate } from '@/lib/calendar-date'
 import { PedidoStatusBadge } from './PedidoStatusBadge'
+import { MesversarioBadge } from './MesversarioBadge'
 import { PaymentStatusBadge } from './pagamentos/PaymentStatusBadge'
 import { CancelPedidoDialog } from './CancelPedidoDialog'
 import { usePermissions } from '@/hooks/usePermissions'
@@ -484,12 +485,18 @@ export function PedidoList({
                       <code className="text-xs font-mono bg-muted px-2 py-0.5 rounded">
                         {pedido.numeroPedido}
                       </code>
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex flex-wrap items-center gap-1.5">
                         <PedidoStatusBadge status={pedido.status} />
                         {pedido.statusPagamento && (
                           <PaymentStatusBadge
                             status={pedido.statusPagamento}
                             hideWhenPendente
+                          />
+                        )}
+                        {pedido.mesversarioId && (
+                          <MesversarioBadge
+                            mesversarioId={pedido.mesversarioId}
+                            mesNumero={pedido.mesNumero}
                           />
                         )}
                       </div>
@@ -663,6 +670,12 @@ export function PedidoList({
                             <PaymentStatusBadge
                               status={pedido.statusPagamento}
                               hideWhenPendente
+                            />
+                          )}
+                          {pedido.mesversarioId && (
+                            <MesversarioBadge
+                              mesversarioId={pedido.mesversarioId}
+                              mesNumero={pedido.mesNumero}
                             />
                           )}
                         </div>

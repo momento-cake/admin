@@ -23,6 +23,7 @@ import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { MesStatusBadge } from '@/components/mesversarios/MesStatusBadge';
 import { AcordoEditor } from '@/components/mesversarios/AcordoEditor';
+import { VincularPedidoDialog } from '@/components/mesversarios/VincularPedidoDialog';
 import { PedidoFormDialog } from '@/components/pedidos/PedidoFormDialog';
 import { getMesLabel } from '@/lib/mesversario-utils';
 import { formatDisplayDate } from '@/lib/special-dates-utils';
@@ -33,15 +34,19 @@ import {
   UpdateMesData,
   MES_STATUS_LABELS,
 } from '@/types/mesversario';
-import type { PedidoImagemReferenciaInput } from '@/types/pedido';
+import type { Pedido, PedidoImagemReferenciaInput } from '@/types/pedido';
 
 interface MesversarioMesCardProps {
+  /** Parent journey id — needed to number created orders and to unlink. */
+  mesversarioId: string;
   mes: MesversarioMes;
   clienteId: string;
   clienteNome: string;
   clienteTelefone?: string;
   onUpdateMes: (numero: number, patch: UpdateMesData) => Promise<void>;
   onLinkPedido: (numero: number, pedidoId: string, pedidoNumero: string) => Promise<void>;
+  /** Clears the month's pedido link. Optional — the "Desvincular" action is hidden when absent. */
+  onUnlinkPedido?: (numero: number) => Promise<void>;
 }
 
 /** Statuses an operator can set by hand; PEDIDO_CRIADO is set by linking an order. */
@@ -57,12 +62,14 @@ function acordoToInput(mes: MesversarioMes): MesversarioAcordoInput {
 }
 
 export function MesversarioMesCard({
+  mesversarioId,
   mes,
   clienteId,
   clienteNome,
   clienteTelefone,
   onUpdateMes,
   onLinkPedido,
+  onUnlinkPedido,
 }: MesversarioMesCardProps) {
   const isMonth12 = mes.numero === 12;
   const year = Number(mes.dataComemoracao.split('-')[0]);
@@ -70,6 +77,8 @@ export function MesversarioMesCard({
   const [acordoOpen, setAcordoOpen] = useState(false);
   const [statusOpen, setStatusOpen] = useState(false);
   const [pedidoOpen, setPedidoOpen] = useState(false);
+  const [vincularOpen, setVincularOpen] = useState(false);
+  const [unlinking, setUnlinking] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const [acordoDraft, setAcordoDraft] = useState<MesversarioAcordoInput>(acordoToInput(mes));
@@ -123,6 +132,29 @@ export function MesversarioMesCard({
       toast.success(`Pedido ${pedido.numeroPedido} vinculado`);
     } catch {
       toast.error('Pedido criado, mas falhou ao vincular ao mês');
+    }
+  };
+
+  const handlePedidoPicked = async (pedido: Pedido) => {
+    setVincularOpen(false);
+    try {
+      await onLinkPedido(mes.numero, pedido.id, pedido.numeroPedido);
+      toast.success(`Pedido ${pedido.numeroPedido} vinculado`);
+    } catch {
+      toast.error('Erro ao vincular o pedido ao mês');
+    }
+  };
+
+  const handleUnlink = async () => {
+    if (!onUnlinkPedido) return;
+    setUnlinking(true);
+    try {
+      await onUnlinkPedido(mes.numero);
+      toast.success('Pedido desvinculado');
+    } catch {
+      toast.error('Erro ao desvincular o pedido');
+    } finally {
+      setUnlinking(false);
     }
   };
 
@@ -189,8 +221,30 @@ export function MesversarioMesCard({
           Avançar status
         </Button>
         {!mes.pedidoId && (
-          <Button type="button" size="sm" onClick={() => setPedidoOpen(true)}>
-            Criar pedido
+          <>
+            <Button type="button" size="sm" onClick={() => setPedidoOpen(true)}>
+              Criar pedido
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setVincularOpen(true)}
+            >
+              Vincular pedido existente
+            </Button>
+          </>
+        )}
+        {mes.pedidoId && onUnlinkPedido && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground"
+            onClick={handleUnlink}
+            disabled={unlinking}
+          >
+            Desvincular
           </Button>
         )}
       </div>
@@ -257,7 +311,7 @@ export function MesversarioMesCard({
         </DialogContent>
       </Dialog>
 
-      {/* Create-order surface */}
+      {/* Create-order surface — carries the milestone so the order is numbered MES-XXXX. */}
       <PedidoFormDialog
         open={pedidoOpen}
         onOpenChange={setPedidoOpen}
@@ -265,7 +319,18 @@ export function MesversarioMesCard({
         initialClienteId={clienteId}
         initialClienteNome={clienteNome}
         initialClienteTelefone={clienteTelefone}
+        mesversarioId={mesversarioId}
+        mesNumero={mes.numero}
         onCreated={handlePedidoCreated}
+      />
+
+      {/* Link an already-existing order to this month. */}
+      <VincularPedidoDialog
+        open={vincularOpen}
+        onOpenChange={setVincularOpen}
+        clienteId={clienteId}
+        clienteNome={clienteNome}
+        onPick={handlePedidoPicked}
       />
     </div>
   );

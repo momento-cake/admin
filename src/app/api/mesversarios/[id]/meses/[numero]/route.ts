@@ -11,6 +11,7 @@ import {
 import { formatErrorMessage, logError } from '@/lib/error-handler';
 
 const MESVERSARIOS_COLLECTION = 'mesversarios';
+const PEDIDOS_COLLECTION = 'pedidos';
 
 interface StoredMes {
   numero: number;
@@ -83,6 +84,10 @@ export async function PUT(
     }
 
     const linkingPedido = Boolean(data.pedidoId && data.pedidoNumero);
+    const unlinkingPedido = Boolean(data.desvincular);
+    // The pedido currently linked to this month — needed to strip its back-ref
+    // when unlinking.
+    const previousPedidoId = target.pedidoId;
 
     const updatedMeses = meses.map((mes) => {
       if (mes.numero !== mesNumero) return mes;
@@ -122,7 +127,11 @@ export async function PUT(
         };
       }
 
-      if (linkingPedido) {
+      if (unlinkingPedido) {
+        delete next.pedidoId;
+        delete next.pedidoNumero;
+        next.status = 'ACORDADO';
+      } else if (linkingPedido) {
         next.pedidoId = data.pedidoId;
         next.pedidoNumero = data.pedidoNumero;
         next.status = 'PEDIDO_CRIADO';
@@ -138,6 +147,30 @@ export async function PUT(
       updatedAt: FieldValue.serverTimestamp(),
       lastModifiedBy: auth.uid,
     });
+
+    // Keep the pedido's back-reference in sync so the Pedidos screens can show a
+    // milestone badge. Guard against a missing pedido doc (skip gracefully).
+    if (linkingPedido && data.pedidoId) {
+      const pedidoRef = adminDb.collection(PEDIDOS_COLLECTION).doc(data.pedidoId);
+      const pedidoSnap = await pedidoRef.get();
+      if (pedidoSnap.exists) {
+        await pedidoRef.update({
+          mesversarioId: id,
+          mesNumero: mesNumero,
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+      }
+    } else if (unlinkingPedido && previousPedidoId) {
+      const pedidoRef = adminDb.collection(PEDIDOS_COLLECTION).doc(previousPedidoId);
+      const pedidoSnap = await pedidoRef.get();
+      if (pedidoSnap.exists) {
+        await pedidoRef.update({
+          mesversarioId: null,
+          mesNumero: null,
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+      }
+    }
 
     const updatedDoc = await adminDb.collection(MESVERSARIOS_COLLECTION).doc(id).get();
 

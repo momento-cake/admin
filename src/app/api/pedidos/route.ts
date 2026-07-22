@@ -10,6 +10,9 @@ import type { Pedido } from '@/types/pedido';
 const PEDIDOS_COLLECTION = 'pedidos';
 const COUNTER_COLLECTION = 'pedidoCounters';
 const COUNTER_DOC_ID = 'counter';
+// Orders created for a mesversário milestone draw from a separate counter and
+// carry a MES- prefix so they read distinctly from ordinary PED- orders.
+const MESVERSARIO_COUNTER_DOC_ID = 'mesversario';
 
 function parseIsoDayStart(iso: string): number {
   const [y, m, d] = iso.split('-').map(Number);
@@ -215,8 +218,13 @@ export async function POST(request: NextRequest) {
       uploadedBy: auth.uid,
     }));
 
-    // Use transaction for atomic counter increment
-    const counterRef = adminDb.collection(COUNTER_COLLECTION).doc(COUNTER_DOC_ID);
+    // Use transaction for atomic counter increment. Orders tied to a mesversário
+    // milestone draw from the `mesversario` counter (MES- prefix); everyone else
+    // uses the default `counter` (PED- prefix).
+    const isMesversario = Boolean(data.mesversarioId);
+    const counterDocId = isMesversario ? MESVERSARIO_COUNTER_DOC_ID : COUNTER_DOC_ID;
+    const numeroPrefix = isMesversario ? 'MES-' : 'PED-';
+    const counterRef = adminDb.collection(COUNTER_COLLECTION).doc(counterDocId);
 
     const result = await adminDb.runTransaction(async (transaction) => {
       const counterDoc = await transaction.get(counterRef);
@@ -225,7 +233,7 @@ export async function POST(request: NextRequest) {
 
       transaction.set(counterRef, { lastNumber: nextNumber }, { merge: true });
 
-      const numeroPedido = `PED-${String(nextNumber).padStart(4, '0')}`;
+      const numeroPedido = `${numeroPrefix}${String(nextNumber).padStart(4, '0')}`;
 
       // Default dataVencimento = dataEntrega ?? today + 7d
       const dataEntregaMs = extractTimestampMs(data.dataEntrega);
@@ -246,6 +254,8 @@ export async function POST(request: NextRequest) {
         observacoes: data.observacoes || null,
         observacoesCliente: data.observacoesCliente || null,
         imagensReferencia,
+        mesversarioId: data.mesversarioId ?? null,
+        mesNumero: data.mesNumero ?? null,
         pagamentos: [],
         totalPago: 0,
         dataVencimento,

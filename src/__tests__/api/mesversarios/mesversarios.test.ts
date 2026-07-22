@@ -364,6 +364,76 @@ describe('/api/mesversarios', () => {
       expect(mes2.status).toBe('PEDIDO_CRIADO');
     });
 
+    it('stamps the back-reference onto the linked pedido document', async () => {
+      seedMesversario('m1');
+      store.set('pedidos/ped-1', { numeroPedido: 'PED-0001', mesversarioId: null, mesNumero: null });
+      await mesPUT(
+        req('/api/mesversarios/m1/meses/2', 'PUT', {
+          pedidoId: 'ped-1',
+          pedidoNumero: 'PED-0001',
+        }),
+        { params: Promise.resolve({ id: 'm1', numero: '2' }) }
+      );
+      const pedido = store.get('pedidos/ped-1')!;
+      expect(pedido.mesversarioId).toBe('m1');
+      expect(pedido.mesNumero).toBe(2);
+    });
+
+    it('skips the back-reference gracefully when the pedido doc is missing', async () => {
+      seedMesversario('m1');
+      // No pedidos/ped-1 seeded — the route must not throw.
+      const res = await mesPUT(
+        req('/api/mesversarios/m1/meses/2', 'PUT', {
+          pedidoId: 'ped-1',
+          pedidoNumero: 'PED-0001',
+        }),
+        { params: Promise.resolve({ id: 'm1', numero: '2' }) }
+      );
+      expect(res.status).toBe(200);
+      expect(store.has('pedidos/ped-1')).toBe(false);
+    });
+
+    it('unlinks a pedido: clears the month link and back-reference, status → ACORDADO', async () => {
+      store.set('mesversarios/m1', {
+        clienteId: 'c1',
+        clienteNome: 'Maria',
+        relatedPersonId: 'rp1',
+        bebeNome: 'João',
+        dataNascimento: '2025-01-15',
+        status: 'ATIVO',
+        meses: [
+          {
+            numero: 2,
+            dataComemoracao: '2025-03-15',
+            status: 'PEDIDO_CRIADO',
+            pedidoId: 'ped-1',
+            pedidoNumero: 'PED-0001',
+          },
+        ],
+        isActive: true,
+        createdAt: { __ts: 1 },
+        updatedAt: { __ts: 1 },
+        createdBy: 'u1',
+        lastModifiedBy: 'u1',
+      });
+      store.set('pedidos/ped-1', { numeroPedido: 'PED-0001', mesversarioId: 'm1', mesNumero: 2 });
+
+      const res = await mesPUT(
+        req('/api/mesversarios/m1/meses/2', 'PUT', { desvincular: true }),
+        { params: Promise.resolve({ id: 'm1', numero: '2' }) }
+      );
+      expect(res.status).toBe(200);
+
+      const mes2 = store.get('mesversarios/m1')!.meses.find((m: any) => m.numero === 2);
+      expect(mes2.pedidoId).toBeUndefined();
+      expect(mes2.pedidoNumero).toBeUndefined();
+      expect(mes2.status).toBe('ACORDADO');
+
+      const pedido = store.get('pedidos/ped-1')!;
+      expect(pedido.mesversarioId).toBeNull();
+      expect(pedido.mesNumero).toBeNull();
+    });
+
     it('stamps reference images on the acordo with server fields', async () => {
       seedMesversario('m1');
       await mesPUT(

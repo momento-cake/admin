@@ -16,7 +16,7 @@ export default function MesversarioDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const { mesversario, isLoading, error, updateMes, linkPedido } = useMesversario(id);
+  const { mesversario, isLoading, error, updateMes, linkPedido, unlinkPedido } = useMesversario(id);
 
   if (isLoading) {
     return (
@@ -78,6 +78,7 @@ export default function MesversarioDetailPage({
         mesversario={mesversario}
         onUpdateMes={updateMes}
         onLinkPedido={linkPedido}
+        onUnlinkPedido={unlinkPedido}
       />
     </div>
   );
