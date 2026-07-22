@@ -1,7 +1,12 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Mesversario, MesversarioStatus, CreateMesversarioData } from '@/types/mesversario';
+import {
+  Mesversario,
+  MesversarioStatus,
+  CreateMesversarioData,
+  UpdateMesversarioData,
+} from '@/types/mesversario';
 import { parseApiResponse, formatErrorMessage, logError } from '@/lib/error-handler';
 
 interface UseMesversariosResult {
@@ -10,6 +15,8 @@ interface UseMesversariosResult {
   error: string | null;
   refresh: () => Promise<void>;
   createMesversario: (data: CreateMesversarioData) => Promise<{ id: string }>;
+  updateMesversario: (id: string, data: UpdateMesversarioData) => Promise<void>;
+  deleteMesversario: (id: string) => Promise<void>;
 }
 
 /**
@@ -62,9 +69,39 @@ export function useMesversarios(status?: MesversarioStatus): UseMesversariosResu
     [refresh]
   );
 
+  const updateMesversario = useCallback(
+    async (id: string, data: UpdateMesversarioData): Promise<void> => {
+      const response = await fetch(`/api/mesversarios/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      await parseApiResponse(response);
+      await refresh();
+    },
+    [refresh]
+  );
+
+  const deleteMesversario = useCallback(
+    async (id: string): Promise<void> => {
+      const response = await fetch(`/api/mesversarios/${id}`, { method: 'DELETE' });
+      await parseApiResponse(response);
+      await refresh();
+    },
+    [refresh]
+  );
+
   useEffect(() => {
     load();
   }, [load]);
 
-  return { mesversarios, isLoading, error, refresh, createMesversario };
+  return {
+    mesversarios,
+    isLoading,
+    error,
+    refresh,
+    createMesversario,
+    updateMesversario,
+    deleteMesversario,
+  };
 }

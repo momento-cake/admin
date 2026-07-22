@@ -13,6 +13,7 @@ interface UseMesversarioResult {
   linkPedido: (numero: number, pedidoId: string, pedidoNumero: string) => Promise<void>;
   unlinkPedido: (numero: number) => Promise<void>;
   updateMesversario: (data: UpdateMesversarioData) => Promise<void>;
+  deleteMesversario: () => Promise<void>;
 }
 
 /**
@@ -92,6 +93,11 @@ export function useMesversario(id: string): UseMesversarioResult {
     [id, refresh]
   );
 
+  const deleteMesversario = useCallback(async () => {
+    const response = await fetch(`/api/mesversarios/${id}`, { method: 'DELETE' });
+    await parseApiResponse(response);
+  }, [id]);
+
   useEffect(() => {
     load();
   }, [load]);
@@ -105,5 +111,6 @@ export function useMesversario(id: string): UseMesversarioResult {
     linkPedido,
     unlinkPedido,
     updateMesversario,
+    deleteMesversario,
   };
 }

@@ -1,9 +1,16 @@
 'use client';
 
 import Link from 'next/link';
-import { Baby } from 'lucide-react';
+import { Baby, MoreVertical, Pencil, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
+import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { MesStatusBadge } from '@/components/mesversarios/MesStatusBadge';
 import type { Mesversario } from '@/types/mesversario';
 import {
@@ -16,18 +23,22 @@ import { getRelativeDateLabel, formatDisplayDate } from '@/lib/special-dates-uti
 
 interface MesversarioCardProps {
   mesversario: Mesversario;
+  onEdit?: (mesversario: Mesversario) => void;
+  onDelete?: (mesversario: Mesversario) => void;
 }
 
 /**
  * Summary card for one baby's mesversário journey: name, X/12 progress, and
- * the next-due month with its relative date.
+ * the next-due month with its relative date. An optional ⋯ menu exposes edit
+ * and delete actions; it only renders when at least one handler is provided.
  */
-export function MesversarioCard({ mesversario }: MesversarioCardProps) {
+export function MesversarioCard({ mesversario, onEdit, onDelete }: MesversarioCardProps) {
   const { done, total } = getMesversarioProgress(mesversario);
   const next = getNextDueMes(mesversario);
   const percent = Math.round((done / total) * 100);
 
   const nextYear = next ? Number(next.dataComemoracao.split('-')[0]) : null;
+  const showMenu = Boolean(onEdit || onDelete);
 
   return (
     <Link href={`/orders/mesversarios/${mesversario.id}`} className="block">
@@ -37,7 +48,53 @@ export function MesversarioCard({ mesversario }: MesversarioCardProps) {
             <Baby className="h-4 w-4 text-muted-foreground" aria-hidden />
             {mesversario.bebeNome}
           </CardTitle>
-          <span className="text-xs text-muted-foreground">{mesversario.clienteNome}</span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">{mesversario.clienteNome}</span>
+            {showMenu && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 w-7 p-0"
+                    aria-label="Ações do mesversário"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                  >
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {onEdit && (
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onEdit(mesversario);
+                      }}
+                    >
+                      <Pencil className="mr-2 h-4 w-4" />
+                      Editar
+                    </DropdownMenuItem>
+                  )}
+                  {onDelete && (
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onDelete(mesversario);
+                      }}
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Excluir
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="space-y-1">

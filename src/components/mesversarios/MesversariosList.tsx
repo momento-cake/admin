@@ -8,12 +8,14 @@ import type { Mesversario } from '@/types/mesversario';
 interface MesversariosListProps {
   mesversarios: Mesversario[];
   onNew?: () => void;
+  onEdit?: (mesversario: Mesversario) => void;
+  onDelete?: (mesversario: Mesversario) => void;
 }
 
 /**
  * Responsive grid of mesversário summary cards, with an empty state.
  */
-export function MesversariosList({ mesversarios, onNew }: MesversariosListProps) {
+export function MesversariosList({ mesversarios, onNew, onEdit, onDelete }: MesversariosListProps) {
   if (mesversarios.length === 0) {
     return (
       <EmptyState
@@ -28,7 +30,7 @@ export function MesversariosList({ mesversarios, onNew }: MesversariosListProps)
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {mesversarios.map((m) => (
-        <MesversarioCard key={m.id} mesversario={m} />
+        <MesversarioCard key={m.id} mesversario={m} onEdit={onEdit} onDelete={onDelete} />
       ))}
     </div>
   );

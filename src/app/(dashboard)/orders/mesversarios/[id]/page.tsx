@@ -1,11 +1,15 @@
 'use client';
 
-import { use } from 'react';
+import { use, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Loader2, Baby } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { ArrowLeft, Loader2, Baby, Pencil, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { MesversarioTimeline } from '@/components/mesversarios/MesversarioTimeline';
+import { MesversarioEditDialog } from '@/components/mesversarios/MesversarioEditDialog';
+import { DeleteMesversarioDialog } from '@/components/mesversarios/DeleteMesversarioDialog';
 import { useMesversario } from '@/hooks/useMesversario';
+import { usePermissions } from '@/hooks/usePermissions';
 import { getMesversarioProgress } from '@/lib/mesversario-utils';
 import { formatDisplayDate } from '@/lib/special-dates-utils';
 import { MESVERSARIO_STATUS_LABELS } from '@/types/mesversario';
@@ -16,7 +20,22 @@ export default function MesversarioDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const { mesversario, isLoading, error, updateMes, linkPedido, unlinkPedido } = useMesversario(id);
+  const router = useRouter();
+  const {
+    mesversario,
+    isLoading,
+    error,
+    updateMes,
+    linkPedido,
+    unlinkPedido,
+    updateMesversario,
+    deleteMesversario,
+  } = useMesversario(id);
+  const { canPerformAction } = usePermissions();
+  const canEdit = canPerformAction('orders', 'update');
+  const canDelete = canPerformAction('orders', 'delete');
+  const [editOpen, setEditOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   if (isLoading) {
     return (
@@ -66,11 +85,29 @@ export default function MesversarioDetailPage({
             {formatDisplayDate(mesversario.dataNascimento, birthYear)}
           </p>
         </div>
-        <div className="text-right">
-          <p className="text-sm font-medium">{MESVERSARIO_STATUS_LABELS[mesversario.status]}</p>
-          <p className="text-xs text-muted-foreground">
-            {done}/{total} meses
-          </p>
+        <div className="flex items-start gap-4">
+          <div className="text-right">
+            <p className="text-sm font-medium">{MESVERSARIO_STATUS_LABELS[mesversario.status]}</p>
+            <p className="text-xs text-muted-foreground">
+              {done}/{total} meses
+            </p>
+          </div>
+          {(canEdit || canDelete) && (
+            <div className="flex items-center gap-2">
+              {canEdit && (
+                <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
+                  <Pencil className="mr-2 h-4 w-4" aria-hidden />
+                  Editar
+                </Button>
+              )}
+              {canDelete && (
+                <Button variant="outline" size="sm" onClick={() => setDeleteOpen(true)}>
+                  <Trash2 className="mr-2 h-4 w-4" aria-hidden />
+                  Excluir
+                </Button>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -80,6 +117,26 @@ export default function MesversarioDetailPage({
         onLinkPedido={linkPedido}
         onUnlinkPedido={unlinkPedido}
       />
+
+      {canEdit && (
+        <MesversarioEditDialog
+          open={editOpen}
+          onOpenChange={setEditOpen}
+          mesversario={mesversario}
+          onSave={updateMesversario}
+        />
+      )}
+      {canDelete && (
+        <DeleteMesversarioDialog
+          open={deleteOpen}
+          onOpenChange={setDeleteOpen}
+          mesversario={mesversario}
+          onConfirm={async () => {
+            await deleteMesversario();
+            router.push('/orders/mesversarios');
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { updateMesversarioSchema } from '@/lib/validators/mesversario';
+import { recomputeMesesDates } from '@/lib/mesversario-utils';
+import type { MesversarioMes } from '@/types/mesversario';
 import {
   getAuthFromRequest,
   canPerformActionFromRequest,
@@ -11,6 +13,7 @@ import {
 import { formatErrorMessage, logError } from '@/lib/error-handler';
 
 const MESVERSARIOS_COLLECTION = 'mesversarios';
+const PEDIDOS_COLLECTION = 'pedidos';
 
 // GET /api/mesversarios/[id]
 export async function GET(
@@ -93,6 +96,14 @@ export async function PUT(
       lastModifiedBy: auth.uid,
     };
 
+    // Changing the birth date shifts all 12 celebration dates, but each month's
+    // status/acordo/pedido link/observações is preserved — only the date moves.
+    const existing = existingDoc.data() as { dataNascimento?: string; meses?: MesversarioMes[] };
+    const newBirthDate = validation.data.dataNascimento;
+    if (newBirthDate && newBirthDate !== existing.dataNascimento) {
+      updatePayload.meses = recomputeMesesDates(existing.meses || [], newBirthDate);
+    }
+
     Object.keys(updatePayload).forEach((key) => {
       if (updatePayload[key] === undefined) {
         delete updatePayload[key];
@@ -146,7 +157,33 @@ export async function DELETE(
       lastModifiedBy: auth.uid,
     });
 
-    return NextResponse.json({ success: true, message: 'Mesversário excluído com sucesso' });
+    // Detach every linked pedido so it survives the soft-delete without a
+    // dangling back-reference. Guard against a missing pedido doc (skip it).
+    const existing = docSnapshot.data() as { meses?: MesversarioMes[] };
+    const linkedPedidoIds = (existing.meses || [])
+      .map((mes) => mes.pedidoId)
+      .filter((pedidoId): pedidoId is string => Boolean(pedidoId));
+
+    let detached = 0;
+    for (const pedidoId of linkedPedidoIds) {
+      const pedidoRef = adminDb.collection(PEDIDOS_COLLECTION).doc(pedidoId);
+      const pedidoSnap = await pedidoRef.get();
+      if (pedidoSnap.exists) {
+        await pedidoRef.update({
+          mesversarioId: null,
+          mesNumero: null,
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+        detached += 1;
+      }
+    }
+
+    const message =
+      detached > 0
+        ? `Mesversário excluído com sucesso. ${detached} pedido(s) desvinculado(s).`
+        : 'Mesversário excluído com sucesso';
+
+    return NextResponse.json({ success: true, message });
   } catch (error) {
     logError('MESVERSARIO_DELETE', error);
     return NextResponse.json(

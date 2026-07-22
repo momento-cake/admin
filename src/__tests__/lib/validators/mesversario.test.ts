@@ -64,6 +64,41 @@ describe('updateMesversarioSchema', () => {
     expect(result.success).toBe(true);
   });
 
+  it('accepts a bebeNome change', () => {
+    const result = updateMesversarioSchema.safeParse({ bebeNome: 'João Pedro' });
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects an empty bebeNome', () => {
+    const result = updateMesversarioSchema.safeParse({ bebeNome: '' });
+    expect(result.success).toBe(false);
+  });
+
+  it('accepts a valid dataNascimento', () => {
+    const result = updateMesversarioSchema.safeParse({ dataNascimento: '2025-03-20' });
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects a dataNascimento that is not ISO YYYY-MM-DD', () => {
+    const result = updateMesversarioSchema.safeParse({ dataNascimento: '20/03/2025' });
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects an impossible dataNascimento', () => {
+    const result = updateMesversarioSchema.safeParse({ dataNascimento: '2025-02-30' });
+    expect(result.success).toBe(false);
+  });
+
+  it('accepts a full edit (name + birth date + status + notes)', () => {
+    const result = updateMesversarioSchema.safeParse({
+      bebeNome: 'João Pedro',
+      dataNascimento: '2025-03-20',
+      status: 'CONCLUIDO',
+      observacoes: 'nota',
+    });
+    expect(result.success).toBe(true);
+  });
+
   it('rejects an invalid status', () => {
     const result = updateMesversarioSchema.safeParse({ status: 'BANANA' });
     expect(result.success).toBe(false);

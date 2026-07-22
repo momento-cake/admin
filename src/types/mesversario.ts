@@ -133,6 +133,9 @@ export interface UpdateMesData {
 }
 
 export interface UpdateMesversarioData {
+  bebeNome?: string;
+  /** ISO date (YYYY-MM-DD). Changing it recomputes the 12 celebration dates. */
+  dataNascimento?: string;
   status?: MesversarioStatus;
   observacoes?: string;
 }

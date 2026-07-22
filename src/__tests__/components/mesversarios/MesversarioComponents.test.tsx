@@ -11,6 +11,19 @@ vi.mock('next/link', () => ({
   default: ({ children, href }: any) => <a href={href}>{children}</a>,
 }));
 
+// Radix DropdownMenu is portal + pointer-event heavy in jsdom — render its
+// items inline so the ⋯ actions are directly assertable.
+vi.mock('@/components/ui/dropdown-menu', () => ({
+  DropdownMenu: ({ children }: any) => <div>{children}</div>,
+  DropdownMenuTrigger: ({ children }: any) => <>{children}</>,
+  DropdownMenuContent: ({ children }: any) => <div>{children}</div>,
+  DropdownMenuItem: ({ children, onClick }: any) => (
+    <button type="button" onClick={onClick}>
+      {children}
+    </button>
+  ),
+}));
+
 // PedidoFormDialog pulls in the whole order wizard — stub it to a lightweight
 // surface that just exposes the onCreated callback.
 vi.mock('@/components/pedidos/PedidoFormDialog', () => ({
@@ -142,6 +155,30 @@ describe('MesversarioCard', () => {
       />
     );
     expect(screen.getByText(/jornada concluída/i)).toBeInTheDocument();
+  });
+
+  it('does not render the ⋯ menu when no action handlers are provided', () => {
+    render(<MesversarioCard mesversario={sampleMesversario()} />);
+    expect(screen.queryByRole('button', { name: /ações do mesversário/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /editar/i })).not.toBeInTheDocument();
+  });
+
+  it('calls onEdit with the mesversário from the ⋯ menu', async () => {
+    const onEdit = vi.fn();
+    const m = sampleMesversario();
+    const user = userEvent.setup();
+    render(<MesversarioCard mesversario={m} onEdit={onEdit} />);
+    await user.click(screen.getByRole('button', { name: /^editar$/i }));
+    expect(onEdit).toHaveBeenCalledWith(m);
+  });
+
+  it('calls onDelete with the mesversário from the ⋯ menu', async () => {
+    const onDelete = vi.fn();
+    const m = sampleMesversario();
+    const user = userEvent.setup();
+    render(<MesversarioCard mesversario={m} onDelete={onDelete} />);
+    await user.click(screen.getByRole('button', { name: /^excluir$/i }));
+    expect(onDelete).toHaveBeenCalledWith(m);
   });
 });
 

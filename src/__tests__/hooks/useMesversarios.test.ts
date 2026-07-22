@@ -110,6 +110,57 @@ describe('useMesversarios', () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     await expect(result.current.refresh()).rejects.toBeTruthy();
   });
+
+  it('updateMesversario PUTs to the detail endpoint and refreshes', async () => {
+    (global.fetch as any)
+      .mockResolvedValueOnce(jsonResponse({ success: true, data: [sampleMesversario()] })) // load
+      .mockResolvedValueOnce(jsonResponse({ success: true, data: sampleMesversario() })) // PUT
+      .mockResolvedValueOnce(
+        jsonResponse({ success: true, data: [sampleMesversario({ bebeNome: 'Ana' })] })
+      ); // refresh
+
+    const { result } = renderHook(() => useMesversarios());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    await act(async () => {
+      await result.current.updateMesversario('m1', { bebeNome: 'Ana' });
+    });
+
+    const putCall = (global.fetch as any).mock.calls[1];
+    expect(putCall[0]).toBe('/api/mesversarios/m1');
+    expect(putCall[1].method).toBe('PUT');
+    await waitFor(() => expect(result.current.mesversarios[0].bebeNome).toBe('Ana'));
+  });
+
+  it('deleteMesversario DELETEs and refreshes the list', async () => {
+    (global.fetch as any)
+      .mockResolvedValueOnce(jsonResponse({ success: true, data: [sampleMesversario()] })) // load
+      .mockResolvedValueOnce(jsonResponse({ success: true, message: 'ok' })) // DELETE
+      .mockResolvedValueOnce(jsonResponse({ success: true, data: [] })); // refresh
+
+    const { result } = renderHook(() => useMesversarios());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    await act(async () => {
+      await result.current.deleteMesversario('m1');
+    });
+
+    const delCall = (global.fetch as any).mock.calls[1];
+    expect(delCall[0]).toBe('/api/mesversarios/m1');
+    expect(delCall[1].method).toBe('DELETE');
+    await waitFor(() => expect(result.current.mesversarios).toHaveLength(0));
+  });
+
+  it('deleteMesversario throws when the request fails', async () => {
+    (global.fetch as any)
+      .mockResolvedValueOnce(jsonResponse({ success: true, data: [sampleMesversario()] }))
+      .mockResolvedValueOnce(jsonResponse({ success: false, error: 'boom' }, false, 500));
+
+    const { result } = renderHook(() => useMesversarios());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    await expect(result.current.deleteMesversario('m1')).rejects.toBeTruthy();
+  });
 });
 
 describe('useMesversario', () => {
@@ -199,6 +250,34 @@ describe('useMesversario', () => {
     const { result } = renderHook(() => useMesversario('m1'));
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     await expect(result.current.refresh()).rejects.toBeTruthy();
+  });
+
+  it('deleteMesversario DELETEs the detail endpoint', async () => {
+    (global.fetch as any)
+      .mockResolvedValueOnce(jsonResponse({ success: true, data: sampleMesversario() })) // load
+      .mockResolvedValueOnce(jsonResponse({ success: true, message: 'ok' })); // DELETE
+
+    const { result } = renderHook(() => useMesversario('m1'));
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    await act(async () => {
+      await result.current.deleteMesversario();
+    });
+
+    const delCall = (global.fetch as any).mock.calls[1];
+    expect(delCall[0]).toBe('/api/mesversarios/m1');
+    expect(delCall[1].method).toBe('DELETE');
+  });
+
+  it('deleteMesversario throws when the request fails', async () => {
+    (global.fetch as any)
+      .mockResolvedValueOnce(jsonResponse({ success: true, data: sampleMesversario() }))
+      .mockResolvedValueOnce(jsonResponse({ success: false, error: 'boom' }, false, 500));
+
+    const { result } = renderHook(() => useMesversario('m1'));
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    await expect(result.current.deleteMesversario()).rejects.toBeTruthy();
   });
 
   it('linkPedido PUTs pedido link to the month endpoint', async () => {

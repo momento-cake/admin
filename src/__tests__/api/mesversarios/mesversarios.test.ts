@@ -252,6 +252,66 @@ describe('/api/mesversarios', () => {
       expect(stored.lastModifiedBy).toBe('atendente-1');
     });
 
+    it('updates the baby name without touching the months', async () => {
+      seedMesversario('m1');
+      const res = await detailPUT(
+        req('/api/mesversarios/m1', 'PUT', { bebeNome: 'João Pedro' }),
+        { params: Promise.resolve({ id: 'm1' }) }
+      );
+      expect(res.status).toBe(200);
+      const stored = store.get('mesversarios/m1')!;
+      expect(stored.bebeNome).toBe('João Pedro');
+      // Months are untouched (dates unchanged) when only the name changes.
+      expect(stored.meses[0].dataComemoracao).toBe('2025-02-15');
+      expect(stored.meses[1].dataComemoracao).toBe('2025-03-15');
+    });
+
+    it('recomputes the 12 dates when the birth date changes, preserving per-month data', async () => {
+      seedMesversario('m1', {
+        meses: [
+          {
+            numero: 1,
+            dataComemoracao: '2025-02-15',
+            status: 'ENTREGUE',
+            acordo: { tema: 'Safari' },
+            pedidoId: 'ped-1',
+            pedidoNumero: 'PED-0001',
+            observacoes: 'ok',
+          },
+          { numero: 2, dataComemoracao: '2025-03-15', status: 'PENDENTE' },
+        ],
+      });
+      const res = await detailPUT(
+        req('/api/mesversarios/m1', 'PUT', { dataNascimento: '2025-02-20' }),
+        { params: Promise.resolve({ id: 'm1' }) }
+      );
+      expect(res.status).toBe(200);
+      const stored = store.get('mesversarios/m1')!;
+      expect(stored.dataNascimento).toBe('2025-02-20');
+      // Dates shift to the new birth date (month N = birth + N months).
+      expect(stored.meses[0].dataComemoracao).toBe('2025-03-20');
+      expect(stored.meses[1].dataComemoracao).toBe('2025-04-20');
+      // Everything else on each month is preserved.
+      expect(stored.meses[0].status).toBe('ENTREGUE');
+      expect(stored.meses[0].acordo).toEqual({ tema: 'Safari' });
+      expect(stored.meses[0].pedidoId).toBe('ped-1');
+      expect(stored.meses[0].pedidoNumero).toBe('PED-0001');
+      expect(stored.meses[0].observacoes).toBe('ok');
+    });
+
+    it('does not recompute the months when the birth date is unchanged', async () => {
+      seedMesversario('m1');
+      const res = await detailPUT(
+        req('/api/mesversarios/m1', 'PUT', { dataNascimento: '2025-01-15', observacoes: 'x' }),
+        { params: Promise.resolve({ id: 'm1' }) }
+      );
+      expect(res.status).toBe(200);
+      const stored = store.get('mesversarios/m1')!;
+      // Same birth date → months left exactly as seeded.
+      expect(stored.meses[0].dataComemoracao).toBe('2025-02-15');
+      expect(stored.meses[0].status).toBe('ENTREGUE');
+    });
+
     it('returns 404 when missing', async () => {
       const res = await detailPUT(req('/api/mesversarios/x', 'PUT', { status: 'CONCLUIDO' }), {
         params: Promise.resolve({ id: 'x' }),
@@ -301,6 +361,48 @@ describe('/api/mesversarios', () => {
       });
       expect(res.status).toBe(200);
       expect(store.get('mesversarios/m1')!.isActive).toBe(false);
+    });
+
+    it('detaches every linked pedido (clears back-ref) and reports the count', async () => {
+      seedMesversario('m1', {
+        meses: [
+          { numero: 1, dataComemoracao: '2025-02-15', status: 'PEDIDO_CRIADO', pedidoId: 'ped-1', pedidoNumero: 'PED-0001' },
+          { numero: 2, dataComemoracao: '2025-03-15', status: 'PEDIDO_CRIADO', pedidoId: 'ped-2', pedidoNumero: 'PED-0002' },
+          { numero: 3, dataComemoracao: '2025-04-15', status: 'PENDENTE' },
+        ],
+      });
+      store.set('pedidos/ped-1', { numeroPedido: 'PED-0001', mesversarioId: 'm1', mesNumero: 1 });
+      store.set('pedidos/ped-2', { numeroPedido: 'PED-0002', mesversarioId: 'm1', mesNumero: 2 });
+      currentAuth = { uid: 'admin-1', role: 'admin' };
+
+      const res = await DELETE(req('/api/mesversarios/m1', 'DELETE'), {
+        params: Promise.resolve({ id: 'm1' }),
+      });
+      expect(res.status).toBe(200);
+      const json = await res.json();
+      expect(json.message).toContain('2');
+
+      expect(store.get('mesversarios/m1')!.isActive).toBe(false);
+      expect(store.get('pedidos/ped-1')!.mesversarioId).toBeNull();
+      expect(store.get('pedidos/ped-1')!.mesNumero).toBeNull();
+      expect(store.get('pedidos/ped-2')!.mesversarioId).toBeNull();
+      expect(store.get('pedidos/ped-2')!.mesNumero).toBeNull();
+    });
+
+    it('skips a linked pedido whose document is missing without throwing', async () => {
+      seedMesversario('m1', {
+        meses: [
+          { numero: 1, dataComemoracao: '2025-02-15', status: 'PEDIDO_CRIADO', pedidoId: 'gone', pedidoNumero: 'PED-9999' },
+        ],
+      });
+      currentAuth = { uid: 'admin-1', role: 'admin' };
+
+      const res = await DELETE(req('/api/mesversarios/m1', 'DELETE'), {
+        params: Promise.resolve({ id: 'm1' }),
+      });
+      expect(res.status).toBe(200);
+      expect(store.get('mesversarios/m1')!.isActive).toBe(false);
+      expect(store.has('pedidos/gone')).toBe(false);
     });
 
     it('returns 403 without orders:delete', async () => {

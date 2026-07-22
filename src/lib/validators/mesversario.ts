@@ -73,6 +73,8 @@ export const createMesversarioSchema = z.object({
 });
 
 export const updateMesversarioSchema = z.object({
+  bebeNome: z.string().min(1, 'Nome do bebê é obrigatório').max(120, 'Nome muito longo').optional(),
+  dataNascimento: isoDateSchema.optional(),
   status: mesversarioStatusEnum.optional(),
   observacoes: z.string().max(2000, 'Observações muito longas').optional(),
 });

@@ -40,6 +40,23 @@ export function computeMesversarioDates(birthDate: string): string[] {
 }
 
 /**
+ * Recompute the 12 celebration dates for a new birth date while preserving each
+ * month's own state — status, acordo, pedido link and observações all carry
+ * over untouched; only `dataComemoracao` shifts. Used when editing a
+ * mesversário's birth date so an in-flight journey keeps its agreements.
+ */
+export function recomputeMesesDates(
+  meses: MesversarioMes[],
+  newBirthDate: string
+): MesversarioMes[] {
+  const dates = computeMesversarioDates(newBirthDate);
+  return meses.map((mes) => ({
+    ...mes,
+    dataComemoracao: dates[mes.numero - 1],
+  }));
+}
+
+/**
  * Human label for a milestone. Months 1..11 use the Portuguese ordinal; month
  * 12 is the first-birthday milestone.
  */

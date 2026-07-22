@@ -4,6 +4,7 @@ import {
   getMesLabel,
   daysUntil,
   buildMeses,
+  recomputeMesesDates,
   getMesversarioProgress,
   getNextDueMes,
   getMesStatusLabel,
@@ -99,6 +100,54 @@ describe('mesversario-utils', () => {
       expect(meses[11].numero).toBe(12);
       expect(meses.every((m) => m.status === 'PENDENTE')).toBe(true);
       expect(meses[0].dataComemoracao).toBe('2025-02-15');
+    });
+  });
+
+  describe('recomputeMesesDates', () => {
+    const existingMeses: MesversarioMes[] = [
+      {
+        numero: 1,
+        dataComemoracao: '2025-02-15',
+        status: 'ENTREGUE',
+        acordo: { tema: 'Safari' },
+        pedidoId: 'ped-1',
+        pedidoNumero: 'PED-0001',
+        observacoes: 'entregue no prazo',
+      },
+      {
+        numero: 2,
+        dataComemoracao: '2025-03-15',
+        status: 'ACORDADO',
+        acordo: { sabor: 'Chocolate' },
+      },
+    ];
+
+    it('shifts every celebration date to match the new birth date by month number', () => {
+      const result = recomputeMesesDates(existingMeses, '2025-02-15');
+      // New birth date 2025-02-15 → month 1 = 2025-03-15, month 2 = 2025-04-15.
+      expect(result[0].dataComemoracao).toBe('2025-03-15');
+      expect(result[1].dataComemoracao).toBe('2025-04-15');
+    });
+
+    it('preserves each month status, acordo, pedido link and observações', () => {
+      const result = recomputeMesesDates(existingMeses, '2025-02-15');
+      expect(result[0].status).toBe('ENTREGUE');
+      expect(result[0].acordo).toEqual({ tema: 'Safari' });
+      expect(result[0].pedidoId).toBe('ped-1');
+      expect(result[0].pedidoNumero).toBe('PED-0001');
+      expect(result[0].observacoes).toBe('entregue no prazo');
+      expect(result[1].status).toBe('ACORDADO');
+      expect(result[1].acordo).toEqual({ sabor: 'Chocolate' });
+    });
+
+    it('does not mutate the input months', () => {
+      const snapshot = JSON.parse(JSON.stringify(existingMeses));
+      recomputeMesesDates(existingMeses, '2025-05-01');
+      expect(existingMeses).toEqual(snapshot);
+    });
+
+    it('returns an empty array for no months', () => {
+      expect(recomputeMesesDates([], '2025-01-15')).toEqual([]);
     });
   });
 
