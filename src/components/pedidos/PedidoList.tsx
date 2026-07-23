@@ -251,6 +251,12 @@ export function PedidoList({
     [statusCounts],
   )
 
+  // Average order value across every pedido — Valor total ÷ total de pedidos.
+  const ticketMedio = useMemo(
+    () => (statusCounts.ALL > 0 ? summaryValue / statusCounts.ALL : 0),
+    [summaryValue, statusCounts.ALL],
+  )
+
   const totalPages = Math.ceil(total / perPage)
 
   if (loading && pedidos.length === 0) {
@@ -317,7 +323,7 @@ export function PedidoList({
   return (
     <div className={cn('space-y-6', className)}>
       {/* Summary stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
         <StatTile
           label="Total de pedidos"
           value={String(statusCounts.ALL)}
@@ -330,15 +336,22 @@ export function PedidoList({
           accent="from-amber-400 to-amber-300"
         />
         <StatTile
-          label="Prontos"
-          value={String(statusCounts.PRONTO)}
-          caption="aguardando entrega"
+          label="Concluídos"
+          value={String(statusCounts.ENTREGUE)}
+          caption="entregues ou retirados"
           accent="from-emerald-400 to-emerald-300"
         />
         <StatTile
           label="Valor total"
           value={formatPrice(summaryValue)}
           caption="todos os pedidos"
+          accent="from-[#a77047] to-[#c28a5e]"
+          mono
+        />
+        <StatTile
+          label="Ticket médio"
+          value={formatPrice(ticketMedio)}
+          caption="por pedido"
           accent="from-[#a77047] to-[#c28a5e]"
           mono
         />
