@@ -307,9 +307,17 @@ service cloud.firestore {
     }
 
     // Store Settings collection - Store configuration (freight, etc.)
+    // The `fiscal` doc holds encrypted fiscal secrets (cert password, CSC) and
+    // must be admin-only for reads too; all other settings docs stay viewer-readable.
     match /storeSettings/{document} {
-      allow read: if isViewer();
+      allow read: if isAdmin() || (isViewer() && document != 'fiscal');
       allow write: if isAdmin();
+    }
+
+    // Fiscal counters (NF-e / NFC-e número sequences) - written only via the
+    // Admin SDK (which bypasses rules). Deny all client access.
+    match /fiscal_counters/{document} {
+      allow read, write: if false;
     }
 
     // Store Hours collection - Store operating hours

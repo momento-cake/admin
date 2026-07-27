@@ -81,6 +81,13 @@ service firebase.storage {
       allow read: if isOwner(userId);
       allow write: if isOwner(userId);
     }
+
+    // Fiscal assets (A1 certificate .pfx and related secrets).
+    // NEVER accessible to clients: the Admin SDK bypasses these rules and is the
+    // only path that reads/writes these bytes. Deny all client access explicitly.
+    match /fiscal/{allPaths=**} {
+      allow read, write: if false;
+    }
     
     // Default deny
     match /{allPaths=**} {

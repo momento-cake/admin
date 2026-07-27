@@ -1,6 +1,7 @@
 import { initializeApp, getApps, cert, applicationDefault, App } from 'firebase-admin/app'
 import { getAuth, Auth } from 'firebase-admin/auth'
 import { getFirestore, Firestore } from 'firebase-admin/firestore'
+import { getStorage, Storage } from 'firebase-admin/storage'
 
 const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'momentocake-admin-dev'
 
@@ -59,18 +60,38 @@ function initializeFirebaseAdmin(): App {
 let app: App
 let _adminAuth: Auth
 let _adminDb: Firestore
+let _adminStorage: Storage
 
 try {
   app = initializeFirebaseAdmin()
   _adminAuth = getAuth(app)
   _adminDb = getFirestore(app)
+  _adminStorage = getStorage(app)
 } catch (error) {
   console.error('[firebase-admin] Critical initialization error:', error)
   // Create a minimal app to prevent crashes
   app = getApps().length > 0 ? getApps()[0] : initializeApp({ projectId })
   _adminAuth = getAuth(app)
   _adminDb = getFirestore(app)
+  _adminStorage = getStorage(app)
 }
 
 export const adminAuth = _adminAuth
 export const adminDb = _adminDb
+export const adminStorage = _adminStorage
+
+/**
+ * Resolve the Cloud Storage bucket used for private fiscal assets (the A1
+ * certificate .pfx). Admin SDK access bypasses Storage security rules, so these
+ * bytes are never exposed with a public download URL.
+ *
+ * The bucket name comes from FIREBASE_STORAGE_BUCKET (server) or the public
+ * NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET; when neither is set the app's default
+ * bucket is used.
+ */
+export function getFiscalBucket() {
+  const bucketName =
+    process.env.FIREBASE_STORAGE_BUCKET ||
+    process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+  return bucketName ? adminStorage.bucket(bucketName) : adminStorage.bucket()
+}

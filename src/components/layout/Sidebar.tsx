@@ -36,6 +36,7 @@ import {
   LayoutGrid,
   ClipboardList,
   MessageCircle,
+  FileText,
   Cake
 } from 'lucide-react'
 
@@ -273,6 +274,12 @@ const navigation: NavItem[] = [
         name: 'Horários',
         href: '/settings/store-hours',
         icon: Clock
+      },
+      {
+        name: 'Fiscal / NF-e',
+        href: '/settings/fiscal',
+        icon: FileText,
+        adminOnly: true
       }
     ]
   }

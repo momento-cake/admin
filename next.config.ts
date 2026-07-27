@@ -2,6 +2,14 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   trailingSlash: true,
+  // The fiscal (NF-e/NFC-e) provider runs server-only and pulls in native/Node
+  // packages (pdfkit, XML tooling) that must not be bundled by Next/Turbopack.
+  serverExternalPackages: [
+    'nfewizard-io',
+    '@nfewizard/nfce',
+    '@nfewizard/danfe',
+    'pdfkit',
+  ],
   images: {
     unoptimized: true
   },

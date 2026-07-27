@@ -253,6 +253,7 @@ export async function POST(request: NextRequest) {
         dataEntrega: data.dataEntrega || null,
         observacoes: data.observacoes || null,
         observacoesCliente: data.observacoesCliente || null,
+        origem: data.origem ?? 'LOJA',
         imagensReferencia,
         mesversarioId: data.mesversarioId ?? null,
         mesNumero: data.mesNumero ?? null,

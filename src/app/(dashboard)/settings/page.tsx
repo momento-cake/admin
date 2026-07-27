@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Truck, MapPin, Clock, ChevronRight } from 'lucide-react'
+import { Truck, MapPin, Clock, FileText, ChevronRight } from 'lucide-react'
 
 const settingsLinks = [
   {
@@ -22,6 +22,12 @@ const settingsLinks = [
     icon: Clock,
     title: 'Horários de Funcionamento',
     description: 'Defina os horários de abertura e fechamento da loja',
+  },
+  {
+    href: '/settings/fiscal',
+    icon: FileText,
+    title: 'Fiscal / NF-e',
+    description: 'Configure a emissão de NF-e e NFC-e, perfil tributário e certificado A1',
   },
 ]
 

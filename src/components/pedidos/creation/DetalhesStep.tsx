@@ -1,14 +1,24 @@
 'use client'
 
-import { Calendar, Lock, Globe } from 'lucide-react'
+import { Calendar, Lock, Globe, Store } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import type { PedidoOrigem } from '@/types/pedido'
 
 interface DetalhesStepProps {
   entregaTipo: 'ENTREGA' | 'RETIRADA'
   dataEntrega: string
   onDataEntregaChange: (date: string) => void
+  origem?: PedidoOrigem
+  onOrigemChange?: (origem: PedidoOrigem) => void
   observacoes: string
   onObservacoesChange: (text: string) => void
   observacoesCliente: string
@@ -19,6 +29,8 @@ export function DetalhesStep({
   entregaTipo,
   dataEntrega,
   onDataEntregaChange,
+  origem = 'LOJA',
+  onOrigemChange,
   observacoes,
   onObservacoesChange,
   observacoesCliente,
@@ -50,6 +62,26 @@ export function DetalhesStep({
         />
         <p className="text-xs text-muted-foreground">
           Pode ser uma data passada (para registrar pedidos antigos) ou futura.
+        </p>
+      </div>
+
+      {/* Order origin (used for fiscal document model: LOJA → NFC-e, ONLINE → NF-e) */}
+      <div className="space-y-2">
+        <Label htmlFor="origem" className="flex items-center gap-2">
+          <Store className="h-4 w-4 text-muted-foreground" />
+          Origem do Pedido
+        </Label>
+        <Select value={origem} onValueChange={(v) => onOrigemChange?.(v as PedidoOrigem)}>
+          <SelectTrigger id="origem" className="max-w-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="LOJA">Loja (presencial)</SelectItem>
+            <SelectItem value="ONLINE">Online</SelectItem>
+          </SelectContent>
+        </Select>
+        <p className="text-xs text-muted-foreground">
+          Define o modelo de nota fiscal ao emitir (Loja: NFC-e, Online: NF-e).
         </p>
       </div>
 
