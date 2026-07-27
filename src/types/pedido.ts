@@ -48,6 +48,16 @@ export type DescontoTipo = 'valor' | 'percentual';
 
 export type NfStatus = 'PENDENTE' | 'EMITIDA' | 'CANCELADA';
 
+/** Fiscal document model: 55 = NF-e (online), 65 = NFC-e (in-store). */
+export type NfModelo = 55 | 65;
+
+/**
+ * Sales channel of an order, used to default the fiscal document type:
+ * ONLINE ⇒ NF-e (55), LOJA ⇒ NFC-e (65). Orders created through the public
+ * self-service checkout are stamped ONLINE; admin-created orders default LOJA.
+ */
+export type PedidoOrigem = 'ONLINE' | 'LOJA';
+
 export type PagamentoMetodo =
   | 'PIX'
   | 'DINHEIRO'
@@ -286,11 +296,30 @@ export interface Pedido {
   dataVencimento: Timestamp;
   statusPagamento: StatusPagamento;
 
-  // NF placeholder fields
+  // Sales channel (drives NF-e vs NFC-e). Optional for backward compat with
+  // orders created before this field existed (treated as LOJA when absent).
+  origem?: PedidoOrigem;
+
+  // Fiscal document (NF-e model 55 / NFC-e model 65) emission result
   nfStatus?: NfStatus | null;
   nfProvider?: string | null;
-  nfExternalId?: string | null;
+  nfExternalId?: string | null; // = chave de acesso (44 digits) when emitted
   nfEmittedAt?: Timestamp | null;
+  nfModelo?: NfModelo | null;
+  nfSerie?: number | null;
+  nfNumero?: number | null;
+  nfAccessKey?: string | null;
+  nfProtocolo?: string | null; // SEFAZ authorization protocol (nProt)
+  nfAmbiente?: 'homologacao' | 'producao' | null; // ambiente at emission time
+  nfXmlPath?: string | null; // Storage path to the authorized XML
+  nfDanfePath?: string | null; // Storage path to the DANFE PDF
+  nfQrCode?: string | null; // NFC-e only: infNFeSupl QR string
+  nfUrlChave?: string | null; // NFC-e only: consulta URL
+  // Fiscal-document cancellation (SEFAZ evento de cancelamento; nfStatus → 'CANCELADA')
+  nfCancelledAt?: Timestamp | null;
+  nfCancelJustificativa?: string | null; // xJust (15–255 chars)
+  nfCancelProtocolo?: string | null; // protocol of the cancellation event
+  nfCancelXmlPath?: string | null; // Storage path to the cancellation event XML
 
   // Cancellation details (set when status === 'CANCELADO')
   cancelamento?: PedidoCancelamento | null;
@@ -381,6 +410,8 @@ export interface CreatePedidoData {
   observacoes?: string;
   observacoesCliente?: string;
   imagensReferencia?: PedidoImagemReferenciaInput[];
+  /** Sales channel; defaults to 'LOJA' when omitted. */
+  origem?: PedidoOrigem;
 }
 
 export interface UpdatePedidoData {
@@ -394,10 +425,25 @@ export interface UpdatePedidoData {
   dataVencimento?: Timestamp;
   observacoes?: string;
   observacoesCliente?: string;
+  origem?: PedidoOrigem;
   nfStatus?: NfStatus | null;
   nfProvider?: string | null;
   nfExternalId?: string | null;
   nfEmittedAt?: Timestamp | null;
+  nfModelo?: NfModelo | null;
+  nfSerie?: number | null;
+  nfNumero?: number | null;
+  nfAccessKey?: string | null;
+  nfProtocolo?: string | null;
+  nfAmbiente?: 'homologacao' | 'producao' | null;
+  nfXmlPath?: string | null;
+  nfDanfePath?: string | null;
+  nfQrCode?: string | null;
+  nfUrlChave?: string | null;
+  nfCancelledAt?: Timestamp | null;
+  nfCancelJustificativa?: string | null;
+  nfCancelProtocolo?: string | null;
+  nfCancelXmlPath?: string | null;
   /** Cancellation reason. Required by the API when status is set to CANCELADO. */
   cancelamento?: {
     categoria: PedidoCancelCategoria;

@@ -164,6 +164,7 @@ export const PATH_TO_FEATURE: Record<string, FeatureKey> = {
   '/settings/store-addresses': 'settings',
   '/settings/freight': 'settings',
   '/settings/store-hours': 'settings',
+  '/settings/fiscal': 'settings',
   '/ponto': 'time_tracking',
   '/ponto/registro': 'time_tracking',
   '/ponto/espelho': 'time_tracking',

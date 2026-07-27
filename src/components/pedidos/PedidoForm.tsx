@@ -16,7 +16,7 @@ import {
   ClipboardCheck,
   Image as ImageIcon,
 } from 'lucide-react'
-import { PedidoItem, PedidoEntrega, PedidoImagemReferenciaInput } from '@/types/pedido'
+import { PedidoItem, PedidoEntrega, PedidoImagemReferenciaInput, PedidoOrigem } from '@/types/pedido'
 import { Address } from '@/types/client'
 import { formatErrorMessage, logError } from '@/lib/error-handler'
 import { calendarDateToISO } from '@/lib/calendar-date'
@@ -120,6 +120,7 @@ export function PedidoForm({
 
   // Dates & notes
   const [dataEntrega, setDataEntrega] = useState('')
+  const [origem, setOrigem] = useState<PedidoOrigem>('LOJA')
   const [observacoes, setObservacoes] = useState('')
   const [observacoesCliente, setObservacoesCliente] = useState('')
 
@@ -327,6 +328,7 @@ export function PedidoForm({
           },
         ],
         dataEntrega: calendarDateToISO(dataEntrega) ?? undefined,
+        origem,
         observacoes: observacoes || undefined,
         observacoesCliente: observacoesCliente || undefined,
         imagensReferencia: referenciaImagens.length ? referenciaImagens : undefined,
@@ -468,6 +470,8 @@ export function PedidoForm({
                 entregaTipo={entregaTipo}
                 dataEntrega={dataEntrega}
                 onDataEntregaChange={setDataEntrega}
+                origem={origem}
+                onOrigemChange={setOrigem}
                 observacoes={observacoes}
                 onObservacoesChange={setObservacoes}
                 observacoesCliente={observacoesCliente}

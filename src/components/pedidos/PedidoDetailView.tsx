@@ -315,7 +315,6 @@ export function PedidoDetailView({ pedido, onUpdate }: PedidoDetailViewProps) {
               <TabsTrigger value="nf" className="gap-1 flex-shrink-0">
                 <Receipt className="h-4 w-4" />
                 NF
-                <Badge variant="secondary" className="text-[10px] ml-1 py-0 px-1.5">Em Breve</Badge>
               </TabsTrigger>
             </TabsList>
           </div>
@@ -358,7 +357,7 @@ export function PedidoDetailView({ pedido, onUpdate }: PedidoDetailViewProps) {
 
         {/* NF tab */}
         <TabsContent value="nf" className="mt-4">
-          <NfSection pedido={pedido} />
+          <NfSection pedido={pedido} onEmitted={onUpdate} />
         </TabsContent>
       </Tabs>
 

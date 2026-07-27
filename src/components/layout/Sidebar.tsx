@@ -35,7 +35,8 @@ import {
   ShoppingCart,
   LayoutGrid,
   ClipboardList,
-  MessageCircle
+  MessageCircle,
+  FileText
 } from 'lucide-react'
 
 interface NavSubmenuItem {
@@ -267,6 +268,12 @@ const navigation: NavItem[] = [
         name: 'Horários',
         href: '/settings/store-hours',
         icon: Clock
+      },
+      {
+        name: 'Fiscal / NF-e',
+        href: '/settings/fiscal',
+        icon: FileText,
+        adminOnly: true
       }
     ]
   }
