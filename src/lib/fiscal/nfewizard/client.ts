@@ -42,6 +42,12 @@ export interface NfeWizardConfig {
   lib: {
     connection: { timeout: number };
     log: { exibirLogNoConsole: boolean };
+    /**
+     * Force the pure-JS XSD validator. The Java-based validator relies on
+     * `xsd-schema-validator`'s postinstall compiling a Java helper (needs a JDK),
+     * which the App Hosting build image lacks — so we never use that path.
+     */
+    useForSchemaValidation: 'validateSchemaJsBased';
   };
 }
 
@@ -111,6 +117,7 @@ export function buildWizardConfig(
     lib: {
       connection: { timeout: 30000 },
       log: { exibirLogNoConsole: false },
+      useForSchemaValidation: 'validateSchemaJsBased',
     },
   };
 }
