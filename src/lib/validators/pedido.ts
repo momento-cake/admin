@@ -130,6 +130,10 @@ export const createPedidoSchema = z.object({
   observacoesCliente: z.string().max(2000, 'Observações do cliente muito longas').optional(),
   imagensReferencia: z.array(pedidoImagemReferenciaSchema).max(30, 'Máximo de 30 imagens de referência').optional(),
   origem: z.enum(['ONLINE', 'LOJA']).default('LOJA'),
+  // Mesversário link — when present the order is numbered MES-XXXX and carries
+  // a back-reference to the milestone.
+  mesversarioId: z.string().optional(),
+  mesNumero: z.number().int().min(1).max(12).optional(),
 });
 
 /**
@@ -194,6 +198,9 @@ export const updatePedidoSchema = z.object({
   nfCancelXmlPath: z.string().nullable().optional(),
   cancelamento: cancelamentoSchema.optional(),
   imagensReferencia: z.array(pedidoImagemReferenciaSchema).max(30, 'Máximo de 30 imagens de referência').optional(),
+  // Mesversário back-reference — nullable so the milestone link can be cleared.
+  mesversarioId: z.string().nullable().optional(),
+  mesNumero: z.number().int().min(1).max(12).nullable().optional(),
 });
 
 // ============================================================================

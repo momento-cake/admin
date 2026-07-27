@@ -17,6 +17,9 @@ interface PedidoFormDialogProps {
   initialClienteId?: string
   initialClienteNome?: string
   initialClienteTelefone?: string
+  /** When set, the created order is numbered MES-XXXX and back-references this milestone. */
+  mesversarioId?: string
+  mesNumero?: number
   onCreated?: (pedido: { id: string; numeroPedido: string }) => void
 }
 
@@ -38,6 +41,8 @@ export function PedidoFormDialog({
   initialClienteId,
   initialClienteNome,
   initialClienteTelefone,
+  mesversarioId,
+  mesNumero,
   onCreated,
 }: PedidoFormDialogProps) {
   return (
@@ -66,6 +71,8 @@ export function PedidoFormDialog({
           initialClienteId={initialClienteId}
           initialClienteNome={initialClienteNome}
           initialClienteTelefone={initialClienteTelefone}
+          mesversarioId={mesversarioId}
+          mesNumero={mesNumero}
           onCreated={onCreated}
         />
       </DialogContent>

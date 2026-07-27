@@ -36,7 +36,8 @@ import {
   LayoutGrid,
   ClipboardList,
   MessageCircle,
-  FileText
+  FileText,
+  Cake
 } from 'lucide-react'
 
 interface NavSubmenuItem {
@@ -169,6 +170,11 @@ const navigation: NavItem[] = [
         name: 'Resumo',
         href: '/orders/resumo',
         icon: ClipboardList
+      },
+      {
+        name: 'Mesversários',
+        href: '/orders/mesversarios',
+        icon: Cake
       }
     ]
   },
